@@ -1,0 +1,7 @@
+/target
+/achtsam.db
+/achtsam.db-shm
+/achtsam.db-wal
+.env
+.DS_Store
+*.log
