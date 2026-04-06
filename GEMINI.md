@@ -34,7 +34,7 @@ Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen 
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
 | `kunde_id` | `i64` | Fremdschlüssel auf `kunden` |
-| `status` | `Enum` | Angefragt, Besichtigt, Durchfuehrung, Abgeschlossen, Storniert |
+| `status` | `Enum` | Angefragt, Besichtigt, Durchfuehrung, Archiviert, Storniert |
 | `beschreibung`| `String` | Kurzbeschreibung des Auftrags |
 | `basis_pauschale`| `Option<f64>`| Optionale Fixkosten-Pauschale |
 | `preis_manuell`| `Option<f64>`| Manuelle Preisanpassung (Überschreibt ggf. Logik) |
@@ -77,9 +77,14 @@ Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen 
 
 ## 4. Nächste Schritte
 
-1. **Frontend:** Aufbau einer Admin-UI (Web-Interface).
-2. **Login:** Absicherung der API.
-3. **PDF-Export:** Automatisierte Rechnungserstellung (Aggregiert Stunden & Kilometer).
+1. [x] **Layout-Anpassung:** Der aktuell dunkelgrüne Reiter für die Rechnungserstellung (rechts) wurde als eigene Sektion unter die anderen Sektionen verschoben. Die Arbeitsstunden und Fahrten nutzen nun ein 2-Spalten-Grid zur besseren Platznutzung.
+2. [x] **Bug-Fix & Edit-Logik:** Die Bearbeitung von Arbeitsstunden und Kilometern wurde korrigiert (getrennte Routen für Create/Update), sodass keine Duplikate mehr entstehen.
+3. [x] **Lösch-Funktion:** Arbeitsstunden und Fahrten können nun über einen Papierkorb-Button gelöscht werden.
+4. [x] **UI-Polishing:** "Abgeschlossen" wurde in "Archiviert" umbenannt. Personendaten sind nun in der Auftragsansicht ausklappbar eingebunden.
+5. [ ] **Dokumenten-Feedback:** Nach dem Hochladen eines erforderlichen Dokuments (z.B. Vertrag) soll dies visuell deutlicher hervorgehoben werden (der aktuelle Upload-Prozess ist noch etwas kontraintuitiv).
+6. [ ] **PDF-Rechnungserstellung:** Stunden, Kilometer und Preise zusammenfassen und als PDF generieren.
+7. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
+8. [ ] **Login:** Absicherung der API.
 
 ## 5. Betriebliche Hinweise
 

@@ -5,7 +5,7 @@ pub enum AuftragStatus {
     Angefragt,
     Besichtigt,
     Durchfuehrung,
-    Abgeschlossen,
+    Archiviert,
     Storniert,
 }
 

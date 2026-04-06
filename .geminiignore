@@ -1,5 +1,5 @@
 target/
-achtsam.db*
 uploads/
 .git/
-node_modules/
+achtsam.db
+target/

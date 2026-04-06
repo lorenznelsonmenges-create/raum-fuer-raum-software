@@ -18,3 +18,5 @@ achtsam.db*
 .idea/
 *.swp
 *.bak
+target/
+target/

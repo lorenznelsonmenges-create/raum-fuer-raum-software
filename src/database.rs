@@ -131,7 +131,7 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
     let status = match status_str.as_str() {
         "Besichtigt" => AuftragStatus::Besichtigt,
         "Durchfuehrung" => AuftragStatus::Durchfuehrung,
-        "Abgeschlossen" => AuftragStatus::Abgeschlossen,
+        "Archiviert" => AuftragStatus::Archiviert,
         "Storniert" => AuftragStatus::Storniert,
         _ => AuftragStatus::Angefragt,
     };
@@ -168,7 +168,7 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
         let status = match status_str.as_str() {
             "Besichtigt" => AuftragStatus::Besichtigt,
             "Durchfuehrung" => AuftragStatus::Durchfuehrung,
-            "Abgeschlossen" => AuftragStatus::Abgeschlossen,
+            "Archiviert" => AuftragStatus::Archiviert,
             "Storniert" => AuftragStatus::Storniert,
             _ => AuftragStatus::Angefragt,
         };
@@ -231,34 +231,46 @@ pub async fn update_auftrag(pool: &SqlitePool, id: i64, auftrag: Auftrag) -> Res
 // --- Einsatz Funktionen (Arbeitsdokumentation) ---
 
 pub async fn create_einsatz(pool: &SqlitePool, einsatz: Einsatz) -> Result<i64, sqlx::Error> {
-    if einsatz.id > 0 {
-        sqlx::query(
-            "UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ? WHERE id = ?"
-        )
-        .bind(einsatz.datum)
-        .bind(einsatz.kilometer)
-        .bind(einsatz.stunden)
-        .bind(einsatz.notiz)
-        .bind(einsatz.typ)
-        .bind(einsatz.id)
-        .execute(pool)
-        .await?;
-        Ok(einsatz.id)
-    } else {
-        let result = sqlx::query(
-            "INSERT INTO einsaetze (auftrag_id, datum, kilometer, stunden, notiz, typ) VALUES (?, ?, ?, ?, ?, ?)"
-        )
-        .bind(einsatz.auftrag_id)
-        .bind(einsatz.datum)
-        .bind(einsatz.kilometer)
-        .bind(einsatz.stunden)
-        .bind(einsatz.notiz)
-        .bind(einsatz.typ)
-        .execute(pool)
-        .await?;
+    let result = sqlx::query(
+        "INSERT INTO einsaetze (auftrag_id, datum, kilometer, stunden, notiz, typ) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .bind(einsatz.auftrag_id)
+    .bind(einsatz.datum)
+    .bind(einsatz.kilometer)
+    .bind(einsatz.stunden)
+    .bind(einsatz.notiz)
+    .bind(einsatz.typ)
+    .execute(pool)
+    .await?;
 
-        Ok(result.last_insert_rowid())
-    }
+    Ok(result.last_insert_rowid())
+}
+
+pub async fn update_einsatz(pool: &SqlitePool, id: i64, einsatz: Einsatz) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ? WHERE id = ?"
+    )
+    .bind(einsatz.datum)
+    .bind(einsatz.kilometer)
+    .bind(einsatz.stunden)
+    .bind(einsatz.notiz)
+    .bind(einsatz.typ)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn delete_einsatz(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "DELETE FROM einsaetze WHERE id = ?"
+    )
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn get_einsaetze_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Result<Vec<Einsatz>, sqlx::Error> {

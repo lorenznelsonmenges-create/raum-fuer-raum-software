@@ -36,6 +36,8 @@ async fn main() {
         .route("/api/auftraege/:id/rechnung", post(create_rechnung))
         .route("/api/auftraege/:id/einsaetze", get(list_einsaetze_for_auftrag))
         .route("/api/einsaetze", post(add_einsatz))
+        .route("/api/einsaetze/:id", post(update_einsatz_handler))
+        .route("/api/einsaetze/:id/delete", post(delete_einsatz_handler))
         .route("/api/auftraege/:id/upload", post(upload_datei))
         .route("/api/auftraege/:id/dateien", get(list_dateien))
         .nest_service("/uploads", tower_http::services::ServeDir::new("uploads"))
@@ -182,6 +184,25 @@ async fn list_einsaetze_for_auftrag(
 async fn add_einsatz(State(pool): State<SqlitePool>, Json(payload): Json<Einsatz>) -> Result<Json<i64>, AppError> {
     let id = database::create_einsatz(&pool, payload).await?;
     Ok(Json(id))
+}
+
+// Handler: Einsatz aktualisieren
+async fn update_einsatz_handler(
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+    Json(payload): Json<Einsatz>,
+) -> Result<(), AppError> {
+    database::update_einsatz(&pool, id, payload).await?;
+    Ok(())
+}
+
+// Handler: Einsatz löschen
+async fn delete_einsatz_handler(
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+) -> Result<(), AppError> {
+    database::delete_einsatz(&pool, id).await?;
+    Ok(())
 }
 
 // Handler: Dateien hochladen
