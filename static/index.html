@@ -371,176 +371,236 @@
                             </div>
                         </header>
 
-                        <!-- Dokumente & Rechtliches -->
-                        <section class="space-y-10">
-                            <div class="flex justify-between items-center">
-                                <h2 class="font-headline text-3xl">Dokumente & Verträge</h2>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Datenschutz -->
-                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
-                                    <div class="flex justify-between items-start">
-                                        <span class="material-icons-outlined text-primary text-3xl">gavel</span>
-                                        <template x-if="!hasDoc('DATENSCHUTZ')">
-                                            <button @click="openSignaturePad('DATENSCHUTZ')" class="text-[10px] font-bold uppercase tracking-widest bg-primary text-white px-4 py-2 rounded-full hover:bg-primary-dim transition-all">Unterschreiben</button>
-                                        </template>
-                                        <template x-if="hasDoc('DATENSCHUTZ')">
-                                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1"><span class="material-icons-outlined text-sm">check_circle</span> Erledigt</span>
-                                        </template>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold text-lg">Datenschutzvereinbarung</h4>
-                                        <p class="text-xs text-on-surface/40">Einwilligung zur Datenverarbeitung.</p>
-                                    </div>
-                                    <template x-if="hasDoc('DATENSCHUTZ')">
-                                        <div class="pt-4 border-t border-surface-low flex gap-2">
-                                            <template x-for="d in getDocs('DATENSCHUTZ')">
-                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <!-- Vertrag -->
-                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
-                                    <div class="flex justify-between items-start">
-                                        <span class="material-icons-outlined text-primary text-3xl">description</span>
-                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'VERTRAG'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold text-lg">Dienstleistungsvertrag</h4>
-                                        <p class="text-xs text-on-surface/40">Unterzeichneter Vertrag als PDF/Foto.</p>
-                                    </div>
-                                    <template x-if="hasDoc('VERTRAG')">
-                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
-                                            <template x-for="d in getDocs('VERTRAG')">
-                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <!-- Rahmenbedingungen -->
-                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
-                                    <div class="flex justify-between items-start">
-                                        <span class="material-icons-outlined text-primary text-3xl">fact_check</span>
-                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'RAHMENBEDINGUNGEN'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold text-lg">Rahmenbedingungen</h4>
-                                        <p class="text-xs text-on-surface/40">AGB und rechtliche Hinweise.</p>
-                                    </div>
-                                    <template x-if="hasDoc('RAHMENBEDINGUNGEN')">
-                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
-                                            <template x-for="d in getDocs('RAHMENBEDINGUNGEN')">
-                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <!-- Sonstiges -->
-                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
-                                    <div class="flex justify-between items-start">
-                                        <span class="material-icons-outlined text-primary text-3xl">folder_open</span>
-                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'SONSTIGES'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold text-lg">Sonstige Dokumente</h4>
-                                        <p class="text-xs text-on-surface/40">Bilder, Bescheinigungen, etc.</p>
-                                    </div>
-                                    <template x-if="hasDoc('SONSTIGES')">
-                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
-                                            <template x-for="d in getDocs('SONSTIGES')">
-                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                            
-                            <!-- Hidden File Input -->
-                            <input type="file" x-ref="fileInput" class="hidden" @change="handleFileUpload($event)">
-                        </section>
-
-                        <!-- Tätigkeitsdokumentation -->
-                        <section class="space-y-10">
+                        <!-- Arbeitsstunden -->
+                        <section class="space-y-8">
                             <div class="flex justify-between items-center border-b border-surface-low pb-6">
-                                <div class="flex gap-12">
-                                    <button @click="einsatzTypView = 'ARBEIT'" :class="einsatzTypView === 'ARBEIT' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Arbeitsstunden</button>
-                                    <button @click="einsatzTypView = 'FAHRT'" :class="einsatzTypView === 'FAHRT' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Fahrten</button>
-                                    <button @click="einsatzTypView = 'RECHNUNG'" :class="einsatzTypView === 'RECHNUNG' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Rechnungen</button>
-                                </div>
-                                <button x-show="activeAuftrag.status !== 'Abgeschlossen' && einsatzTypView !== 'RECHNUNG'" @click="openEinsatzForm = true; newEinsatz.typ = einsatzTypView" class="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary-dim shadow-md transition-all">
+                                <h2 class="font-headline text-3xl text-primary">Arbeitsstunden</h2>
+                                <button x-show="activeAuftrag.status !== 'Abgeschlossen'" @click="openArbeitsForm = !openArbeitsForm; if(openArbeitsForm) { openFahrtForm = false; newEinsatz.typ = 'ARBEIT'; }" class="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary-dim shadow-md transition-all">
                                     <span class="material-icons-outlined text-lg">add</span>
-                                    <span x-text="einsatzTypView === 'ARBEIT' ? 'Stunden erfassen' : 'Fahrt erfassen'"></span>
+                                    <span>Stunden erfassen</span>
                                 </button>
                             </div>
 
-                            <!-- Inline Form für neuen Einsatz -->
-                            <div x-show="openEinsatzForm" x-transition class="bg-white p-10 rounded-[32px] border border-surface-low shadow-sm space-y-8">
+                            <!-- Form für Arbeitsstunden -->
+                            <div x-show="openArbeitsForm" x-transition class="bg-white p-10 rounded-[32px] border border-surface-low shadow-sm space-y-8">
                                 <div class="grid grid-cols-2 gap-8">
                                     <div class="space-y-2">
                                         <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Datum</label>
                                         <input x-model="newEinsatz.datum" type="date" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1" x-text="newEinsatz.typ === 'ARBEIT' ? 'Stunden' : 'Kilometer'"></label>
-                                        <input x-model.number="newEinsatz.typ === 'ARBEIT' ? newEinsatz.stunden : newEinsatz.kilometer" type="number" step="0.25" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Stunden</label>
+                                        <input x-model.number="newEinsatz.stunden" type="number" step="0.25" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
                                     </div>
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Notiz / Ziel</label>
-                                    <textarea x-model="newEinsatz.notiz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[100px]" :placeholder="newEinsatz.typ === 'ARBEIT' ? 'Was wurde erledigt?' : 'Wohin wurde gefahren?'"></textarea>
+                                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Was wurde erledigt?</label>
+                                    <textarea x-model="newEinsatz.notiz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[100px]" placeholder="Beschreibung der Arbeit..."></textarea>
                                 </div>
                                 <div class="flex justify-end gap-4 pt-4 border-t border-surface-low">
-                                    <button @click="openEinsatzForm = false" class="text-on-surface/40 px-8 font-bold text-sm">Abbrechen</button>
-                                    <button @click="saveEinsatzInline()" class="bg-primary text-white px-10 py-4 rounded-xl font-bold shadow-md hover:bg-primary-dim transition-all">Speichern</button>
+                                    <button @click="openArbeitsForm = false" class="text-on-surface/40 px-8 font-bold text-sm">Abbrechen</button>
+                                    <button @click="newEinsatz.typ = 'ARBEIT'; saveEinsatzInline(); openArbeitsForm = false;" class="bg-primary text-white px-10 py-4 rounded-xl font-bold shadow-md hover:bg-primary-dim transition-all">Speichern</button>
                                 </div>
                             </div>
 
-                            <!-- Liste der Rechnungen -->
-                            <div class="space-y-6" x-show="einsatzTypView === 'RECHNUNG'">
-                                <template x-for="r in activeAuftrag.rechnungen.sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="r.id">
-                                    <div class="bg-white p-8 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
-                                        <div class="space-y-1">
-                                            <div class="font-bold text-lg text-primary" x-text="r.rechnungs_nummer"></div>
-                                            <div class="text-on-surface/40 text-xs" x-text="formatDate(r.datum)"></div>
+                            <div class="space-y-4">
+                                <template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT').sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="e.id">
+                                    <div class="bg-white p-6 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
+                                        <div class="flex-1 space-y-1" x-show="editingEinsatzId !== e.id">
+                                            <div class="font-bold text-lg text-primary" x-text="formatDate(e.datum)"></div>
+                                            <div class="text-on-surface/60 text-sm leading-relaxed" x-text="e.notiz || 'Keine Notiz'"></div>
                                         </div>
-                                        <div class="flex gap-12 items-center pl-12 border-l border-surface-low">
-                                            <div class="text-right">
-                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1">Betrag</div>
-                                                <div class="font-headline text-2xl font-bold text-primary" x-text="r.gesamt_brutto.toFixed(2) + ' €'"></div>
+                                        
+                                        <!-- Inline Edit Form -->
+                                        <div class="flex-1 grid grid-cols-3 gap-4 items-end" x-show="editingEinsatzId === e.id">
+                                            <input type="date" x-model="e.datum" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm">
+                                            <input type="number" x-model.number="e.stunden" step="0.25" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm">
+                                            <input type="text" x-model="e.notiz" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm col-span-3 mt-2" placeholder="Notiz">
+                                        </div>
+
+                                        <div class="flex gap-8 items-center pl-8 border-l border-surface-low min-w-[120px] justify-center">
+                                            <div class="text-center" x-show="editingEinsatzId !== e.id">
+                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1">Std.</div>
+                                                <div class="font-headline text-2xl font-bold text-primary" x-text="e.stunden"></div>
                                             </div>
-                                            <a :href="'/' + r.pdf_pfad" target="_blank" class="bg-surface-low p-4 rounded-xl text-primary hover:bg-primary hover:text-white transition-all">
-                                                <span class="material-icons-outlined">download</span>
-                                            </a>
+                                            
+                                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" x-show="editingEinsatzId !== e.id">
+                                                <button @click="editingEinsatzId = e.id" class="p-2 text-primary hover:bg-surface-low rounded-lg"><span class="material-icons-outlined text-sm">edit</span></button>
+                                            </div>
+                                            
+                                            <div class="flex flex-col gap-2" x-show="editingEinsatzId === e.id">
+                                                <button @click="updateEinsatz(e)" class="bg-primary text-white p-2 rounded-lg"><span class="material-icons-outlined text-sm">check</span></button>
+                                                <button @click="editingEinsatzId = null; fetchEinsaetze(activeAuftrag.id)" class="bg-surface-low text-on-surface/40 p-2 rounded-lg"><span class="material-icons-outlined text-sm">close</span></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </template>
-                                <template x-if="activeAuftrag.rechnungen.length === 0">
-                                    <div class="text-center py-20 bg-surface-low/30 rounded-[40px] border border-dashed border-on-surface/10 text-on-surface/30 italic">Noch keine Rechnungen für diesen Auftrag erstellt.</div>
-                                </template>
+                            </div>
+                        </section>
+
+                        <!-- Fahrten -->
+                        <section class="space-y-8">
+                            <div class="flex justify-between items-center border-b border-surface-low pb-6">
+                                <h2 class="font-headline text-3xl text-primary">Fahrten</h2>
+                                <button x-show="activeAuftrag.status !== 'Abgeschlossen'" @click="openFahrtForm = !openFahrtForm; if(openFahrtForm) { openArbeitsForm = false; newEinsatz.typ = 'FAHRT'; }" class="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary-dim shadow-md transition-all">
+                                    <span class="material-icons-outlined text-lg">add</span>
+                                    <span>Fahrt erfassen</span>
+                                </button>
                             </div>
 
-                            <!-- Liste der Einsätze -->
-                            <div class="space-y-6" x-show="einsatzTypView !== 'RECHNUNG'">
-                                <template x-for="e in activeEinsaetze.filter(e => e.typ === einsatzTypView).sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="e.id">
-                                    <div class="bg-white p-8 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
-                                        <div class="space-y-1">
+                            <!-- Form für Fahrten -->
+                            <div x-show="openFahrtForm" x-transition class="bg-white p-10 rounded-[32px] border border-surface-low shadow-sm space-y-8">
+                                <div class="grid grid-cols-2 gap-8">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Datum</label>
+                                        <input x-model="newEinsatz.datum" type="date" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Kilometer</label>
+                                        <input x-model.number="newEinsatz.kilometer" type="number" step="0.5" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Ziel / Zweck</label>
+                                    <textarea x-model="newEinsatz.notiz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[100px]" placeholder="Wohin wurde gefahren?"></textarea>
+                                </div>
+                                <div class="flex justify-end gap-4 pt-4 border-t border-surface-low">
+                                    <button @click="openFahrtForm = false" class="text-on-surface/40 px-8 font-bold text-sm">Abbrechen</button>
+                                    <button @click="newEinsatz.typ = 'FAHRT'; saveEinsatzInline(); openFahrtForm = false;" class="bg-primary text-white px-10 py-4 rounded-xl font-bold shadow-md hover:bg-primary-dim transition-all">Speichern</button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <template x-for="e in activeEinsaetze.filter(e => e.typ === 'FAHRT').sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="e.id">
+                                    <div class="bg-white p-6 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
+                                        <div class="flex-1 space-y-1" x-show="editingEinsatzId !== e.id">
                                             <div class="font-bold text-lg text-primary" x-text="formatDate(e.datum)"></div>
-                                            <div class="text-on-surface/60 leading-relaxed" x-text="e.notiz || 'Keine Notiz'"></div>
+                                            <div class="text-on-surface/60 text-sm leading-relaxed" x-text="e.notiz || 'Keine Notiz'"></div>
                                         </div>
-                                        <div class="flex gap-12 items-center pl-12 border-l border-surface-low min-w-[120px] justify-center">
-                                            <div class="text-center">
-                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1" x-text="e.typ === 'ARBEIT' ? 'Std.' : 'KM'"></div>
-                                                <div class="font-headline text-3xl font-bold text-primary" x-text="e.typ === 'ARBEIT' ? e.stunden : e.kilometer"></div>
+
+                                        <!-- Inline Edit Form -->
+                                        <div class="flex-1 grid grid-cols-3 gap-4 items-end" x-show="editingEinsatzId === e.id">
+                                            <input type="date" x-model="e.datum" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm">
+                                            <input type="number" x-model.number="e.kilometer" step="0.5" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm">
+                                            <input type="text" x-model="e.notiz" class="bg-surface-low border-none rounded-lg px-3 py-2 text-sm col-span-3 mt-2" placeholder="Notiz">
+                                        </div>
+
+                                        <div class="flex gap-8 items-center pl-8 border-l border-surface-low min-w-[120px] justify-center">
+                                            <div class="text-center" x-show="editingEinsatzId !== e.id">
+                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1">KM</div>
+                                                <div class="font-headline text-2xl font-bold text-primary" x-text="e.kilometer"></div>
+                                            </div>
+
+                                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" x-show="editingEinsatzId !== e.id">
+                                                <button @click="editingEinsatzId = e.id" class="p-2 text-primary hover:bg-surface-low rounded-lg"><span class="material-icons-outlined text-sm">edit</span></button>
+                                            </div>
+
+                                            <div class="flex flex-col gap-2" x-show="editingEinsatzId === e.id">
+                                                <button @click="updateEinsatz(e)" class="bg-primary text-white p-2 rounded-lg"><span class="material-icons-outlined text-sm">check</span></button>
+                                                <button @click="editingEinsatzId = null; fetchEinsaetze(activeAuftrag.id)" class="bg-surface-low text-on-surface/40 p-2 rounded-lg"><span class="material-icons-outlined text-sm">close</span></button>
                                             </div>
                                         </div>
                                     </div>
                                 </template>
                             </div>
+                        </section>
+
+                        <!-- Rechnungen & Dokumente (Statische Pflichtliste) -->
+                        <section class="space-y-8 pt-8 border-t border-surface-low">
+                            <div class="flex justify-between items-center">
+                                <h2 class="font-headline text-3xl text-primary">Dokumente & Rechnungen</h2>
+                                <button @click="$refs.fileInput.click(); uploadKategorie = 'SONSTIGES'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-6 py-3 rounded-xl hover:bg-surface-dim transition-all flex items-center gap-2">
+                                    <span class="material-icons-outlined text-sm">upload_file</span>
+                                    Sonstiges hochladen
+                                </button>
+                            </div>
+                            
+                            <div class="bg-white rounded-[32px] border border-surface-low overflow-hidden shadow-sm">
+                                <table class="w-full text-left">
+                                    <thead class="bg-surface-low/50 text-[10px] font-bold uppercase tracking-widest text-on-surface/40">
+                                        <tr>
+                                            <th class="px-8 py-4">Dokument</th>
+                                            <th class="px-8 py-4">Status</th>
+                                            <th class="px-8 py-4 text-right">Aktion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-surface-low">
+                                        <!-- Pflicht: Datenschutz -->
+                                        <tr class="hover:bg-surface-low/30 transition-all">
+                                            <td class="px-8 py-6 font-bold">Datenschutzvereinbarung</td>
+                                            <td class="px-8 py-6 text-sm">
+                                                <template x-if="hasDoc('DATENSCHUTZ')">
+                                                    <span class="text-primary flex items-center gap-1 font-bold"><span class="material-icons-outlined text-sm">check_circle</span> Vorhanden</span>
+                                                </template>
+                                                <template x-if="!hasDoc('DATENSCHUTZ')">
+                                                    <span class="text-red-400 flex items-center gap-1"><span class="material-icons-outlined text-sm">error_outline</span> Erforderlich</span>
+                                                </template>
+                                            </td>
+                                            <td class="px-8 py-6 text-right">
+                                                <template x-if="!hasDoc('DATENSCHUTZ')">
+                                                    <button @click="openSignaturePad()" class="text-[9px] font-bold uppercase bg-primary text-white px-4 py-2 rounded-full">Signieren</button>
+                                                </template>
+                                                <template x-if="hasDoc('DATENSCHUTZ')">
+                                                    <a :href="'/' + getDocs('DATENSCHUTZ')[0].dateipfad" target="_blank" class="p-2 text-primary hover:bg-surface-low rounded-lg inline-block"><span class="material-icons-outlined text-sm">visibility</span></a>
+                                                </template>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Pflicht: Vertrag -->
+                                        <tr class="hover:bg-surface-low/30 transition-all">
+                                            <td class="px-8 py-6 font-bold">Dienstleistungsvertrag</td>
+                                            <td class="px-8 py-6 text-sm">
+                                                <template x-if="hasDoc('VERTRAG')">
+                                                    <span class="text-primary flex items-center gap-1 font-bold"><span class="material-icons-outlined text-sm">check_circle</span> Vorhanden</span>
+                                                </template>
+                                                <template x-if="!hasDoc('VERTRAG')">
+                                                    <span class="text-red-400 flex items-center gap-1"><span class="material-icons-outlined text-sm">error_outline</span> Erforderlich</span>
+                                                </template>
+                                            </td>
+                                            <td class="px-8 py-6 text-right">
+                                                <button @click="$refs.fileInput.click(); uploadKategorie = 'VERTRAG'" class="text-[9px] font-bold uppercase bg-surface-low text-primary px-4 py-2 rounded-full">Upload</button>
+                                                <template x-if="hasDoc('VERTRAG')">
+                                                    <a :href="'/' + getDocs('VERTRAG')[0].dateipfad" target="_blank" class="p-2 text-primary hover:bg-surface-low rounded-lg inline-block ml-2"><span class="material-icons-outlined text-sm">visibility</span></a>
+                                                </template>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Pflicht: Rechnung -->
+                                        <tr class="hover:bg-surface-low/30 transition-all">
+                                            <td class="px-8 py-6 font-bold">Rechnung</td>
+                                            <td class="px-8 py-6 text-sm">
+                                                <template x-if="activeAuftrag.rechnungen.length > 0">
+                                                    <span class="text-primary flex items-center gap-1 font-bold"><span class="material-icons-outlined text-sm">check_circle</span> Erstellt</span>
+                                                </template>
+                                                <template x-if="activeAuftrag.rechnungen.length === 0">
+                                                    <span class="text-red-400 flex items-center gap-1"><span class="material-icons-outlined text-sm">error_outline</span> Erforderlich</span>
+                                                </template>
+                                            </td>
+                                            <td class="px-8 py-6 text-right">
+                                                <template x-if="activeAuftrag.rechnungen.length > 0">
+                                                    <div class="flex justify-end gap-2">
+                                                        <template x-for="r in activeAuftrag.rechnungen">
+                                                            <a :href="'/' + r.pdf_pfad" target="_blank" class="p-2 text-primary hover:bg-surface-low rounded-lg inline-block"><span class="material-icons-outlined text-sm">receipt</span></a>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Sonstige Dateien -->
+                                        <template x-for="d in activeDateien.filter(d => d.kategorie === 'SONSTIGES')" :key="d.id">
+                                            <tr class="hover:bg-surface-low/30 transition-all">
+                                                <td class="px-8 py-6 font-bold text-on-surface/60" x-text="d.dateiname"></td>
+                                                <td class="px-8 py-6 text-sm text-on-surface/40">Zusatzdokument</td>
+                                                <td class="px-8 py-6 text-right">
+                                                    <a :href="'/' + d.dateipfad" target="_blank" class="p-2 text-on-surface/40 hover:bg-surface-low rounded-lg inline-block"><span class="material-icons-outlined text-sm">visibility</span></a>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <input type="file" x-ref="fileInput" class="hidden" @change="handleFileUpload($event)">
                         </section>
                     </div>
 
@@ -719,13 +779,14 @@
                 activeKundeForAuftrag: null,
                 activeEinsaetze: [],
                 activeDateien: [],
-                einsatzTypView: 'ARBEIT',
                 uploadKategorie: 'SONSTIGES',
                 showSignaturePad: false,
                 isDrawing: false,
                 lastX: 0,
                 lastY: 0,
-                openEinsatzForm: false,
+                openArbeitsForm: false,
+                openFahrtForm: false,
+                editingEinsatzId: null,
                 newEinsatz: { datum: new Date().toISOString().split('T')[0], stunden: 0, kilometer: 0, notiz: '', typ: 'ARBEIT' },
                 newKundeModal: false,
                 newKundeData: { vorname: '', nachname: '' },
@@ -929,19 +990,62 @@
                     }
                 },
                 async saveEinsatzInline() {
-                    const payload = { ...this.newEinsatz, id: 0, auftrag_id: this.activeAuftrag.id };
+                    const payload = { 
+                        ...this.newEinsatz, 
+                        id: 0, 
+                        auftrag_id: this.activeAuftrag.id,
+                        stunden: parseFloat(this.newEinsatz.stunden) || 0,
+                        kilometer: parseFloat(this.newEinsatz.kilometer) || 0
+                    };
                     const res = await fetch('/api/einsaetze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     if (res.ok) {
-                        this.openEinsatzForm = false;
-                        this.newEinsatz = { datum: new Date().toISOString().split('T')[0], stunden: 0, kilometer: 0, notiz: '', typ: this.einsatzTypView };
+                        const savedTyp = this.newEinsatz.typ;
+                        this.newEinsatz = { 
+                            datum: new Date().toISOString().split('T')[0], 
+                            stunden: 0, 
+                            kilometer: 0, 
+                            notiz: '', 
+                            typ: savedTyp 
+                        };
+                        this.fetchEinsaetze(this.activeAuftrag.id);
+                    }
+                },
+                async updateEinsatz(e) {
+                    // Da wir im Rust Backend aktuell noch keinen PUT Endpunkt für Einsätze haben,
+                    // nutzen wir den POST Endpunkt (der in der DB ein INSERT oder UPDATE macht, falls implementiert)
+                    // Falls das Backend noch kein UPDATE kann, müssen wir das dort erst ergänzen.
+                    // Ich prüfe nun src/database.rs für Update-Logik.
+                    const res = await fetch('/api/einsaetze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(e)
+                    });
+                    if (res.ok) {
+                        this.editingEinsatzId = null;
                         this.fetchEinsaetze(this.activeAuftrag.id);
                     }
                 },
                 async updateAuftragSync() {
+                    // Validierung: Nur archivieren, wenn Pflichtdokumente da sind
+                    if (this.activeAuftrag.status === 'Abgeschlossen') {
+                        const hasDS = this.hasDoc('DATENSCHUTZ');
+                        const hasVertrag = this.hasDoc('VERTRAG');
+                        const hasRE = this.activeAuftrag.rechnungen.length > 0;
+
+                        if (!hasDS || !hasVertrag || !hasRE) {
+                            alert("Vorgang abgebrochen! Der Auftrag kann erst archiviert werden, wenn folgende Dokumente vorhanden sind:\n- Datenschutzvereinbarung\n- Dienstleistungsvertrag\n- Mindestens eine Rechnung");
+                            // Status zurücksetzen (wir laden den alten Stand)
+                            this.fetchAuftraege();
+                            const old = this.auftraege.find(a => a.id === this.activeAuftrag.id);
+                            if (old) this.activeAuftrag.status = old.status;
+                            return;
+                        }
+                    }
+
                     await fetch(`/api/auftraege/${this.activeAuftrag.id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
