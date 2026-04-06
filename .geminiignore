@@ -1,0 +1,15 @@
+# Build & Dependencies
+target/
+Cargo.lock
+
+# Data & Uploads
+achtsam.db*
+uploads/
+
+# Environment & Git
+.git/
+.env
+
+# Others
+.DS_Store
+*.log

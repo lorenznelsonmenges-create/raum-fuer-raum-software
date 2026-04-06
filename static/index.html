@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Achtsam Entrümpeln | Admin</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: '#fbf9f3',
+                        'surface-low': '#f5f4ec',
+                        'surface-lowest': '#ffffff',
+                        'surface-dim': '#dadbd0',
+                        primary: '#526447',
+                        'primary-dim': '#46583c',
+                        'primary-container': '#d4e9c4',
+                        'on-surface': '#31332c',
+                    },
+                    fontFamily: {
+                        headline: ['Noto Serif', 'serif'],
+                        body: ['Manrope', 'sans-serif'],
+                    },
+                    spacing: {
+                        '16': '4rem',
+                        '20': '5rem',
+                        '24': '6rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body { background-color: #fbf9f3; color: #31332c; font-family: 'Manrope', sans-serif; overflow: hidden; }
+        .font-headline { font-family: 'Noto Serif', serif; letter-spacing: -0.02em; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input:focus, select:focus, textarea:focus { outline: none; background-color: #e3e3d9 !important; border-bottom: 1px solid #526447; }
+        .sidebar-item.active { background-color: #f5f4ec; color: #526447; font-weight: 600; }
+        .secondary-button { display: inline-flex; align-items: center; gap: 0.5rem; color: #526447; cursor: pointer; transition: all 0.2s; }
+        .secondary-button span:last-child { font-family: 'Manrope', sans-serif; font-size: 0.875rem; font-weight: 600; border-bottom: 2px solid rgba(82, 100, 71, 0.15); padding-bottom: 2px; transition: all 0.2s; }
+        .secondary-button:hover span:last-child { border-bottom-color: #526447; }
+        .secondary-button:hover { transform: translateX(-4px); }
+    </style>
+</head>
+<body x-data="app()" x-init="init()" class="h-screen flex">
+
+    <!-- Sidebar (Links) -->
+    <aside class="w-80 h-full bg-surface-lowest border-r border-surface-low flex flex-col py-12 px-6">
+        <!-- Logo Shortcut zum Dashboard -->
+        <div class="flex items-center gap-4 mb-24 px-4 cursor-pointer hover:opacity-80 transition-opacity" @click="view = 'dashboard'">
+            <div class="w-12 h-12 flex items-center justify-center">
+                <img src="/static/logo.svg" alt="Logo" class="w-full h-full">
+            </div>
+            <span class="font-headline text-xl font-bold tracking-tight">Achtsam Entrümpeln</span>
+        </div>
+
+        <nav class="flex-1 space-y-2">
+            <button @click="view = 'dashboard'" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg text-on-surface/60 hover:bg-surface-low transition-all">
+                <span class="material-icons-outlined text-xl">dashboard</span>
+                <span>Dashboard</span>
+            </button>
+            <button @click="view = 'kunden'" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg text-on-surface/60 hover:bg-surface-low transition-all">
+                <span class="material-icons-outlined text-xl">people</span>
+                <span>Kunden</span>
+            </button>
+            <button @click="view = 'auftraege'" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg text-on-surface/60 hover:bg-surface-low transition-all">
+                <span class="material-icons-outlined text-xl">assignment</span>
+                <span>Auftragsverwaltung</span>
+            </button>
+            <button @click="view = 'abgeschlossen'" :class="view === 'abgeschlossen' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg text-on-surface/60 hover:bg-surface-low transition-all">
+                <span class="material-icons-outlined text-xl">check_circle</span>
+                <span>Abgeschlossen</span>
+            </button>
+        </nav>
+
+        <div class="pt-12 border-t border-surface-low px-4">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-primary-container/40 flex items-center justify-center">
+                    <span class="material-icons-outlined text-primary text-xl">person</span>
+                </div>
+                <div class="overflow-hidden">
+                    <div class="text-sm font-bold truncate">Stefanie Ruf</div>
+                    <div class="text-[10px] uppercase tracking-widest text-on-surface/40">Inhaberin</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 h-full overflow-y-auto px-16 py-16 no-scrollbar">
+        
+        <!-- Dashboard View -->
+        <template x-if="view === 'dashboard'">
+            <div x-cloak>
+                <header class="mb-24">
+                    <h1 class="font-headline text-5xl mb-4 text-primary">Übersicht</h1>
+                    <p class="text-on-surface/60 text-lg max-w-2xl leading-relaxed">Verwalte deine Kunden und begleite deine Projekte.</p>
+                </header>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                    <div @click="view = 'kunden'" class="bg-surface-lowest p-12 rounded-3xl border border-surface-low shadow-sm cursor-pointer hover:shadow-soft transition-all">
+                        <span class="text-[10px] font-bold tracking-widest uppercase text-primary mb-4 block">Kunden</span>
+                        <div class="text-5xl font-headline mb-2" x-text="kunden.length">0</div>
+                        <p class="text-on-surface/40 text-xs">Registrierte Personen</p>
+                    </div>
+                    <div @click="view = 'auftraege'" class="bg-surface-lowest p-12 rounded-3xl border border-surface-low shadow-sm cursor-pointer hover:shadow-soft transition-all">
+                        <span class="text-[10px] font-bold tracking-widest uppercase text-primary mb-4 block">Aktive Aufträge</span>
+                        <div class="text-5xl font-headline mb-2" x-text="auftraege.filter(a => a.status !== 'Abgeschlossen').length">0</div>
+                        <p class="text-on-surface/40 text-xs">In Bearbeitung</p>
+                    </div>
+                    <div @click="view = 'abgeschlossen'" class="bg-surface-lowest p-12 rounded-3xl border border-surface-low shadow-sm cursor-pointer hover:shadow-soft transition-all">
+                        <span class="text-[10px] font-bold tracking-widest uppercase text-primary mb-4 block">Abgeschlossen</span>
+                        <div class="text-5xl font-headline mb-2" x-text="auftraege.filter(a => a.status === 'Abgeschlossen').length">0</div>
+                        <p class="text-on-surface/40 text-xs">Projektarchiv</p>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Kunden View -->
+        <template x-if="view === 'kunden'">
+            <div x-cloak>
+                <div class="secondary-button mb-12" @click="view = 'dashboard'">
+                    <span class="material-icons-outlined text-xl">west</span>
+                    <span>Zurück zum Dashboard</span>
+                </div>
+                <div class="flex justify-between items-end mb-16">
+                    <div>
+                        <h1 class="font-headline text-4xl mb-2 text-primary">Kundenverwaltung</h1>
+                        <p class="text-on-surface/60">Details bearbeiten oder neue Kontakte anlegen.</p>
+                    </div>
+                    <button @click="openNewKunde()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold hover:bg-primary-dim shadow-lg transition-all flex items-center gap-3">
+                        <span class="material-icons-outlined">person_add</span>
+                        Neuer Kunde
+                    </button>
+                </div>
+
+                <div class="bg-surface-lowest rounded-3xl overflow-hidden border border-surface-low shadow-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-surface-low/50 text-[10px] font-bold uppercase tracking-widest text-on-surface/40">
+                            <tr>
+                                <th class="px-12 py-8">Kunden-Nr.</th>
+                                <th class="px-12 py-8">Vorname</th>
+                                <th class="px-12 py-8">Nachname</th>
+                                <th class="px-12 py-8 text-right"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-low">
+                            <template x-for="k in kunden" :key="k.id">
+                                <tr class="hover:bg-surface-low/30 transition-all group cursor-pointer" @click="openKundeDetail(k)">
+                                    <td class="px-12 py-8 font-mono text-primary font-bold tracking-wider" x-text="formatKundeID(k.id)"></td>
+                                    <td class="px-12 py-8 text-xl" x-text="k.vorname"></td>
+                                    <td class="px-12 py-8 text-xl font-bold" x-text="k.nachname"></td>
+                                    <td class="px-12 py-8 text-right">
+                                        <div class="flex justify-end gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span class="material-icons-outlined text-primary">east</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+
+        <!-- Kunde Detail View -->
+        <template x-if="view === 'kunde_detail'">
+            <div x-cloak>
+                <div class="secondary-button mb-12" @click="view = 'kunden'">
+                    <span class="material-icons-outlined text-xl">west</span>
+                    <span>Zurück zur Kundenliste</span>
+                </div>
+
+                <div class="bg-surface-lowest p-16 rounded-[40px] border border-surface-low shadow-soft max-w-4xl">
+                    <header class="mb-12">
+                        <div class="font-mono text-primary font-bold text-lg mb-2" x-text="formatKundeID(activeKunde.id)"></div>
+                        <h1 class="font-headline text-5xl font-bold" x-text="activeKunde.vorname + ' ' + activeKunde.nachname"></h1>
+                    </header>
+
+                    <form @submit.prevent="saveKundeDetail()" class="space-y-10">
+                        <div class="grid grid-cols-2 gap-12">
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Vorname *</label>
+                                <input x-model="activeKunde.vorname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 text-lg" type="text" required>
+                            </div>
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Nachname *</label>
+                                <input x-model="activeKunde.nachname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 text-lg" type="text" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-12">
+                            <div class="col-span-2 space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Straße</label>
+                                <input x-model="activeKunde.strasse" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                            </div>
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Nr.</label>
+                                <input x-model="activeKunde.hausnummer" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-12">
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">PLZ</label>
+                                <input x-model="activeKunde.plz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                            </div>
+                            <div class="col-span-2 space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Ort</label>
+                                <input x-model="activeKunde.ort" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-12">
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">E-Mail</label>
+                                <input x-model="activeKunde.email" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="email">
+                            </div>
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Telefon</label>
+                                <input x-model="activeKunde.telefon" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Wichtige Notizen (z.B. Erreichbarkeit)</label>
+                            <textarea x-model="activeKunde.notizen" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[120px] text-lg" placeholder="Hier Notizen eingeben..."></textarea>
+                        </div>
+
+                        <div class="pt-12 flex justify-end">
+                            <button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold hover:bg-primary-dim shadow-lg transition-all">
+                                Änderungen speichern
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </template>
+
+        <!-- Aktive Aufträge View -->
+        <template x-if="view === 'auftraege'">
+            <div x-cloak>
+                <div class="secondary-button mb-12" @click="view = 'dashboard'">
+                    <span class="material-icons-outlined text-xl">west</span>
+                    <span>Zurück zum Dashboard</span>
+                </div>
+                <div class="flex justify-between items-end mb-16">
+                    <div>
+                        <h1 class="font-headline text-4xl mb-2 text-primary">Aktive Aufträge</h1>
+                        <p class="text-on-surface/60 text-lg">Projekte in Bearbeitung.</p>
+                    </div>
+                    <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold hover:bg-primary-dim shadow-lg flex items-center gap-3">
+                        <span class="material-icons-outlined">add_task</span>
+                        Neuer Auftrag
+                    </button>
+                </div>
+
+                <div class="bg-surface-lowest rounded-3xl overflow-hidden border border-surface-low shadow-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-surface-low/50 text-[10px] font-bold uppercase tracking-widest text-on-surface/40">
+                            <tr>
+                                <th class="px-12 py-8">Auftrag-Nr.</th>
+                                <th class="px-12 py-8">Kunde</th>
+                                <th class="px-12 py-8">Status</th>
+                                <th class="px-12 py-8 text-right"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-low">
+                            <template x-for="a in auftraege.filter(a => a.status !== 'Abgeschlossen')" :key="a.id">
+                                <tr class="hover:bg-surface-low/30 transition-all group cursor-pointer" @click="openAuftragDetail(a)">
+                                    <td class="px-12 py-8 font-mono text-primary font-bold tracking-wider" x-text="formatAuftragID(a.id)"></td>
+                                    <td class="px-12 py-8 text-xl font-bold" x-text="getKundeName(a.kunde_id)"></td>
+                                    <td class="px-12 py-8">
+                                        <span class="px-4 py-1.5 bg-primary-container text-primary text-[10px] font-bold uppercase tracking-widest rounded-full" x-text="a.status"></span>
+                                    </td>
+                                    <td class="px-12 py-8 text-right">
+                                        <div class="flex justify-end gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span class="material-icons-outlined text-primary">east</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+
+        <!-- Abgeschlossene Aufträge View -->
+        <template x-if="view === 'abgeschlossen'">
+            <div x-cloak>
+                <div class="secondary-button mb-12" @click="view = 'dashboard'">
+                    <span class="material-icons-outlined text-xl">west</span>
+                    <span>Zurück zum Dashboard</span>
+                </div>
+                <div class="flex justify-between items-end mb-16">
+                    <div>
+                        <h1 class="font-headline text-4xl mb-2 text-primary">Abgeschlossen</h1>
+                        <p class="text-on-surface/60 text-lg">Archivierte Projekte und Abrechnungen.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                    <template x-for="a in auftraege.filter(a => a.status === 'Abgeschlossen')" :key="a.id">
+                        <div class="bg-surface-lowest p-12 rounded-[40px] border border-surface-low group hover:shadow-soft transition-all cursor-pointer flex flex-col opacity-80 hover:opacity-100" @click="openAuftragDetail(a)">
+                            <div class="flex justify-between items-start mb-8">
+                                <span class="px-5 py-2 bg-surface-low text-on-surface/40 text-[10px] font-bold uppercase tracking-widest rounded-full">Abgeschlossen</span>
+                                <span class="font-mono text-xs text-on-surface/20" x-text="formatAuftragID(a.id)"></span>
+                            </div>
+                            <h3 class="font-headline text-3xl mb-4" x-text="getKundeName(a.kunde_id)"></h3>
+                            <p class="text-on-surface/60 text-lg mb-12 line-clamp-2 leading-relaxed" x-text="a.beschreibung || 'Keine Beschreibung hinterlegt.'"></p>
+                            
+                            <div class="mt-auto pt-8 border-t border-surface-low flex justify-between items-center text-[10px] font-bold tracking-widest uppercase text-on-surface/40">
+                                <span>Basis: <span class="text-on-surface text-sm" x-text="a.basis_pauschale + ' €'"></span></span>
+                                <span class="flex items-center gap-2">
+                                    <span class="material-icons-outlined text-sm">history_edu</span>
+                                    <span>Details ansehen</span>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Auftrag Detail View -->
+        <template x-if="view === 'auftrag_detail'">
+            <div x-cloak>
+                <div class="secondary-button mb-12" @click="view = 'auftraege'">
+                    <span class="material-icons-outlined text-xl">west</span>
+                    <span>Zurück zur Auftragsverwaltung</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+                    <!-- Linke Seite: Details & Einsätze -->
+                    <div class="lg:col-span-2 space-y-16">
+                        <header>
+                            <div class="flex items-center gap-4 mb-4">
+                                <span class="font-mono text-primary font-bold text-lg" x-text="formatAuftragID(activeAuftrag.id)"></span>
+                                <span class="text-on-surface/20">|</span>
+                                <span class="font-mono text-on-surface/40" x-text="formatKundeID(activeKundeForAuftrag.id)"></span>
+                            </div>
+                            <h1 class="font-headline text-5xl font-bold mb-6" x-text="activeKundeForAuftrag.vorname + ' ' + activeKundeForAuftrag.nachname"></h1>
+                            
+                            <div class="flex items-center gap-6">
+                                <div class="relative group">
+                                    <select x-model="activeAuftrag.status" @change="updateAuftragSync()" class="pl-6 pr-12 py-3 bg-primary-container text-primary text-xs font-bold uppercase tracking-widest rounded-full appearance-none cursor-pointer border-none focus:ring-2 focus:ring-primary/20 transition-all">
+                                        <option value="Angefragt">Angefragt</option>
+                                        <option value="Besichtigt">Besichtigt</option>
+                                        <option value="Durchfuehrung">Durchführung</option>
+                                        <option value="Abgeschlossen">Abgeschlossen</option>
+                                        <option value="Storniert">Storniert</option>
+                                    </select>
+                                    <span class="material-icons-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary text-sm pointer-events-none">expand_more</span>
+                                </div>
+                                <span class="text-on-surface/40 text-[10px] uppercase tracking-widest font-bold">Status anpassen</span>
+                            </div>
+                        </header>
+
+                        <!-- Dokumente & Rechtliches -->
+                        <section class="space-y-10">
+                            <div class="flex justify-between items-center">
+                                <h2 class="font-headline text-3xl">Dokumente & Verträge</h2>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Datenschutz -->
+                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
+                                    <div class="flex justify-between items-start">
+                                        <span class="material-icons-outlined text-primary text-3xl">gavel</span>
+                                        <template x-if="!hasDoc('DATENSCHUTZ')">
+                                            <button @click="openSignaturePad('DATENSCHUTZ')" class="text-[10px] font-bold uppercase tracking-widest bg-primary text-white px-4 py-2 rounded-full hover:bg-primary-dim transition-all">Unterschreiben</button>
+                                        </template>
+                                        <template x-if="hasDoc('DATENSCHUTZ')">
+                                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1"><span class="material-icons-outlined text-sm">check_circle</span> Erledigt</span>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg">Datenschutzvereinbarung</h4>
+                                        <p class="text-xs text-on-surface/40">Einwilligung zur Datenverarbeitung.</p>
+                                    </div>
+                                    <template x-if="hasDoc('DATENSCHUTZ')">
+                                        <div class="pt-4 border-t border-surface-low flex gap-2">
+                                            <template x-for="d in getDocs('DATENSCHUTZ')">
+                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Vertrag -->
+                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
+                                    <div class="flex justify-between items-start">
+                                        <span class="material-icons-outlined text-primary text-3xl">description</span>
+                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'VERTRAG'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg">Dienstleistungsvertrag</h4>
+                                        <p class="text-xs text-on-surface/40">Unterzeichneter Vertrag als PDF/Foto.</p>
+                                    </div>
+                                    <template x-if="hasDoc('VERTRAG')">
+                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
+                                            <template x-for="d in getDocs('VERTRAG')">
+                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Rahmenbedingungen -->
+                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
+                                    <div class="flex justify-between items-start">
+                                        <span class="material-icons-outlined text-primary text-3xl">fact_check</span>
+                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'RAHMENBEDINGUNGEN'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg">Rahmenbedingungen</h4>
+                                        <p class="text-xs text-on-surface/40">AGB und rechtliche Hinweise.</p>
+                                    </div>
+                                    <template x-if="hasDoc('RAHMENBEDINGUNGEN')">
+                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
+                                            <template x-for="d in getDocs('RAHMENBEDINGUNGEN')">
+                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Sonstiges -->
+                                <div class="bg-white p-8 rounded-[32px] border border-surface-low space-y-4">
+                                    <div class="flex justify-between items-start">
+                                        <span class="material-icons-outlined text-primary text-3xl">folder_open</span>
+                                        <button @click="$refs.fileInput.click(); uploadKategorie = 'SONSTIGES'" class="text-[10px] font-bold uppercase tracking-widest bg-surface-low text-primary px-4 py-2 rounded-full hover:bg-surface-dim transition-all">Upload</button>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg">Sonstige Dokumente</h4>
+                                        <p class="text-xs text-on-surface/40">Bilder, Bescheinigungen, etc.</p>
+                                    </div>
+                                    <template x-if="hasDoc('SONSTIGES')">
+                                        <div class="pt-4 border-t border-surface-low flex flex-col gap-1">
+                                            <template x-for="d in getDocs('SONSTIGES')">
+                                                <a :href="'/' + d.dateipfad" target="_blank" class="text-[10px] text-primary underline truncate" x-text="d.dateiname"></a>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden File Input -->
+                            <input type="file" x-ref="fileInput" class="hidden" @change="handleFileUpload($event)">
+                        </section>
+
+                        <!-- Tätigkeitsdokumentation -->
+                        <section class="space-y-10">
+                            <div class="flex justify-between items-center border-b border-surface-low pb-6">
+                                <div class="flex gap-12">
+                                    <button @click="einsatzTypView = 'ARBEIT'" :class="einsatzTypView === 'ARBEIT' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Arbeitsstunden</button>
+                                    <button @click="einsatzTypView = 'FAHRT'" :class="einsatzTypView === 'FAHRT' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Fahrten</button>
+                                    <button @click="einsatzTypView = 'RECHNUNG'" :class="einsatzTypView === 'RECHNUNG' ? 'text-primary border-b-2 border-primary pb-6 -mb-6 font-bold' : 'text-on-surface/40 pb-6 -mb-6'" class="font-headline text-3xl transition-all">Rechnungen</button>
+                                </div>
+                                <button x-show="activeAuftrag.status !== 'Abgeschlossen' && einsatzTypView !== 'RECHNUNG'" @click="openEinsatzForm = true; newEinsatz.typ = einsatzTypView" class="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary-dim shadow-md transition-all">
+                                    <span class="material-icons-outlined text-lg">add</span>
+                                    <span x-text="einsatzTypView === 'ARBEIT' ? 'Stunden erfassen' : 'Fahrt erfassen'"></span>
+                                </button>
+                            </div>
+
+                            <!-- Inline Form für neuen Einsatz -->
+                            <div x-show="openEinsatzForm" x-transition class="bg-white p-10 rounded-[32px] border border-surface-low shadow-sm space-y-8">
+                                <div class="grid grid-cols-2 gap-8">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Datum</label>
+                                        <input x-model="newEinsatz.datum" type="date" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1" x-text="newEinsatz.typ === 'ARBEIT' ? 'Stunden' : 'Kilometer'"></label>
+                                        <input x-model.number="newEinsatz.typ === 'ARBEIT' ? newEinsatz.stunden : newEinsatz.kilometer" type="number" step="0.25" class="w-full bg-surface-low border-none rounded-xl px-6 py-4">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface/40 px-1">Notiz / Ziel</label>
+                                    <textarea x-model="newEinsatz.notiz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[100px]" :placeholder="newEinsatz.typ === 'ARBEIT' ? 'Was wurde erledigt?' : 'Wohin wurde gefahren?'"></textarea>
+                                </div>
+                                <div class="flex justify-end gap-4 pt-4 border-t border-surface-low">
+                                    <button @click="openEinsatzForm = false" class="text-on-surface/40 px-8 font-bold text-sm">Abbrechen</button>
+                                    <button @click="saveEinsatzInline()" class="bg-primary text-white px-10 py-4 rounded-xl font-bold shadow-md hover:bg-primary-dim transition-all">Speichern</button>
+                                </div>
+                            </div>
+
+                            <!-- Liste der Rechnungen -->
+                            <div class="space-y-6" x-show="einsatzTypView === 'RECHNUNG'">
+                                <template x-for="r in activeAuftrag.rechnungen.sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="r.id">
+                                    <div class="bg-white p-8 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
+                                        <div class="space-y-1">
+                                            <div class="font-bold text-lg text-primary" x-text="r.rechnungs_nummer"></div>
+                                            <div class="text-on-surface/40 text-xs" x-text="formatDate(r.datum)"></div>
+                                        </div>
+                                        <div class="flex gap-12 items-center pl-12 border-l border-surface-low">
+                                            <div class="text-right">
+                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1">Betrag</div>
+                                                <div class="font-headline text-2xl font-bold text-primary" x-text="r.gesamt_brutto.toFixed(2) + ' €'"></div>
+                                            </div>
+                                            <a :href="'/' + r.pdf_pfad" target="_blank" class="bg-surface-low p-4 rounded-xl text-primary hover:bg-primary hover:text-white transition-all">
+                                                <span class="material-icons-outlined">download</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="activeAuftrag.rechnungen.length === 0">
+                                    <div class="text-center py-20 bg-surface-low/30 rounded-[40px] border border-dashed border-on-surface/10 text-on-surface/30 italic">Noch keine Rechnungen für diesen Auftrag erstellt.</div>
+                                </template>
+                            </div>
+
+                            <!-- Liste der Einsätze -->
+                            <div class="space-y-6" x-show="einsatzTypView !== 'RECHNUNG'">
+                                <template x-for="e in activeEinsaetze.filter(e => e.typ === einsatzTypView).sort((a,b) => new Date(b.datum) - new Date(a.datum))" :key="e.id">
+                                    <div class="bg-white p-8 rounded-[24px] border border-surface-low flex justify-between items-center group transition-all">
+                                        <div class="space-y-1">
+                                            <div class="font-bold text-lg text-primary" x-text="formatDate(e.datum)"></div>
+                                            <div class="text-on-surface/60 leading-relaxed" x-text="e.notiz || 'Keine Notiz'"></div>
+                                        </div>
+                                        <div class="flex gap-12 items-center pl-12 border-l border-surface-low min-w-[120px] justify-center">
+                                            <div class="text-center">
+                                                <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-1" x-text="e.typ === 'ARBEIT' ? 'Std.' : 'KM'"></div>
+                                                <div class="font-headline text-3xl font-bold text-primary" x-text="e.typ === 'ARBEIT' ? e.stunden : e.kilometer"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Rechte Seite: Zusammenfassung & Rechnung -->
+                    <div class="space-y-8">
+                        <div class="bg-primary-container p-12 rounded-[40px] space-y-10 shadow-sm">
+                            <h3 class="font-headline text-2xl font-bold">Status & Abrechnung</h3>
+                            
+                            <div class="space-y-6">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-primary/60 text-[10px] font-bold uppercase tracking-widest">Gesamtstunden</span>
+                                    <span class="font-headline text-3xl font-bold text-primary" x-text="totalStunden()"></span>
+                                </div>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-primary/60 text-[10px] font-bold uppercase tracking-widest">Kilometer</span>
+                                    <span class="font-headline text-3xl text-primary" x-text="totalKM()"></span>
+                                </div>
+                                <div class="pt-6 border-t border-primary-dim/10 space-y-4">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Basis-Pauschale (€)</label>
+                                        <input x-model.number="activeAuftrag.basis_pauschale" @blur="updateAuftragSync()" class="w-full bg-white/40 border-none rounded-xl px-4 py-3 font-bold text-primary" type="number" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button @click="createInvoice()" class="w-full bg-primary text-white py-6 rounded-[24px] font-bold text-lg flex items-center justify-center gap-3 hover:bg-primary-dim shadow-xl transition-all">
+                                <span class="material-icons-outlined">receipt_long</span>
+                                Rechnung erstellen
+                            </button>
+                        </div>
+
+                        <div class="bg-surface-lowest p-12 rounded-[40px] border border-surface-low space-y-6">
+                            <h3 class="font-headline text-xl font-bold">Projektnotizen</h3>
+                            <textarea x-model="activeAuftrag.notizen" @blur="updateAuftragSync()" class="w-full bg-surface-low border-none rounded-2xl px-6 py-5 min-h-[200px] text-sm leading-relaxed" placeholder="Besonderheiten zum Auftrag..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+    </main>
+
+    <!-- Modal für NEUEN Kunden -->
+    <div x-show="newKundeModal" class="fixed inset-0 z-[60] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-surface-lowest w-full max-w-2xl rounded-[40px] p-12 relative shadow-soft overflow-y-auto max-h-[90vh] no-scrollbar">
+            <button @click="newKundeModal = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-on-surface"><span class="material-icons-outlined text-3xl">close</span></button>
+            <h2 class="font-headline text-4xl mb-10">Neuer Kunde</h2>
+            <form @submit.prevent="createNewKunde()" class="space-y-8">
+                <div class="grid grid-cols-2 gap-8">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Vorname *</label>
+                        <input x-model="newKundeData.vorname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Nachname *</label>
+                        <input x-model="newKundeData.nachname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="col-span-2 space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Straße</label>
+                        <input x-model="newKundeData.strasse" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Nr.</label>
+                        <input x-model="newKundeData.hausnummer" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">PLZ</label>
+                        <input x-model="newKundeData.plz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                    </div>
+                    <div class="col-span-2 space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Ort</label>
+                        <input x-model="newKundeData.ort" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">E-Mail</label>
+                        <input x-model="newKundeData.email" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="email">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Telefon</label>
+                        <input x-model="newKundeData.telefon" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" type="text">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Notizen</label>
+                    <textarea x-model="newKundeData.notizen" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 min-h-[100px]" placeholder="Optionale Notizen zum Kunden..."></textarea>
+                </div>
+
+                <div class="pt-8 flex justify-end">
+                    <button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Kunden anlegen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VEREINFACHTE Auftragserstellung (Nur Kunde auswählen) -->
+    <div x-show="newAuftragModal" class="fixed inset-0 z-[60] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-surface-lowest w-full max-w-2xl rounded-[40px] p-20 relative shadow-soft">
+            <button @click="newAuftragModal = false" class="absolute top-10 right-10 text-on-surface/20 hover:text-on-surface"><span class="material-icons-outlined text-3xl">close</span></button>
+            <h2 class="font-headline text-4xl mb-12">Neues Projekt starten</h2>
+            <form @submit.prevent="createNewAuftrag()" class="space-y-10">
+                <div class="space-y-3">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Kunden auswählen</label>
+                    <select x-model.number="newAuftragKundeID" class="w-full bg-surface-low border-none rounded-xl px-6 py-4 appearance-none" required>
+                        <option value="">-- Bitte wählen --</option>
+                        <template x-for="k in kunden" :key="k.id">
+                            <option :value="k.id" x-text="k.vorname + ' ' + k.nachname + ' (' + formatKundeID(k.id) + ')'"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="pt-10 flex justify-end">
+                    <button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg flex items-center gap-3">
+                        Auftrag erstellen & Details befüllen
+                        <span class="material-icons-outlined">east</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal für DIGITALE UNTERSCHRIFT (Datenschutz) -->
+    <div x-show="showSignaturePad" class="fixed inset-0 z-[70] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-surface-lowest w-full max-w-3xl rounded-[40px] p-12 relative shadow-soft flex flex-col max-h-[90vh]">
+            <button @click="showSignaturePad = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-on-surface"><span class="material-icons-outlined text-3xl">close</span></button>
+            
+            <h2 class="font-headline text-3xl mb-6">Datenschutzvereinbarung unterzeichnen</h2>
+            
+            <div class="flex-1 overflow-y-auto no-scrollbar bg-surface-low p-8 rounded-2xl mb-8 text-sm leading-relaxed text-on-surface/70">
+                <h3 class="font-bold text-lg mb-4 text-on-surface">Einwilligung zur Datenverarbeitung</h3>
+                <p class="mb-4">Ich willige hiermit ein, dass <strong>Achtsam Entrümpeln (Inh. Stefanie Ruf)</strong> meine personenbezogenen Daten (Name, Anschrift, Kontaktdaten) sowie auftragsbezogene Informationen zum Zwecke der Vertragsabwicklung, Rechnungsstellung und Dokumentation verarbeitet.</p>
+                <p class="mb-4">Die Daten werden sicher gespeichert und nicht an unbefugte Dritte weitergegeben. Fotos vom Objekt dienen ausschließlich der Dokumentation des Zustands vor und nach der Entrümpelung.</p>
+                <p class="mb-4">Diese Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden. Weitere Informationen finden Sie in der Datenschutzerklärung.</p>
+                <div class="pt-8 border-t border-on-surface/10 mt-8">
+                    <p class="font-bold">Kunde:</p>
+                    <p class="text-xl text-on-surface" x-text="activeKundeForAuftrag.vorname + ' ' + activeKundeForAuftrag.nachname"></p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <label class="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Ihre Unterschrift (bitte im Feld unterschreiben)</label>
+                <div class="bg-white border-2 border-primary/20 rounded-2xl overflow-hidden relative">
+                    <canvas x-ref="canvas" width="600" height="200" class="w-full cursor-crosshair touch-none"
+                        @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing"
+                        @touchstart="startDrawing" @touchmove="draw" @touchend="stopDrawing">
+                    </canvas>
+                    <button @click="clearSignature" class="absolute bottom-4 right-4 bg-surface-low text-on-surface/40 p-2 rounded-lg hover:bg-surface-dim transition-all">
+                        <span class="material-icons-outlined text-sm">delete</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-10 flex justify-end gap-6">
+                <button @click="showSignaturePad = false" class="text-on-surface/40 font-bold">Abbrechen</button>
+                <button @click="saveSignature()" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Unterschrift bestätigen & Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                view: 'dashboard',
+                kunden: [],
+                auftraege: [],
+                activeKunde: null,
+                activeAuftrag: null,
+                activeKundeForAuftrag: null,
+                activeEinsaetze: [],
+                activeDateien: [],
+                einsatzTypView: 'ARBEIT',
+                uploadKategorie: 'SONSTIGES',
+                showSignaturePad: false,
+                isDrawing: false,
+                lastX: 0,
+                lastY: 0,
+                openEinsatzForm: false,
+                newEinsatz: { datum: new Date().toISOString().split('T')[0], stunden: 0, kilometer: 0, notiz: '', typ: 'ARBEIT' },
+                newKundeModal: false,
+                newKundeData: { vorname: '', nachname: '' },
+                newAuftragModal: false,
+                newAuftragKundeID: null,
+                
+                init() {
+                    this.fetchKunden();
+                    this.fetchAuftraege();
+                },
+                formatKundeID(id) { return 'K' + String(id).padStart(6, '0'); },
+                formatAuftragID(id) { return 'A' + String(id).padStart(6, '0'); },
+                async fetchKunden() {
+                    const res = await fetch('/api/kunden');
+                    this.kunden = await res.json();
+                },
+                async fetchAuftraege() {
+                    const res = await fetch('/api/auftraege');
+                    this.auftraege = await res.json();
+                },
+                getKundeName(id) {
+                    const k = this.kunden.find(k => k.id === id);
+                    return k ? `${k.vorname} ${k.nachname}` : 'Unbekannter Kunde';
+                },
+                formatDate(d) {
+                    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
+                },
+                totalStunden() {
+                    const s = this.activeEinsaetze.reduce((sum, e) => sum + e.stunden, 0);
+                    return s + (s === 1 ? ' Std.' : ' Std.');
+                },
+                totalKM() {
+                    return this.activeEinsaetze.reduce((sum, e) => sum + e.kilometer, 0) + ' km';
+                },
+                openNewKunde() {
+                    this.newKundeData = { 
+                        vorname: '', 
+                        nachname: '',
+                        strasse: null,
+                        hausnummer: null,
+                        plz: null,
+                        ort: null,
+                        email: null,
+                        telefon: null,
+                        notizen: null
+                    };
+                    this.newKundeModal = true;
+                },
+                async createNewKunde() {
+                    const res = await fetch('/api/kunden', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            ...this.newKundeData, 
+                            id: 0, 
+                            auftraege: [] 
+                        })
+                    });
+                    if (res.ok) { 
+                        this.newKundeModal = false; 
+                        this.fetchKunden(); 
+                    }
+                },
+                openKundeDetail(kunde) {
+                    this.activeKunde = JSON.parse(JSON.stringify(kunde));
+                    this.view = 'kunde_detail';
+                },
+                async saveKundeDetail() {
+                    const res = await fetch(`/api/kunden/${this.activeKunde.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.activeKunde)
+                    });
+                    if (res.ok) { this.fetchKunden(); alert("Kunden-Stammdaten gespeichert."); }
+                },
+                openAuftragErstellung() {
+                    this.newAuftragKundeID = null;
+                    this.newAuftragModal = true;
+                },
+                async createNewAuftrag() {
+                    const res = await fetch('/api/auftraege', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: 0, kunde_id: this.newAuftragKundeID, status: 'Angefragt', beschreibung: '', basis_pauschale: 0, notizen: '', einsaetze: [], dateien: [], rechnungs_notizen: [] })
+                    });
+                    if (res.ok) {
+                        const newId = await res.json();
+                        await this.fetchAuftraege();
+                        const newAuftrag = this.auftraege.find(a => a.id === newId);
+                        this.newAuftragModal = false;
+                        this.openAuftragDetail(newAuftrag);
+                    }
+                },
+                async openAuftragDetail(auftrag) {
+                    this.activeAuftrag = auftrag;
+                    this.activeKundeForAuftrag = this.kunden.find(k => k.id === auftrag.kunde_id) || { vorname: 'Unbekannt', nachname: '' };
+                    await this.fetchEinsaetze(auftrag.id);
+                    await this.fetchDateien(auftrag.id);
+                    this.view = 'auftrag_detail';
+                },
+                async fetchEinsaetze(auftragId) {
+                    const res = await fetch(`/api/auftraege/${auftragId}/einsaetze`);
+                    this.activeEinsaetze = await res.json();
+                },
+                async fetchDateien(auftragId) {
+                    const res = await fetch(`/api/auftraege/${auftragId}/dateien`);
+                    this.activeDateien = await res.json();
+                },
+                hasDoc(kat) { return this.activeDateien.some(d => d.kategorie === kat); },
+                getDocs(kat) { return this.activeDateien.filter(d => d.kategorie === kat); },
+                
+                async handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('kategorie', this.uploadKategorie);
+                    
+                    const res = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (res.ok) {
+                        this.fetchDateien(this.activeAuftrag.id);
+                        alert("Datei erfolgreich hochgeladen.");
+                    }
+                },
+                
+                openSignaturePad() {
+                    this.showSignaturePad = true;
+                    this.$nextTick(() => {
+                        this.clearSignature();
+                    });
+                },
+                getCanvasContext() {
+                    const canvas = this.$refs.canvas;
+                    const ctx = canvas.getContext('2d');
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = '#31332c';
+                    return ctx;
+                },
+                startDrawing(e) {
+                    this.isDrawing = true;
+                    const pos = this.getEventPos(e);
+                    this.lastX = pos.x;
+                    this.lastY = pos.y;
+                },
+                draw(e) {
+                    if (!this.isDrawing) return;
+                    e.preventDefault();
+                    const ctx = this.getCanvasContext();
+                    const pos = this.getEventPos(e);
+                    ctx.beginPath();
+                    ctx.moveTo(this.lastX, this.lastY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    this.lastX = pos.x;
+                    this.lastY = pos.y;
+                },
+                stopDrawing() { this.isDrawing = false; },
+                getEventPos(e) {
+                    const canvas = this.$refs.canvas;
+                    const rect = canvas.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    return {
+                        x: (clientX - rect.left) * (canvas.width / rect.width),
+                        y: (clientY - rect.top) * (canvas.height / rect.height)
+                    };
+                },
+                clearSignature() {
+                    const canvas = this.$refs.canvas;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                },
+                async saveSignature() {
+                    const canvas = this.$refs.canvas;
+                    const dataUrl = canvas.toDataURL('image/png');
+                    
+                    // Convert DataURL to Blob
+                    const res_blob = await fetch(dataUrl);
+                    const blob = await res_blob.blob();
+                    const file = new File([blob], "unterschrift.png", { type: "image/png" });
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('kategorie', 'DATENSCHUTZ');
+                    
+                    const res = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (res.ok) {
+                        this.showSignaturePad = false;
+                        this.fetchDateien(this.activeAuftrag.id);
+                        alert("Datenschutzvereinbarung wurde digital unterzeichnet und gespeichert.");
+                    }
+                },
+                async saveEinsatzInline() {
+                    const payload = { ...this.newEinsatz, id: 0, auftrag_id: this.activeAuftrag.id };
+                    const res = await fetch('/api/einsaetze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        this.openEinsatzForm = false;
+                        this.newEinsatz = { datum: new Date().toISOString().split('T')[0], stunden: 0, kilometer: 0, notiz: '', typ: this.einsatzTypView };
+                        this.fetchEinsaetze(this.activeAuftrag.id);
+                    }
+                },
+                async updateAuftragSync() {
+                    await fetch(`/api/auftraege/${this.activeAuftrag.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.activeAuftrag)
+                    });
+                    this.fetchAuftraege();
+                },
+                async createInvoice() {
+                    if (!confirm("Möchten Sie jetzt eine offizielle Rechnung für diesen Auftrag generieren?")) return;
+                    
+                    const res = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, {
+                        method: 'POST'
+                    });
+                    
+                    if (res.ok) {
+                        const newId = await res.json();
+                        alert("Rechnung wurde erfolgreich generiert.");
+                        await this.fetchAuftraege(); // Gesamte Liste laden
+                        // Aktiven Auftrag aktualisieren
+                        const updated = this.auftraege.find(a => a.id === this.activeAuftrag.id);
+                        if (updated) {
+                            this.activeAuftrag = updated;
+                            this.einsatzTypView = 'RECHNUNG'; // Tab wechseln
+                        }
+                    } else {
+                        const err = await res.text();
+                        alert("Fehler bei der Rechnungserstellung: " + err);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

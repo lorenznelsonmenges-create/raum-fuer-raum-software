@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 pub enum AuftragStatus {
     Angefragt,
     Besichtigt,
-    AngebotErstellt,
     Durchfuehrung,
     Abgeschlossen,
     Storniert,
@@ -15,13 +14,13 @@ pub struct Kunde {
     pub id: i64,
     pub vorname: String,
     pub nachname: String,
-    pub strasse: String,
-    pub hausnummer: String,
-    pub plz: String,
-    pub stadt: String,
-    pub email: String,
-    pub telefon: String,
-    pub notizen: String,
+    pub strasse: Option<String>,
+    pub hausnummer: Option<String>,
+    pub plz: Option<String>,
+    pub ort: Option<String>,
+    pub email: Option<String>,
+    pub telefon: Option<String>,
+    pub notizen: Option<String>,
     pub auftraege: Vec<Auftrag>,
 }
 
@@ -36,7 +35,8 @@ pub struct Auftrag {
     pub notizen: String,             // Interne Notizen
     pub einsaetze: Vec<Einsatz>,
     pub dateien: Vec<Datei>,
-    pub rechnungs_notizen: Vec<RechnungsNotiz>, // Neu: Notizen für die Rechnung
+    pub rechnungen: Vec<Rechnung>,   // Liste der Rechnungen
+    pub rechnungs_notizen: Vec<RechnungsNotiz>, // Notizen für die Rechnung
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +44,7 @@ pub struct RechnungsNotiz {
     pub id: i64,
     pub auftrag_id: i64,
     pub text: String,
-    pub auf_rechnung: bool, // Der "Haken" für die Rechnung
+    pub auf_rechnung: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +55,7 @@ pub struct Einsatz {
     pub kilometer: f64,
     pub stunden: f64,
     pub notiz: String,
+    pub typ: String, // ARBEIT, FAHRT
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +66,19 @@ pub struct Datei {
     pub dateipfad: String,
     pub dateityp: String,
     pub hochgeladen_am: String,
+    pub kategorie: String, // DATENSCHUTZ, VERTRAG, RAHMENBEDINGUNGEN, SONSTIGES, RECHNUNG
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Rechnung {
+    pub id: i64,
+    pub auftrag_id: i64,
+    pub rechnungs_nummer: String,
+    pub datum: String,
+    pub gesamt_netto: f64,
+    pub gesamt_brutto: f64,
+    pub pdf_pfad: String,
+    pub status: String, // OFFEN, BEZAHLT, STORNIERT
 }
 
 impl Kunde {
@@ -73,13 +87,13 @@ impl Kunde {
             id,
             vorname,
             nachname,
-            strasse: String::new(),
-            hausnummer: String::new(),
-            plz: String::new(),
-            stadt: String::new(),
-            email: String::new(),
-            telefon: String::new(),
-            notizen: String::new(),
+            strasse: None,
+            hausnummer: None,
+            plz: None,
+            ort: None,
+            email: None,
+            telefon: None,
+            notizen: None,
             auftraege: Vec::new(),
         }
     }
@@ -97,6 +111,7 @@ impl Auftrag {
             notizen: String::new(),
             einsaetze: Vec::new(),
             dateien: Vec::new(),
+            rechnungen: Vec::new(),
             rechnungs_notizen: Vec::new(),
         }
     }

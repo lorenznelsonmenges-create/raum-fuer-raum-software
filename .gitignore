@@ -1,7 +1,20 @@
+# Build-Artefakte
 /target
-/achtsam.db
-/achtsam.db-shm
-/achtsam.db-wal
+/target/
+
+# Datenbank
+achtsam.db*
+
+# Uploads
+/uploads/
+
+# Umgebungsvariablen
 .env
+
+# System & Editoren
 .DS_Store
 *.log
+.vscode/
+.idea/
+*.swp
+*.bak
