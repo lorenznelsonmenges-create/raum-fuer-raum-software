@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --surface: #fbf9f3;
+            --surface-low: #f5f4ec;
+            --primary: #526447;
+            --on-surface: #31332c;
+        }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body {
+            background-color: var(--surface);
+            color: var(--on-surface);
+            font-family: 'Manrope', sans-serif;
+            margin: 0; padding: 0;
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 40mm 30mm;
+            background: var(--surface);
+        }
+        h1 {
+            font-family: 'Noto Serif', serif;
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 15mm;
+        }
+        .legal-box {
+            background: #ffffff;
+            padding: 40pt;
+            border-radius: 20pt;
+            box-shadow: 0 10px 30px rgba(49, 51, 44, 0.03);
+            margin-bottom: 20mm;
+        }
+        .signature-box {
+            margin-top: 40mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40pt;
+        }
+        .sig-container {
+            border-top: 1px solid var(--on-surface);
+            padding-top: 10pt;
+        }
+        .sig-placeholder {
+            height: 60pt;
+            margin-bottom: 10pt;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sig-image {
+            max-height: 60pt;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <h1>Datenschutz</h1>
+        
+        <div class="legal-box">
+            <p>Ich willige hiermit ein, dass <strong>Achtsam Entrümpeln (Inh. Stefanie Ruf)</strong> meine personenbezogenen Daten (Name, Anschrift, Kontaktdaten) sowie auftragsbezogene Informationen zum Zwecke der Vertragsabwicklung, Rechnungsstellung und Dokumentation verarbeitet.</p>
+            <p>Die Daten werden sicher gespeichert und nicht an unbefugte Dritte weitergegeben. Ich wurde darüber informiert, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen kann.</p>
+        </div>
+
+        <div class="signature-box">
+            <div class="sig-container">
+                <span style="font-size: 8pt; text-transform: uppercase; opacity: 0.4">Datum</span>
+                <div style="font-weight: 600; margin-top: 10pt">{{datum_heute}}</div>
+            </div>
+            <div class="sig-container">
+                <span style="font-size: 8pt; text-transform: uppercase; opacity: 0.4">Digitale Unterschrift</span>
+                <div class="sig-placeholder">
+                    {{#if signatur_pfad}}
+                        <img src="file:///{{signatur_pfad}}" class="sig-image">
+                    {{/if}}
+                </div>
+                <div style="font-weight: 600">{{kunde_name}}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

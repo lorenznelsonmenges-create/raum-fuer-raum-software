@@ -1,159 +1,106 @@
-use typst_as_lib::TypstTemplate;
-use typst::eval::Tracer;
-use typst::foundations::Smart;
-use typst_pdf;
+use handlebars::Handlebars;
+use serde_json::json;
+use headless_chrome::{Browser, LaunchOptions};
 use crate::models::{Auftrag, Kunde, Einsatz, RechnungsNotiz};
 use chrono::Local;
+use std::fs;
 
-pub fn generate_invoice_pdf(
+use base64::{Engine as _, engine::general_purpose};
+
+pub fn generate_dynamic_pdf(
+    template_path: &str,
     auftrag: &Auftrag,
     kunde: &Kunde,
-    einsaetze: &[Einsatz],
-    notizen: &[RechnungsNotiz],
-    rechnungs_nummer: &str,
+    einsaetze: Option<&[Einsatz]>,
+    _notizen: Option<&[RechnungsNotiz]>,
+    rechnungs_nummer: Option<&str>,
+    signature_path: Option<&str>,
 ) -> Result<Vec<u8>, String> {
-    let datum = Local::now().format("%d.%m.%Y").to_string();
-    
-    // Berechnungen
-    let mut gesamt_stunden = 0.0;
-    let mut gesamt_km = 0.0;
-    for e in einsaetze {
-        gesamt_stunden += e.stunden;
-        gesamt_km += e.kilometer;
-    }
+    let mut hb = Handlebars::new();
+    // Helper für Preisberechnung oder Bedingungen
+    hb.register_helper("eq", Box::new(|h: &handlebars::Helper, _: &Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
+        let first = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+        let second = h.param(1).and_then(|v| v.value().as_str()).unwrap_or("");
+        if first == second {
+            out.write("true")?;
+        }
+        Ok(())
+    }));
 
-    // Preise (Platzhalter - sollten konfigurierbar sein)
-    let stundensatz = 45.0; // Beispiel
-    let km_satz = 0.50;    // Beispiel
+    let template_content = fs::read_to_string(template_path)
+        .map_err(|e| format!("Konnte Vorlage nicht lesen: {}", e))?;
+
+    // Berechnungen für Rechnung (falls vorhanden)
+    let mut gesamt_netto = 0.0;
+    let mut einsaetze_data = Vec::new();
+    
+    if let Some(ee) = einsaetze {
+        for e in ee {
+            let einzelpreis = if e.typ == "ARBEIT" { auftrag.stundensatz } else { auftrag.kilometer_satz };
+            let summe = if e.typ == "ARBEIT" { e.stunden * einzelpreis } else { e.kilometer * einzelpreis };
+            gesamt_netto += summe;
+            einsaetze_data.push(json!({
+                "datum": e.datum,
+                "typ": e.typ,
+                "stunden": e.stunden,
+                "kilometer": e.kilometer,
+                "notiz": e.notiz,
+                "zeilen_summe": format!("{:.2}", summe)
+            }));
+        }
+    }
+    
     let basis = auftrag.basis_pauschale.unwrap_or(0.0);
+    let netto_total = gesamt_netto + basis;
+    let mwst = netto_total * 0.19;
+    let brutto_total = netto_total + mwst;
+
+    let data = json!({
+        "kunde_name": format!("{} {}", kunde.vorname, kunde.nachname),
+        "kunde_vorname": kunde.vorname,
+        "kunde_nachname": kunde.nachname,
+        "kunde_strasse": kunde.strasse.clone().unwrap_or_default(),
+        "kunde_hausnummer": kunde.hausnummer.clone().unwrap_or_default(),
+        "kunde_plz": kunde.plz.clone().unwrap_or_default(),
+        "kunde_ort": kunde.ort.clone().unwrap_or_default(),
+        "kunde_id": format!("K{:06}", kunde.id),
+        "auftrag_id": format!("A{:06}", auftrag.id),
+        "auftrag_beschreibung": auftrag.beschreibung,
+        "datum_heute": Local::now().format("%d.%m.%Y").to_string(),
+        "basis_pauschale": format!("{:.2}", basis),
+        "rechnungs_nummer": rechnungs_nummer.unwrap_or(""),
+        "einsaetze": einsaetze_data,
+        "gesamt_netto": format!("{:.2}", netto_total),
+        "mwst": format!("{:.2}", mwst),
+        "gesamt_brutto": format!("{:.2}", brutto_total),
+        "signatur_pfad": signature_path.unwrap_or("")
+    });
+
+    let html = hb.render_template(&template_content, &data)
+        .map_err(|e| format!("Fehler beim Render der Vorlage: {}", e))?;
+
+    // PDF Generierung via Headless Chrome
+    print_html_to_pdf(html)
+}
+
+fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {
+    let options = LaunchOptions::default_builder()
+        .headless(true)
+        .build()
+        .map_err(|e| e.to_string())?;
     
-    let netto_stunden = gesamt_stunden * stundensatz;
-    let netto_km = gesamt_km * km_satz;
-    let netto_gesamt = netto_stunden + netto_km + basis;
-    let mwst = netto_gesamt * 0.19;
-    let brutto_gesamt = netto_gesamt + mwst;
+    let browser = Browser::new(options).map_err(|e| e.to_string())?;
+    let tab = browser.new_tab().map_err(|e| e.to_string())?;
 
-    // Typst Template
-    let template_str = r#"
-#set page(paper: "a4", margin: (x: 2cm, y: 2cm))
-#set text(font: "DejaVu Sans", size: 10pt)
+    // Wir laden das HTML direkt als Data-URL
+    let b64_html = general_purpose::STANDARD.encode(html);
+    let data_url = format!("data:text/html;base64,{}", b64_html);
+    
+    tab.navigate_to(&data_url).map_err(|e| e.to_string())?;
+    tab.wait_until_navigated().map_err(|e| e.to_string())?;
 
-#grid(
-  columns: (1fr, 1fr),
-  [
-    #set text(size: 14pt, weight: "bold")
-    Achtsam Entrümpeln \
-    #set text(size: 10pt, weight: "regular")
-    Stefanie Ruf \
-    Musterstraße 1 \
-    12345 Musterstadt \
-    \
-    Steuernummer: 123/456/78901
-  ],
-  [
-    #align(right)[
-      #image("static/logo.svg", width: 40pt)
-    ]
-  ]
-)
+    let pdf_options = None; // Default A4
+    let pdf_data = tab.print_to_pdf(pdf_options).map_err(|e| e.to_string())?;
 
-#v(2cm)
-
-#grid(
-  columns: (1fr),
-  [
-    *Rechnungsempfänger:* \
-    {{KUNDE_NAME}} \
-    {{KUNDE_STRASSE}} {{KUNDE_NR}} \
-    {{KUNDE_PLZ}} {{KUNDE_ORT}}
-  ]
-)
-
-#v(1cm)
-
-#grid(
-  columns: (1fr, 1fr),
-  [
-    *Rechnungsnummer:* {{RE_NR}}
-  ],
-  [
-    #align(right)[
-      *Datum:* {{DATUM}}
-    ]
-  ]
-)
-
-#v(1cm)
-
-#table(
-  columns: (1fr, 100pt, 80pt, 80pt),
-  inset: 8pt,
-  align: (left, right, right, right),
-  [*Leistung*], [*Menge*], [*Einzelpreis*], [*Gesamt*],
-  {{POSTEN}}
-)
-
-#v(0.5cm)
-
-#align(right)[
-  #grid(
-    columns: (100pt, 80pt),
-    row-gutter: 8pt,
-    [Netto Gesamt:], [{{NETTO}} €],
-    [USt. 19%:], [{{MWST}} €],
-    [*Brutto Gesamt:*], [*{{BRUTTO}} €*]
-  )
-]
-
-#v(1cm)
-#line(length: 100%, stroke: 0.5pt + gray)
-#v(0.5cm)
-
-*Hinweise:* \
-{{NOTIZEN}}
-\
-Das Leistungsdatum entspricht dem Rechnungsdatum, sofern nicht anders angegeben.
-Bitte überweisen Sie den Betrag innerhalb von 14 Tagen auf das unten stehende Konto.
-"#;
-
-    // Platzhalter ersetzen
-    let mut posten = String::new();
-    if basis > 0.0 {
-        posten.push_str(&format!("[Basis-Pauschale], [1], [{:.2} €], [{:.2} €],\n", basis, basis));
-    }
-    if gesamt_stunden > 0.0 {
-        posten.push_str(&format!("[Arbeitszeit (Stunden)], [{:.2}], [{:.2} €], [{:.2} €],\n", gesamt_stunden, stundensatz, netto_stunden));
-    }
-    if gesamt_km > 0.0 {
-        posten.push_str(&format!("[Fahrtkosten (Kilometer)], [{:.2}], [{:.2} €], [{:.2} €],\n", gesamt_km, km_satz, netto_km));
-    }
-
-    let rechnungs_notizen = notizen.iter()
-        .filter(|n| n.auf_rechnung)
-        .map(|n| format!("- {}", n.text))
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let filled_template = template_str
-        .replace("{{KUNDE_NAME}}", &format!("{} {}", kunde.vorname, kunde.nachname))
-        .replace("{{KUNDE_STRASSE}}", &kunde.strasse.clone().unwrap_or_default())
-        .replace("{{KUNDE_NR}}", &kunde.hausnummer.clone().unwrap_or_default())
-        .replace("{{KUNDE_PLZ}}", &kunde.plz.clone().unwrap_or_default())
-        .replace("{{KUNDE_ORT}}", &kunde.ort.clone().unwrap_or_default())
-        .replace("{{RE_NR}}", rechnungs_nummer)
-        .replace("{{DATUM}}", &datum)
-        .replace("{{POSTEN}}", &posten)
-        .replace("{{NETTO}}", &format!("{:.2}", netto_gesamt))
-        .replace("{{MWST}}", &format!("{:.2}", mwst))
-        .replace("{{BRUTTO}}", &format!("{:.2}", brutto_gesamt))
-        .replace("{{NOTIZEN}}", if rechnungs_notizen.is_empty() { "Keine besonderen Hinweise." } else { &rechnungs_notizen });
-
-    // Typst Compiler aufrufen
-    let mut tracer = Tracer::new();
-    let template = TypstTemplate::new(vec![], filled_template);
-    let doc = template.compile(&mut tracer)
-        .map_err(|e| format!("Fehler bei PDF-Generierung: {:?}", e))?;
-    let pdf = typst_pdf::pdf(&doc, Smart::Auto, None);
-
-    Ok(pdf)
+    Ok(pdf_data)
 }

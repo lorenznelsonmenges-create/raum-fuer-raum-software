@@ -1,32 +1,27 @@
-use axum::response::{IntoResponse, Response};
-use axum::http::StatusCode;
-use axum::Json;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 use serde_json::json;
-use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum AppError {
-    #[error("Datenbankfehler: {0}")]
-    Database(#[from] sqlx::Error),
-    
-    #[error("Nicht gefunden")]
+    Sqlx(sqlx::Error),
+    Internal(String),
+    PdfError(String),
     NotFound,
-    
-    #[error("Ungültige Anfrage: {0}")]
     BadRequest(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::Database(ref e) => {
-                // Intern loggen wir den echten Fehler
-                eprintln!("Interner Datenbankfehler: {:?}", e);
-                // Dem Client senden wir eine neutrale Meldung
-                (StatusCode::INTERNAL_SERVER_ERROR, "Ein interner Datenbankfehler ist aufgetreten.".to_string())
-            }
-            AppError::NotFound => (StatusCode::NOT_FOUND, "Die angeforderte Ressource wurde nicht gefunden.".to_string()),
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::Sqlx(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            AppError::Internal(s) => (StatusCode::INTERNAL_SERVER_ERROR, s),
+            AppError::PdfError(s) => (StatusCode::INTERNAL_SERVER_ERROR, s),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Ressource nicht gefunden".to_string()),
+            AppError::BadRequest(s) => (StatusCode::BAD_REQUEST, s),
         };
 
         let body = Json(json!({
@@ -34,5 +29,11 @@ impl IntoResponse for AppError {
         }));
 
         (status, body).into_response()
+    }
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(err: sqlx::Error) -> Self {
+        AppError::Sqlx(err)
     }
 }

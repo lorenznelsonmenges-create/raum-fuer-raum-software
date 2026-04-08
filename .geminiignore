@@ -1,5 +1,10 @@
 target/
 uploads/
+Cargo.lock
+achtsam.db*
+*.log
+server_*.txt
+Dokumentation/
+.env
 .git/
-achtsam.db
-target/
+.DS_Store

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --surface: #fbf9f3;
+            --surface-low: #f5f4ec;
+            --surface-lowest: #ffffff;
+            --primary: #526447;
+            --primary-container: #d4e9c4;
+            --on-surface: #31332c;
+            --outline-variant: rgba(178, 179, 169, 0.15);
+        }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body {
+            background-color: var(--surface);
+            color: var(--on-surface);
+            font-family: 'Manrope', sans-serif;
+            margin: 0; padding: 0;
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 40mm 30mm;
+            background: var(--surface);
+            position: relative;
+        }
+        h1 {
+            font-family: 'Noto Serif', serif;
+            color: var(--primary);
+            font-size: 3.5rem;
+            margin-bottom: 20mm;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+        h2 {
+            font-family: 'Noto Serif', serif;
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-top: 30pt;
+            margin-bottom: 15pt;
+        }
+        .label-md {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(49, 51, 44, 0.4);
+            margin-bottom: 10pt;
+            display: block;
+        }
+        .party-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40pt;
+            margin-bottom: 30mm;
+        }
+        .party-card {
+            background: var(--surface-low);
+            padding: 30pt;
+            border-radius: 15pt;
+        }
+        .content-section {
+            margin-bottom: 25pt;
+            padding-left: 20pt;
+            border-left: 2px solid var(--primary-container);
+        }
+        .atemzug {
+            margin: 40mm 0;
+            padding: 40pt;
+            background: var(--surface-lowest);
+            border-radius: 20pt;
+            text-align: center;
+            font-family: 'Noto Serif', serif;
+            font-style: italic;
+            font-size: 1.2rem;
+            color: var(--primary);
+            box-shadow: 0 20px 40px rgba(49, 51, 44, 0.04);
+        }
+        .signature-area {
+            margin-top: 50mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60pt;
+        }
+        .sig-box {
+            border-top: 1px solid var(--on-surface);
+            padding-top: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header style="margin-bottom: 30mm">
+            <div style="font-family: 'Noto Serif'; font-size: 1.5rem; font-weight: 700; color: var(--primary)">Achtsam Entrümpeln.</div>
+        </header>
+
+        <h1>Rahmenvertrag</h1>
+
+        <div class="party-grid">
+            <div class="party-card">
+                <span class="label-md">Auftragnehmer</span>
+                <strong>Achtsam Entrümpeln</strong><br>
+                Stefanie Ruf<br>
+                Musterstraße 1<br>
+                12345 Musterstadt
+            </div>
+            <div class="party-card">
+                <span class="label-md">Auftraggeber</span>
+                <strong>{{kunde_name}}</strong><br>
+                {{kunde_strasse}} {{kunde_hausnummer}}<br>
+                {{kunde_plz}} {{kunde_ort}}
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2>§1 Gegenstand der Vereinbarung</h2>
+            <p>Dieser Vertrag regelt die Zusammenarbeit für das Projekt <strong>{{auftrag_id}}</strong>. Der Auftragnehmer verpflichtet sich zur achtsamen und fachgerechten Durchführung der Entrümpelungs- und Reinigungsarbeiten gemäß Absprache.</p>
+        </div>
+
+        <div class="atemzug">
+            "In der Ruhe liegt die Kraft. Wir schaffen den Raum, den Sie zum Atmen brauchen."
+        </div>
+
+        <div class="content-section">
+            <h2>§2 Vergütung</h2>
+            <p>Die Basis-Pauschale wird auf <strong>{{basis_pauschale}} €</strong> festgesetzt. Alle weiteren Leistungen werden transparent nach den im System erfassten Stunden und Kilometern abgerechnet.</p>
+        </div>
+
+        <div class="signature-area">
+            <div class="sig-box">
+                <span class="label-md">Ort, Datum</span>
+                <div style="margin-top: 40pt">Unterschrift Stefanie Ruf</div>
+            </div>
+            <div class="sig-box">
+                <span class="label-md">Ort, Datum</span>
+                <div style="margin-top: 40pt">Unterschrift {{kunde_name}}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
