@@ -67,7 +67,9 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
         id: row.get("id"), kunde_id: row.get("kunde_id"), status,
         beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
         stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
-        einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
+        einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
+        dateien: get_dateien_for_auftrag(pool, id).await?,
+        rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
         rechnungs_notizen: get_rechnungs_notizen_for_auftrag(pool, id).await?
     })
 }
@@ -88,7 +90,9 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
             id, kunde_id: row.get("kunde_id"), status,
             beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
             stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
-            einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
+            einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
+            dateien: get_dateien_for_auftrag(pool, id).await?,
+            rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
             rechnungs_notizen: get_rechnungs_notizen_for_auftrag(pool, id).await?
         });
     }

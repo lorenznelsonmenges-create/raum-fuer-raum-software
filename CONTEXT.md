@@ -5,10 +5,12 @@
 ---
 
 ## Was gerade gebaut wird
-<!-- Beispiel: PDF-Rechnungs-Workflow -->
+- Dokumenten-Feature Infrastruktur (Upload-Handler, DB-Anbindung) und Feedback implementiert.
 
 ## Bekannte offene Punkte dieser Sitzung
-<!-- Beispiel: Handler kompiliert noch nicht -->
+- PDF-Rechnungserstellung (Finalisierung des Designs).
+- Absicherung der API (Login).
 
 ## Letzte Entscheidungen
-<!-- Beispiel: PDF via headless_chrome, kein chromiumoxide -->
+- Dokumenten-Feedback erfolgt via Toast/Alert (Frontend-seitig vorbereitet).
+- PDF-Workflow ist fix: Handlebars -> HTML -> headless_chrome -> PDF.

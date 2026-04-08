@@ -1,4 +1,4 @@
-use handlebars::Handlebars;
+use handlebars::{Handlebars, Renderable};
 use serde_json::json;
 use headless_chrome::{Browser, LaunchOptions};
 use crate::models::{Auftrag, Kunde, Einsatz, RechnungNotiz};
@@ -12,20 +12,42 @@ pub fn generate_dynamic_pdf(
     auftrag: &Auftrag,
     kunde: &Kunde,
     einsaetze: Option<&[Einsatz]>,
-    _notizen: Option<&[RechnungNotiz]>,
+    notizen: Option<&[RechnungNotiz]>,
     rechnungs_nummer: Option<&str>,
     signature_path: Option<&str>,
 ) -> Result<(Vec<u8>, f64, f64), String> {
     let mut hb = Handlebars::new();
+    
     // Helper für Preisberechnung oder Bedingungen
-    hb.register_helper("eq", Box::new(|h: &handlebars::Helper, _: &Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
-        let first = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
-        let second = h.param(1).and_then(|v| v.value().as_str()).unwrap_or("");
-        if first == second {
-            out.write("true")?;
+    struct EqHelper;
+    impl handlebars::HelperDef for EqHelper {
+        fn call<'reg: 'rc, 'rc>(
+            &self,
+            h: &handlebars::Helper<'rc>,
+            r: &'reg Handlebars<'reg>,
+            ctx: &'rc handlebars::Context,
+            rc: &mut handlebars::RenderContext<'reg, 'rc>,
+            out: &mut dyn handlebars::Output,
+        ) -> handlebars::HelperResult {
+            let first = h.param(0).map(|v| v.value());
+            let second = h.param(1).map(|v| v.value());
+            let is_eq = first == second;
+
+            if is_eq {
+                if let Some(template) = h.template() {
+                    template.render(r, ctx, rc, out)
+                } else {
+                    out.write("true").map_err(handlebars::RenderError::from)?;
+                    Ok(())
+                }
+            } else if let Some(inverse) = h.inverse() {
+                inverse.render(r, ctx, rc, out)
+            } else {
+                Ok(())
+            }
         }
-        Ok(())
-    }));
+    }
+    hb.register_helper("eq", Box::new(EqHelper));
 
     let template_content = fs::read_to_string(template_path)
         .map_err(|e| format!("Konnte Vorlage nicht lesen: {}", e))?;
@@ -53,6 +75,17 @@ pub fn generate_dynamic_pdf(
             }));
         }
     }
+
+    let mut notizen_data = Vec::new();
+    if let Some(nn) = notizen {
+        for n in nn {
+            if n.auf_rechnung {
+                notizen_data.push(json!({
+                    "text": n.text
+                }));
+            }
+        }
+    }
     
     let basis = auftrag.basis_pauschale.unwrap_or(0.0);
     let netto_total = gesamt_netto_einsaetze + basis;
@@ -74,6 +107,7 @@ pub fn generate_dynamic_pdf(
         "basis_pauschale": format!("{:.2}", basis),
         "rechnungs_nummer": rechnungs_nummer.unwrap_or(""),
         "einsaetze": einsaetze_data,
+        "rechnungs_notizen": notizen_data,
         "gesamt_netto": format!("{:.2}", netto_total),
         "mwst": format!("{:.2}", mwst),
         "gesamt_brutto": format!("{:.2}", brutto_total),
@@ -91,21 +125,52 @@ pub fn generate_dynamic_pdf(
 fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {
     let options = LaunchOptions::default_builder()
         .headless(true)
+        .args(vec![
+            std::ffi::OsStr::new("--no-sandbox"),
+            std::ffi::OsStr::new("--disable-setuid-sandbox"),
+            std::ffi::OsStr::new("--disable-dev-shm-usage"),
+        ])
         .build()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let err_msg = format!("CRITICAL: Headless Chrome LaunchOptions error: {}", e);
+            eprintln!("{}", err_msg);
+            err_msg
+        })?;
     
-    let browser = Browser::new(options).map_err(|e| e.to_string())?;
-    let tab = browser.new_tab().map_err(|e| e.to_string())?;
+    let browser = Browser::new(options).map_err(|e| {
+        let err_msg = format!("CRITICAL: Headless Chrome Browser::new error: {}. Is Chrome/Chromium installed?", e);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
+
+    let tab = browser.new_tab().map_err(|e| {
+        let err_msg = format!("CRITICAL: Headless Chrome browser.new_tab error: {}", e);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
 
     // Wir laden das HTML direkt als Data-URL
     let b64_html = general_purpose::STANDARD.encode(html);
     let data_url = format!("data:text/html;base64,{}", b64_html);
     
-    tab.navigate_to(&data_url).map_err(|e| e.to_string())?;
-    tab.wait_until_navigated().map_err(|e| e.to_string())?;
+    tab.navigate_to(&data_url).map_err(|e| {
+        let err_msg = format!("CRITICAL: Headless Chrome tab.navigate_to error: {}", e);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
+
+    tab.wait_until_navigated().map_err(|e| {
+        let err_msg = format!("CRITICAL: Headless Chrome tab.wait_until_navigated error: {}", e);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
 
     let pdf_options = None; // Default A4
-    let pdf_data = tab.print_to_pdf(pdf_options).map_err(|e| e.to_string())?;
+    let pdf_data = tab.print_to_pdf(pdf_options).map_err(|e| {
+        let err_msg = format!("CRITICAL: Headless Chrome tab.print_to_pdf error: {}", e);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
 
     Ok(pdf_data)
 }
