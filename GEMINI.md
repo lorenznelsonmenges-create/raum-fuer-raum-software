@@ -73,7 +73,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `hochgeladen_am` | `String` | Zeitstempel des Uploads |
 | `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR, RECHNUNG |
 
-### RechnungNotiz
+### RechnungsNotiz
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
@@ -81,7 +81,29 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `text` | `String` | Inhalt der Notiz |
 | `auf_rechnung` | `bool` | Haken: Erscheint diese Notiz auf der finalen PDF-Rechnung? |
 
-## 3. Status der API-Endpunkte
+## 3. Datenbankschema – Migrations-Übersicht
+
+Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`).
+⚠️ Neue Migrationen NIE rückgängig machen – immer neue Migrations-Datei erstellen.
+
+| Datei | Inhalt |
+| :--- | :--- |
+| `20240405120000_init.sql` | Tabellen `kunden`, `auftraege`, `rechnungs_notizen` |
+| `20240405130000_add_einsaetze.sql` | Tabelle `einsaetze` (Stunden, Kilometer) |
+| `20240405140000_add_dateien.sql` | Tabelle `dateien` (Datei-Uploads) |
+| `20240406100000_rename_stadt_to_ort.sql` | `stadt` → `ort` in `kunden` |
+| `20240407100000_extend_models.sql` | `kategorie` zu `dateien`, `typ` zu `einsaetze` |
+| `20240407110000_add_rechnungen.sql` | Tabelle `rechnungen` |
+| `20240408120000_add_signature_to_einsaetze.sql` | `signatur_pfad` zu `einsaetze` |
+| `20240408150000_add_prices_to_auftraege.sql` | `stundensatz`, `kilometer_satz` zu `auftraege` |
+| `20240408160000_fix_km_satz_naming.sql` | `km_satz` → `kilometer_satz` (Namenskorrektur) |
+
+### Wichtige Spalten-Hinweise
+- `kunden.ort` (nicht `stadt` – wurde umbenannt)
+- `auftraege.kilometer_satz` (nicht `km_satz` – wurde umbenannt)
+- `auftraege.preis_manuell` existiert noch in der DB aber nicht mehr im Rust-Code
+
+## 4. Status der API-Endpunkte
 
 - [x] **Kunden:** CRUD-Operationen (Erstellen, Lesen, Liste, Update, Löschen).
 - [x] **Aufträge:** Erstellung, Status-Management und Update.
@@ -89,7 +111,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
 
-## 4. Nächste Schritte
+## 5. Nächste Schritte
 
 1. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
 2. [ ] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
@@ -97,7 +119,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 4. [ ] **Login:** Absicherung der API.
 5. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
 
-## 5. Betriebliche Hinweise
+## 6. Betriebliche Hinweise
 
 - **Hosting:** Geplant auf Hetzner-Server via Git-Deployment.
 - **Email:** Finalisierung der Adressen (Platzhalter: `hallo@achtsam-entruempeln.de`).
@@ -105,7 +127,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 - **PDF-Generierung:** `headless_chrome` (Crate) benötigt Chromium auf dem Server.
   Bei Deployment via Git: `apt install chromium-browser` im Setup-Script sicherstellen.
 
-## 6. Quality & Validation (Globale Checkliste)
+## 7. Quality & Validation (Globale Checkliste)
 
 Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten:
 
@@ -114,32 +136,35 @@ Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten
 2. **SSOT (Single Source of Truth)**: Nutze die dafür vorgesehenen zentralen Dateien exklusiv.
 3. **Zero-Ping-Pong**: Führe vor dem Abschluss JEDER Aufgabe `cargo check` oder `cargo build` aus.
 4. **Design-Disziplin**: Jede neue Seite, jedes Feature und jede UI-Anpassung MUSS sich strikt am Design Guide in `DESIGN.md` orientieren (Farben, Abstände, Typografie).
+5. **`BUGS.md` zuerst lesen**: Bevor du Code schreibst oder änderst, lies `BUGS.md`. Stelle sicher dass du keinen behobenen Bug wieder einführst und trage neue Bugs sofort ein.
 
 ### Git-Disziplin (gilt für alle Agenten)
 - Nach jeder abgeschlossenen Aufgabe MUSS der Orchestrator einen Commit vorschlagen.
 - Commit nur wenn `cargo check` oder `cargo build` erfolgreich war.
 - Commit-Message beschreibt was geändert wurde, nicht was der Prompt war.
 - Der Nutzer bestätigt den Commit explizit – kein Agent pusht eigenständig.
-- Bei größeren Features: `git checkout -b feature/<name>` vor dem Start.
+- Bei größeren Features: `git checkout -b feature/<n>` vor dem Start.
   Merge zurück auf `main` erst nach erfolgreichem `cargo build`.
 
-## 7. Sub-Agenten Team (Strikte Delegation)
+## 8. Sub-Agenten Team (Strikte Delegation)
 
-Der Orchestrator (Haupt-Agent) koordiniert alle Aufgaben und **muss** zwingend an die zuständigen Sub-Agenten delegieren. Eigenständige Implementierungen oder Code-Analysen durch den Orchestrator sind untersagt.
+## 7. Sub-Agenten Team (Automatisierte Delegation)
+
+**AUTOMATIONS-REGEL:** Jede Benutzeranfrage, die nicht explizit an einen Agenten gerichtet ist (z.B. durch @name), wird ZWINGEND zuerst intern an den **@orchestrator** delegiert. Der Haupt-Agent darf keine eigenständigen Code-Änderungen vornehmen.
 
 ### Rollen & Zuweisung
 
-| Agent | Zuständigkeit (MUST-Delegation) |
+| Agent | Zuständigkeit |
 | :--- | :--- |
-| **@rust-backend-expert** | Implementierung, Code-Änderungen, neue Features, Bug-Fixes. |
-| **@code-reviewer** | Analysen ("Erkläre mir..."), Reviews, Struktur-Prüfung, Sicherheit. |
-| **@tester** | Tests (`cargo test`), Fehlersuche, Reproduktion von Bug-Listen. |
-| **@workspace-janitor** | Hygiene, Aufräumen, Kontext-Optimierung (`CONTEXT.md`). |
+| **@orchestrator** | **Zentrale Einstiegsinstanz.** Analysiert Prompts, liest BUGS.md/GEMINI.md und delegiert an Spezialisten. Schreibt niemals Code. |
+| **@rust-backend-expert** | Implementierung, Code-Änderungen, neue Features, Bug-Fixes im Rust-Code. |
+| **@code-reviewer** | Analysen, Reviews, Struktur-Prüfung, Sicherheits-Audits. |
+| **@tester** | Reproduktion von Fehlern, Schreiben und Ausführen von Tests (`cargo test`). |
+| **@workspace-janitor** | Kontext-Hygiene, Aufräumen, Aktualisierung der `CONTEXT.md` oder `GEMINI.md`. |
 
 ### Zusätzliche Referenzdateien
-- **`SCHEMA.md`**: Aktueller Stand der Datenbank (Source of Truth für SQL).
-- **`BUGS.md`**: Liste aller bekannten Fehler und Edge-Cases.
-- **`CONTEXT.md`**: Sitzungsbezogene Notizen (wird vom Janitor bereinigt).
+- **`BUGS.md`**: Liste aller bekannten Fehler – vor jeder Arbeit lesen.
+- **`CONTEXT.md`**: Sitzungsbezogene Notizen (max. 20 Zeilen, wird vom Janitor bereinigt).
 
 ### Halluzinations-Prävention (@rust-backend-expert)
 - **Cargo.toml zuerst**: Jede Antwort mit Code beginnt mit dem vollständigen
@@ -158,10 +183,6 @@ Wenn du `src/models.rs` änderst, weise den Nutzer am Ende explizit darauf hin:
 GEMINI.md zu synchronisieren."
 Tue dies NIEMALS eigenständig – nur mit expliziter Erlaubnis.
 
-### Delegations-Pflicht
-Der Orchestrator arbeitet **niemals alleine**, wenn ein spezialisierter Sub-Agent
-besser geeignet ist. Die Zuweisung erfolgt explizit zu Beginn jeder Aufgabe.
-
 ### Beispiel-Delegation
 - Neue Feature-Anfrage → @rust-backend-expert implementiert, @code-reviewer prüft
 - Bug-Report → @tester reproduziert zuerst, dann @rust-backend-expert fixt
@@ -173,3 +194,4 @@ Bevor du deine Antwort gibst:
 2. **Validierung**: Sind 'lint' und 'build' erfolgreich durchgelaufen?
 3. **Annahmen**: Habe ich Annahmen getroffen?
 4. **Kontext-Hygiene**: Habe ich unnötige Artefakte bereinigt?
+5. **BUGS.md**: Habe ich neue Bugs eingetragen oder behobene Bugs verschoben?

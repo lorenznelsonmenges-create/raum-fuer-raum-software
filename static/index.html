@@ -58,7 +58,7 @@
                 </header>
                 <div class="grid grid-cols-2 gap-12 text-center">
                     <div @click="view = 'kunden'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div><p class="text-[10px] uppercase font-bold opacity-40">Kunden</p></div>
-                    <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="activeAuftraegeCount()"></div><p class="text-[10px] uppercase font-bold opacity-40">Aktive Projekte</p></div>
+                    <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="activeAuftraegeCount()"></div><p class="text-[10px] uppercase font-bold opacity-40">Aktuelle Projekte</p></div>
                 </div>
             </div>
         </template>
@@ -135,14 +135,13 @@
                                 <template x-for="a in uniqueAuftraegeForKunde.filter(a => !isArchiv(a))" :key="a.id">
                                     <div @click="openAuftragDetail(a)" class="flex items-center justify-between p-6 bg-surface-low/50 hover:bg-surface-low rounded-2xl cursor-pointer transition-all group">
                                         <div class="flex items-center gap-6">
-                                            <span class="text-[10px] font-bold text-primary opacity-40" x-text="formatAuftragID(a.id)"></span>
-                                            <span class="font-bold text-lg" x-text="a.beschreibung || 'Projekt ohne Titel'"></span>
+                                            <span class="font-bold text-lg" x-text="formatAuftragID(a.id)"></span>
                                         </div>
                                         <span class="material-icons-outlined text-primary opacity-0 group-hover:opacity-100 transition-all text-sm">east</span>
                                     </div>
                                 </template>
                                 <template x-if="uniqueAuftraegeForKunde.filter(a => !isArchiv(a)).length === 0">
-                                    <p class="text-sm italic opacity-30 py-4 text-center">Keine aktiven Projekte.</p>
+                                    <p class="text-sm italic opacity-30 py-4 text-center">Keine aktuellen Projekte.</p>
                                 </template>
                             </div>
                         </div>
@@ -161,7 +160,7 @@
         <template x-if="view === 'auftraege'">
             <div>
                 <div class="flex justify-between items-end mb-16">
-                    <h1 class="font-headline text-4xl text-primary font-bold">Aktive Projekte</h1>
+                    <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Projekte</h1>
                     <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neues Projekt</button>
                 </div>
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
@@ -173,8 +172,7 @@
                                     <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
                                     <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
                                     <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
-                                    <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary font-body">east</span></td>
-                                </tr>
+                                    <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                                </tr>
                             </template>
                         </tbody>
                     </table>
@@ -192,7 +190,7 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde-Nr</p><div class="text-xl font-bold" x-text="formatKundeID(activeKundeForAuftrag.id)"></div></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
                     </div>
-                    <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-12 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-[11px] tracking-widest cursor-pointer shadow-xl transition-all">
+                    <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-20 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all">
                         <option value="AnfrageLaeuft">Anfrage läuft</option><option value="InBearbeitung">In Bearbeitung</option><option value="Abgeschlossen">Abgeschlossen</option><option value="Storniert">Storniert</option>
                     </select>
                 </header>
@@ -239,8 +237,7 @@
                                 <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
                                 <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
                                 <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
-                                <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary font-body">east</span></td>
-                            </tr>
+                                <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                            </tr>
                         </template>
                     </tbody>
                 </table>
@@ -272,8 +269,7 @@
                 activeAuftraegeCount() { return this.auftraege.filter(a => !this.isArchiv(a)).length; },
                 archivedAuftraegeCount() { return this.auftraege.filter(a => this.isArchiv(a)).length; },
                 isArchiv(a) { if(!a) return false; return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
-                getStatusBadgeClass(s) { const b = "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-full font-body "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },
-                formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
+                getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },                formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
                 get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) r.push({ type: 'kunde', key: 'k_'+k.id, title: k.vorname+' '+k.nachname, subtitle: this.formatKundeID(k.id), data: k }); }); this.auftraege.forEach(a => { const kn = this.getKundeName(a.kunde_id).toLowerCase(); if (kn.includes(q) || this.formatAuftragID(a.id).toLowerCase().includes(q)) r.push({ type: 'auftrag', key: 'a_'+a.id, title: this.getKundeName(a.kunde_id), subtitle: this.formatAuftragID(a.id), data: a }); }); return r.slice(0, 5); },
                 handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') this.openKundeDetail(res.data); else this.openAuftragDetail(res.data); },
                 get filteredKunden() { const q = this.searchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)); },

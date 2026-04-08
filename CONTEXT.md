@@ -1,16 +1,14 @@
 # CONTEXT.md – Aktuelle Sitzung
 
-Dieses Dokument wird am Ende jeder Sitzung vom **Workspace-Janitor** bereinigt oder aktualisiert.
+⚠️ Max. 20 Zeilen. @workspace-janitor bereinigt diese Datei nach jeder Sitzung.
+
+---
 
 ## Was gerade gebaut wird
-- Optimierung des Agenten-Systems (Strukturierung, Rollenschärfung).
-- Dokumentation des Datenbank-Schemas (`SCHEMA.md`).
-- Einführung von Bug-Tracking (`BUGS.md`).
+<!-- Beispiel: PDF-Rechnungs-Workflow -->
 
-## Bekannte offene Bugs
-- Siehe `BUGS.md` (Fokus: `gesamt_netto` 0.0 Problem).
+## Bekannte offene Punkte dieser Sitzung
+<!-- Beispiel: Handler kompiliert noch nicht -->
 
 ## Letzte Entscheidungen
-- `SCHEMA.md` wird als zentrale Referenz für DB-Strukturen genutzt.
-- Agenten werden über exklusivere Trigger in ihren `.md`-Files gesteuert.
-- `sqlx` Migrationen sind die alleinige Quelle für Schema-Änderungen.
+<!-- Beispiel: PDF via headless_chrome, kein chromiumoxide -->
