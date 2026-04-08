@@ -127,11 +127,8 @@
                     </form>
 
                     <!-- Integrierte Projekt-Übersicht -->
-                    <div class="mt-12 space-y-8">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-headline text-2xl text-primary font-bold">Aktuelle Projekte</h3>
-                            <button @click="openAuftragErstellung(activeKunde.id)" class="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">+ Neues Projekt</button>
-                        </div>
+                    <div class="mt-12 pt-12 border-t border-surface-low space-y-8">
+                        <h3 class="font-headline text-2xl text-primary font-bold">Aktuelle Projekte</h3>
                         <div class="grid grid-cols-1 gap-3">
                             <template x-for="a in uniqueAuftraegeForKunde.filter(a => !isArchiv(a))" :key="a.id">
                                 <div @click="openAuftragDetail(a)" class="flex items-center justify-between p-6 bg-surface-low/50 hover:bg-surface-low rounded-2xl cursor-pointer transition-all group">
@@ -150,12 +147,12 @@
                             </template>
                         </div>
                     </div>
-                </div>
 
-                <!-- Notizen als dezenter Abschluss -->
-                <div class="bg-surface-low/30 p-12 rounded-[40px] font-body border border-surface-low/50">
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 mb-4">Interne Notizen</h4>
-                    <textarea x-model="activeKunde.notizen" class="w-full bg-transparent border-none p-0 text-sm focus:ring-0 min-h-[150px] placeholder:italic" placeholder="Notizen hier hinterlegen..."></textarea>
+                    <!-- Integrierte Notizen -->
+                    <div class="mt-12 pt-12 border-t border-surface-low space-y-6">
+                        <h3 class="font-headline text-2xl text-primary font-bold">Interne Notizen</h3>
+                        <textarea x-model="activeKunde.notizen" class="w-full bg-surface-low/30 rounded-2xl p-8 text-sm border-none shadow-inner min-h-[150px] focus:ring-1 ring-primary/10 placeholder:opacity-20 font-body" placeholder="Hier können wichtige Informationen zum Kunden hinterlegt werden..."></textarea>
+                    </div>
                 </div>
             </div>
         </template>
