@@ -126,32 +126,32 @@
                         <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Stammdaten speichern</button></div>
                     </form>
 
-                    <!-- Integrierte Projekt-Übersicht -->
-                    <div class="mt-12 pt-12 border-t border-surface-low space-y-8">
-                        <h3 class="font-headline text-2xl text-primary font-bold">Aktuelle Projekte</h3>
-                        <div class="grid grid-cols-1 gap-3">
-                            <template x-for="a in uniqueAuftraegeForKunde.filter(a => !isArchiv(a))" :key="a.id">
-                                <div @click="openAuftragDetail(a)" class="flex items-center justify-between p-6 bg-surface-low/50 hover:bg-surface-low rounded-2xl cursor-pointer transition-all group">
-                                    <div class="flex items-center gap-6">
-                                        <span class="text-[10px] font-bold text-primary opacity-40" x-text="formatAuftragID(a.id)"></span>
-                                        <span class="font-bold text-lg" x-text="a.beschreibung || 'Projekt ohne Titel'"></span>
-                                    </div>
-                                    <div class="flex items-center gap-6">
-                                        <span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span>
+                    <!-- Integrierte Projekt-Übersicht & Notizen nebeneinander -->
+                    <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-2 gap-16">
+                        <!-- Projekt-Übersicht -->
+                        <div class="space-y-8">
+                            <h3 class="font-headline text-2xl text-primary font-bold">Aktuelle Projekte</h3>
+                            <div class="grid grid-cols-1 gap-3">
+                                <template x-for="a in uniqueAuftraegeForKunde.filter(a => !isArchiv(a))" :key="a.id">
+                                    <div @click="openAuftragDetail(a)" class="flex items-center justify-between p-6 bg-surface-low/50 hover:bg-surface-low rounded-2xl cursor-pointer transition-all group">
+                                        <div class="flex items-center gap-6">
+                                            <span class="text-[10px] font-bold text-primary opacity-40" x-text="formatAuftragID(a.id)"></span>
+                                            <span class="font-bold text-lg" x-text="a.beschreibung || 'Projekt ohne Titel'"></span>
+                                        </div>
                                         <span class="material-icons-outlined text-primary opacity-0 group-hover:opacity-100 transition-all text-sm">east</span>
                                     </div>
-                                </div>
-                            </template>
-                            <template x-if="uniqueAuftraegeForKunde.filter(a => !isArchiv(a)).length === 0">
-                                <p class="text-sm italic opacity-30 py-4 text-center">Keine aktiven Projekte für diesen Kunden.</p>
-                            </template>
+                                </template>
+                                <template x-if="uniqueAuftraegeForKunde.filter(a => !isArchiv(a)).length === 0">
+                                    <p class="text-sm italic opacity-30 py-4 text-center">Keine aktiven Projekte.</p>
+                                </template>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Integrierte Notizen -->
-                    <div class="mt-12 pt-12 border-t border-surface-low space-y-6">
-                        <h3 class="font-headline text-2xl text-primary font-bold">Interne Notizen</h3>
-                        <textarea x-model="activeKunde.notizen" class="w-full bg-surface-low/30 rounded-2xl p-8 text-sm border-none shadow-inner min-h-[150px] focus:ring-1 ring-primary/10 placeholder:opacity-20 font-body" placeholder="Hier können wichtige Informationen zum Kunden hinterlegt werden..."></textarea>
+                        <!-- Notizen -->
+                        <div class="space-y-6">
+                            <h3 class="font-headline text-2xl text-primary font-bold">Interne Notizen</h3>
+                            <textarea x-model="activeKunde.notizen" class="w-full bg-surface-low/30 rounded-2xl p-8 text-sm border-none shadow-inner min-h-[250px] focus:ring-1 ring-primary/10 placeholder:opacity-20 font-body" placeholder="Hier können wichtige Informationen zum Kunden hinterlegt werden..."></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
