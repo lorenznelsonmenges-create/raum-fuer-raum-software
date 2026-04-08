@@ -14,37 +14,43 @@ Dieses Dokument dient als zentrale Wissensbasis ("Source of Truth") für die Arc
 - **Error-Handling:** Zentralisiertes System in `src/error.rs` für konsistente HTTP-Statuscodes.
 - **Datei-Management:** Uploads landen im Ordner `uploads/` auf der Festplatte; Pfade werden in der DB gespeichert.
 - **Frontend-Anbindung:** Aktuell als reine REST-API konzipiert (bereit für Nginx/HTTPS-Reverse-Proxy).
+- **Templating:** Handlebars 6.x (nicht Tera – trotz anderslautender älterer Notizen).
+- **PDF-Generierung:** `headless_chrome` 1.x via HTML → PDF.
 
 ## 2. Datenmodell (Source of Truth)
 
-Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen persistiert.
+⚠️ **SYNCHRONISIERUNGS-PFLICHT:** Dieses Datenmodell MUSS mit `src/models.rs`
+übereinstimmen. Wenn ein Agent `src/models.rs` ändert (Felder hinzufügt,
+entfernt oder umbenennt), MUSS er danach mit expliziter Nutzer-Erlaubnis
+diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 
 ### Kunde
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel (Auto-Increment) |
-| `vorname` | `String` | Vorname |
-| `nachname` | `String` | Nachname |
-| `strasse` | `String` | Straße |
-| `hausnummer`| `String` | Hausnummer |
-| `plz` | `String` | Postleitzahl |
-| `ort` | `String` | Stadt/Ort |
-| `email` | `String` | E-Mail Adresse |
-| `telefon` | `String` | Telefonnummer |
-| `notizen` | `String` | Interne Kundennotizen |
+| `vorname` | `String` | Vorname (Pflichtfeld) |
+| `nachname` | `String` | Nachname (Pflichtfeld) |
+| `strasse` | `Option<String>` | Straße |
+| `hausnummer` | `Option<String>` | Hausnummer |
+| `plz` | `Option<String>` | Postleitzahl |
+| `ort` | `Option<String>` | Stadt/Ort |
+| `email` | `Option<String>` | E-Mail Adresse |
+| `telefon` | `Option<String>` | Telefonnummer |
+| `notizen` | `Option<String>` | Interne Kundennotizen |
 
 ### Auftrag
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
 | `kunde_id` | `i64` | Fremdschlüssel auf `kunden` |
-| `status` | `Enum` | Angefragt, Besichtigt, Durchfuehrung, Archiviert, Storniert |
-| `beschreibung`| `String` | Kurzbeschreibung des Auftrags |
-| `basis_pauschale`| `Option<f64>`| Optionale Fixkosten-Pauschale |
-| `preis_manuell`| `Option<f64>`| Manuelle Preisanpassung (Überschreibt ggf. Logik) |
+| `status` | `Enum` | AnfrageLaeuft, InBearbeitung, Abgeschlossen, Storniert |
+| `beschreibung` | `String` | Kurzbeschreibung des Auftrags |
+| `basis_pauschale` | `Option<f64>` | Optionale Fixkosten-Pauschale |
+| `stundensatz` | `f64` | Stundensatz (Default: 45.00) |
+| `kilometer_satz` | `f64` | Kilometersatz (Default: 0.50) |
 | `notizen` | `String` | Interne Auftragsnotizen |
 
-### Einsatz (Arbeitszeit & Fahrtkosten)
+### Einsatz
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
@@ -54,9 +60,9 @@ Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen 
 | `stunden` | `f64` | Gearbeitete Stunden |
 | `notiz` | `String` | Notiz zum Einsatz |
 | `typ` | `String` | ARBEIT oder FAHRT |
-| `signatur_pfad`| `Option<String>`| Pfad zum Signaturbild (digital vor Ort) |
+| `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild |
 
-### Datei (Uploads)
+### Datei
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
@@ -64,8 +70,8 @@ Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen 
 | `dateiname` | `String` | Originaler Name der Datei |
 | `dateipfad` | `String` | Relativer Pfad im `uploads/` Ordner |
 | `dateityp` | `String` | MIME-Type oder Endung |
-| `hochgeladen_am`| `String` | Zeitstempel des Uploads |
-| `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR_EINSATZ, etc. |
+| `hochgeladen_am` | `String` | Zeitstempel des Uploads |
+| `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR, RECHNUNG |
 
 ### RechnungsNotiz
 | Feld | Typ | Beschreibung |
@@ -73,7 +79,7 @@ Das Datenmodell ist in `src/models.rs` definiert und wird durch SQLite-Tabellen 
 | `id` | `i64` | Primärschlüssel |
 | `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
 | `text` | `String` | Inhalt der Notiz |
-| `auf_rechnung`| `bool` | Haken: Erscheint diese Notiz auf der finalen PDF-Rechnung? |
+| `auf_rechnung` | `bool` | Erscheint auf der PDF-Rechnung |
 
 ## 3. Status der API-Endpunkte
 
