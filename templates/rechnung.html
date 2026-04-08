@@ -163,7 +163,7 @@
             <div class="item-row">
                 <div><strong>{{#if (eq typ "ARBEIT")}}Arbeitszeit{{else}}Fahrtkosten{{/if}}</strong><div style="font-size: 9pt; opacity: 0.5">{{datum}} - {{notiz}}</div></div>
                 <div style="text-align: center">{{#if (eq typ "ARBEIT")}}{{stunden}} Std.{{else}}{{kilometer}} km{{/if}}</div>
-                <div style="text-align: right">{{#if (eq typ "ARBEIT")}}45,00 €{{else}}0,50 €{{/if}}</div>
+                <div style="text-align: right">{{einzelpreis}} €</div>
                 <div style="text-align: right">{{zeilen_summe}} €</div>
             </div>
             {{/each}}

@@ -1,15 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum AuftragStatus {
+    #[default]
     AnfrageLaeuft,
     InBearbeitung,
     Abgeschlossen,
     Storniert,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Kunde {
+    #[serde(default)]
     pub id: i64,
     #[serde(default)]
     pub vorname: String,
@@ -26,11 +28,14 @@ pub struct Kunde {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auftrag {
+    #[serde(default)]
     pub id: i64,
     pub kunde_id: i64,
+    #[serde(default)]
     pub status: AuftragStatus,
     #[serde(default)]
     pub beschreibung: String,
+    #[serde(default)]
     pub basis_pauschale: Option<f64>,
     #[serde(default = "default_stundensatz")]
     pub stundensatz: f64,
@@ -44,6 +49,8 @@ pub struct Auftrag {
     pub dateien: Vec<Datei>,
     #[serde(default)]
     pub rechnungen: Vec<Rechnung>,
+    #[serde(default, alias = "rechnungs_notizen")]
+    pub rechnungs_notizen: Vec<RechnungNotiz>,
 }
 
 fn default_stundensatz() -> f64 { 45.0 }
@@ -51,6 +58,7 @@ fn default_kilometer_satz() -> f64 { 0.50 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Einsatz {
+    #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
     pub datum: String,
@@ -63,6 +71,7 @@ pub struct Einsatz {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Datei {
+    #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
     pub dateiname: String,
@@ -74,6 +83,7 @@ pub struct Datei {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rechnung {
+    #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
     pub rechnungs_nummer: String,
@@ -85,7 +95,8 @@ pub struct Rechnung {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RechnungsNotiz {
+pub struct RechnungNotiz {
+    #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
     pub text: String,

@@ -50,7 +50,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `kilometer_satz` | `f64` | Kilometersatz (Default: 0.50) |
 | `notizen` | `String` | Interne Auftragsnotizen |
 
-### Einsatz
+### Einsatz (Arbeitszeit & Fahrtkosten)
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
@@ -60,9 +60,9 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `stunden` | `f64` | Gearbeitete Stunden |
 | `notiz` | `String` | Notiz zum Einsatz |
 | `typ` | `String` | ARBEIT oder FAHRT |
-| `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild |
+| `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild (digital vor Ort) |
 
-### Datei
+### Datei (Uploads)
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
@@ -73,13 +73,13 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `hochgeladen_am` | `String` | Zeitstempel des Uploads |
 | `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR, RECHNUNG |
 
-### RechnungsNotiz
+### RechnungNotiz
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
 | `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
 | `text` | `String` | Inhalt der Notiz |
-| `auf_rechnung` | `bool` | Erscheint auf der PDF-Rechnung |
+| `auf_rechnung` | `bool` | Haken: Erscheint diese Notiz auf der finalen PDF-Rechnung? |
 
 ## 3. Status der API-Endpunkte
 
@@ -102,17 +102,19 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 - **Hosting:** Geplant auf Hetzner-Server via Git-Deployment.
 - **Email:** Finalisierung der Adressen (Platzhalter: `hallo@achtsam-entruempeln.de`).
 - **Entwicklung:** `target/`, `achtsam.db*`, `uploads/` und `Cargo.lock` werden ignoriert.
-- **PDF-Generierung:** Headless Chrome (`chromiumoxide`) benötigt Chromium 
-  auf dem Server. Bei Deployment via Git: `apt install chromium-browser` 
-  im Setup-Script sicherstellen.
+- **PDF-Generierung:** `headless_chrome` (Crate) benötigt Chromium auf dem Server.
+  Bei Deployment via Git: `apt install chromium-browser` im Setup-Script sicherstellen.
 
 ## 6. Quality & Validation (Globale Checkliste)
 
 Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten:
+
 ### Zero-Ping-Pong & Architektur-Disziplin
 1. **DRY (Don't Repeat Yourself)**: Bevor du neuen Code schreibst, MUSS eine Suche im bestehenden Verzeichnis erfolgen.
 2. **SSOT (Single Source of Truth)**: Nutze die dafür vorgesehenen zentralen Dateien exklusiv.
 3. **Zero-Ping-Pong**: Führe vor dem Abschluss JEDER Aufgabe `cargo check` oder `cargo build` aus.
+4. **Design-Disziplin**: Jede neue Seite, jedes Feature und jede UI-Anpassung MUSS sich strikt am Design Guide in `DESIGN.md` orientieren (Farben, Abstände, Typografie).
+
 ### Git-Disziplin (gilt für alle Agenten)
 - Nach jeder abgeschlossenen Aufgabe MUSS der Orchestrator einen Commit vorschlagen.
 - Commit nur wenn `cargo check` oder `cargo build` erfolgreich war.
@@ -121,21 +123,23 @@ Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten
 - Bei größeren Features: `git checkout -b feature/<name>` vor dem Start.
   Merge zurück auf `main` erst nach erfolgreichem `cargo build`.
 
-## 7. Sub-Agenten Team
+## 7. Sub-Agenten Team (Strikte Delegation)
 
-Der Orchestrator (Haupt-Agent) koordiniert alle Aufgaben und delegiert aktiv
-an die zuständigen Sub-Agenten. **Für jede Aufgabe MUSS der Orchestrator
-explizit entscheiden, welcher Sub-Agent die Arbeit übernimmt.**
+Der Orchestrator (Haupt-Agent) koordiniert alle Aufgaben und **muss** zwingend an die zuständigen Sub-Agenten delegieren. Eigenständige Implementierungen oder Code-Analysen durch den Orchestrator sind untersagt.
 
-### Rollen
+### Rollen & Zuweisung
 
-| Agent | Zuständigkeit |
+| Agent | Zuständigkeit (MUST-Delegation) |
 | :--- | :--- |
-| **Orchestrator** | Projektmanager & Schnittstelle zum Nutzer. Koordiniert, delegiert, validiert. |
-| **@rust-backend-expert** | Implementierung in Rust, Axum & SQLx. Hält streng DRY & Architektur-Disziplin ein. |
-| **@code-reviewer** | Prüft Code auf Best Practices, Sicherheit und Korrektheit – bevor Probleme entstehen. |
-| **@tester** | Schreibt automatisierte Tests (`cargo test`), deckt Randfälle ab, reproduziert Bugs. |
-| **@workspace-janitor** | Bereinigt den Workspace, reduziert Kontext-Overhead durch Artefakt-Entfernung. |
+| **@rust-backend-expert** | Implementierung, Code-Änderungen, neue Features, Bug-Fixes. |
+| **@code-reviewer** | Analysen ("Erkläre mir..."), Reviews, Struktur-Prüfung, Sicherheit. |
+| **@tester** | Tests (`cargo test`), Fehlersuche, Reproduktion von Bug-Listen. |
+| **@workspace-janitor** | Hygiene, Aufräumen, Kontext-Optimierung (`CONTEXT.md`). |
+
+### Zusätzliche Referenzdateien
+- **`SCHEMA.md`**: Aktueller Stand der Datenbank (Source of Truth für SQL).
+- **`BUGS.md`**: Liste aller bekannten Fehler und Edge-Cases.
+- **`CONTEXT.md`**: Sitzungsbezogene Notizen (wird vom Janitor bereinigt).
 
 ### Halluzinations-Prävention (@rust-backend-expert)
 - **Cargo.toml zuerst**: Jede Antwort mit Code beginnt mit dem vollständigen
@@ -143,10 +147,16 @@ explizit entscheiden, welcher Sub-Agent die Arbeit übernimmt.**
 - **Keine Crate-Erfindungen**: Externe Crates NUR nutzen, wenn Cargo.toml-Eintrag
   + konkrete Version angegeben wird. Bei unbekannter API: `// TODO: API prüfen`
   statt Halluzination.
-- **PDF-Workflow ist fix**: Ausschließlich Tera → HTML-String →
-  chromiumoxide → PDF-Bytes. Kein anderer Weg ist akzeptabel.
-- **Chromium-Abhängigkeit**: `chromiumoxide` benötigt eine installierte
+- **PDF-Workflow ist fix**: Ausschließlich Handlebars → HTML-String →
+  headless_chrome → PDF-Bytes. Kein anderer Weg ist akzeptabel.
+- **Chromium-Abhängigkeit**: `headless_chrome` benötigt eine installierte
   Chrome/Chromium-Binary auf dem Server (relevant für Hetzner-Deployment).
+
+### Datenmodell-Pflicht
+Wenn du `src/models.rs` änderst, weise den Nutzer am Ende explizit darauf hin:
+"⚠️ Das Datenmodell wurde geändert – bitte erlaube mir, Abschnitt 2 der
+GEMINI.md zu synchronisieren."
+Tue dies NIEMALS eigenständig – nur mit expliziter Erlaubnis.
 
 ### Delegations-Pflicht
 Der Orchestrator arbeitet **niemals alleine**, wenn ein spezialisierter Sub-Agent
@@ -156,7 +166,6 @@ besser geeignet ist. Die Zuweisung erfolgt explizit zu Beginn jeder Aufgabe.
 - Neue Feature-Anfrage → @rust-backend-expert implementiert, @code-reviewer prüft
 - Bug-Report → @tester reproduziert zuerst, dann @rust-backend-expert fixt
 - Aufräumen / Kontext zu groß → @workspace-janitor
-
 
 ### Before you finish
 Bevor du deine Antwort gibst:

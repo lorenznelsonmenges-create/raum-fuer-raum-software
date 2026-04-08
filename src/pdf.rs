@@ -1,7 +1,7 @@
 use handlebars::Handlebars;
 use serde_json::json;
 use headless_chrome::{Browser, LaunchOptions};
-use crate::models::{Auftrag, Kunde, Einsatz, RechnungsNotiz};
+use crate::models::{Auftrag, Kunde, Einsatz, RechnungNotiz};
 use chrono::Local;
 use std::fs;
 
@@ -12,10 +12,10 @@ pub fn generate_dynamic_pdf(
     auftrag: &Auftrag,
     kunde: &Kunde,
     einsaetze: Option<&[Einsatz]>,
-    _notizen: Option<&[RechnungsNotiz]>,
+    _notizen: Option<&[RechnungNotiz]>,
     rechnungs_nummer: Option<&str>,
     signature_path: Option<&str>,
-) -> Result<Vec<u8>, String> {
+) -> Result<(Vec<u8>, f64, f64), String> {
     let mut hb = Handlebars::new();
     // Helper für Preisberechnung oder Bedingungen
     hb.register_helper("eq", Box::new(|h: &handlebars::Helper, _: &Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
@@ -31,27 +31,31 @@ pub fn generate_dynamic_pdf(
         .map_err(|e| format!("Konnte Vorlage nicht lesen: {}", e))?;
 
     // Berechnungen für Rechnung (falls vorhanden)
-    let mut gesamt_netto = 0.0;
+    let mut gesamt_netto_einsaetze = 0.0;
     let mut einsaetze_data = Vec::new();
     
     if let Some(ee) = einsaetze {
         for e in ee {
-            let einzelpreis = if e.typ == "ARBEIT" { auftrag.stundensatz } else { auftrag.kilometer_satz };
-            let summe = if e.typ == "ARBEIT" { e.stunden * einzelpreis } else { e.kilometer * einzelpreis };
-            gesamt_netto += summe;
+            let typ_upper = e.typ.to_uppercase();
+            let ist_arbeit = typ_upper == "ARBEIT";
+            let einzelpreis = if ist_arbeit { auftrag.stundensatz } else { auftrag.kilometer_satz };
+            let summe = if ist_arbeit { e.stunden * einzelpreis } else { e.kilometer * einzelpreis };
+            
+            gesamt_netto_einsaetze += summe;
             einsaetze_data.push(json!({
                 "datum": e.datum,
                 "typ": e.typ,
                 "stunden": e.stunden,
                 "kilometer": e.kilometer,
                 "notiz": e.notiz,
+                "einzelpreis": format!("{:.2}", einzelpreis),
                 "zeilen_summe": format!("{:.2}", summe)
             }));
         }
     }
     
     let basis = auftrag.basis_pauschale.unwrap_or(0.0);
-    let netto_total = gesamt_netto + basis;
+    let netto_total = gesamt_netto_einsaetze + basis;
     let mwst = netto_total * 0.19;
     let brutto_total = netto_total + mwst;
 
@@ -80,7 +84,8 @@ pub fn generate_dynamic_pdf(
         .map_err(|e| format!("Fehler beim Render der Vorlage: {}", e))?;
 
     // PDF Generierung via Headless Chrome
-    print_html_to_pdf(html)
+    let pdf_bytes = print_html_to_pdf(html)?;
+    Ok((pdf_bytes, netto_total, brutto_total))
 }
 
 fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {

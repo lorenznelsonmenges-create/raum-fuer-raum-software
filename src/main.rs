@@ -19,16 +19,7 @@ use chrono::Local;
 
 #[tokio::main]
 async fn main() {
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:achtsam.db".to_string());
-    let pool = SqlitePool::connect(&database_url).await.expect("Failed to connect to database");
-
-    if !std::path::Path::new("uploads").exists() { fs::create_dir("uploads").unwrap(); }
-    if !std::path::Path::new("templates").exists() { fs::create_dir("templates").unwrap(); }
-
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Failed to run migrations");
+    let pool = database::init_db().await.expect("Failed to initialize database");
 
     let app = Router::new()
         .route("/api/kunden", get(list_kunden).post(add_kunde))
@@ -181,8 +172,12 @@ async fn upload_datei(State(pool): State<SqlitePool>, Path(auftrag_id): Path<i64
             if category == "SIGNATUR" {
                 let auftrag = database::get_auftrag_by_id(&pool, auftrag_id).await?;
                 let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
-                let abs_sig = fs::canonicalize(&filepath).unwrap().to_str().unwrap().to_string();
-                let pdf_content = pdf::generate_dynamic_pdf("templates/datenschutz.html", &auftrag, &kunde, None, None, None, Some(&abs_sig)).map_err(AppError::PdfError)?;
+                let abs_sig = fs::canonicalize(&filepath)
+                    .map_err(|e| AppError::Internal(e.to_string()))?
+                    .to_str()
+                    .ok_or_else(|| AppError::Internal("Konnte Signaturpfad nicht konvertieren".to_string()))?
+                    .to_string();
+                let (pdf_content, _, _) = pdf::generate_dynamic_pdf("templates/datenschutz.html", &auftrag, &kunde, None, None, None, Some(&abs_sig)).map_err(AppError::PdfError)?;
                 let pdf_name = format!("Datenschutz_{}_{}.pdf", auftrag_id, Local::now().format("%Y%m%d"));
                 let pdf_path = format!("uploads/{}", pdf_name);
                 fs::write(&pdf_path, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
@@ -200,19 +195,48 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
     let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
     let re_nr = format!("RE-{}-{}", Local::now().format("%Y"), id);
-    let pdf_content = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None).map_err(AppError::PdfError)?;
-    let filepath = format!("uploads/{}.pdf", re_nr);
+    
+    // Verzeichnis sicherstellen
+    if !std::path::Path::new("uploads/rechnungen").exists() {
+        fs::create_dir_all("uploads/rechnungen").map_err(|e| AppError::Internal(e.to_string()))?;
+    }
+
+    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None).map_err(AppError::PdfError)?;
+    let filename = format!("rechnung_{}.pdf", id);
+    let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
-    let datei_id = database::create_datei(&pool, Datei { id: 0, auftrag_id: id, dateiname: format!("{}.pdf", re_nr), dateipfad: filepath.clone(), dateityp: "application/pdf".into(), hochgeladen_am: Local::now().to_rfc3339(), kategorie: "RECHNUNG".into() }).await?;
-    database::create_rechnung(&pool, crate::models::Rechnung { id: 0, auftrag_id: id, rechnungs_nummer: re_nr, datum: Local::now().format("%Y-%m-%d").to_string(), gesamt_netto: 0.0, gesamt_brutto: 0.0, status: "Offen".into(), pdf_pfad: filepath }).await?;
-    Ok(Json(datei_id))
+    
+    // In Tabelle `dateien` speichern
+    database::create_datei(&pool, Datei { 
+        id: 0, 
+        auftrag_id: id, 
+        dateiname: filename.clone(), 
+        dateipfad: filepath.clone(), 
+        dateityp: "application/pdf".into(), 
+        hochgeladen_am: Local::now().to_rfc3339(), 
+        kategorie: "RECHNUNG".into() 
+    }).await?;
+
+    // In Tabelle `rechnungen` speichern
+    let re_id = database::create_rechnung(&pool, crate::models::Rechnung { 
+        id: 0, 
+        auftrag_id: id, 
+        rechnungs_nummer: re_nr, 
+        datum: Local::now().format("%Y-%m-%d").to_string(), 
+        gesamt_netto: netto, 
+        gesamt_brutto: brutto, 
+        status: "Offen".into(), 
+        pdf_pfad: filepath 
+    }).await?;
+    
+    Ok(Json(re_id))
 }
 
 async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64>, Json(payload): Json<serde_json::Value>) -> Result<Json<i64>, AppError> {
     let template_name = payload["template"].as_str().unwrap_or("vertrag.html");
     let auftrag = database::get_auftrag_by_id(&pool, id).await?;
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
-    let pdf_content = pdf::generate_dynamic_pdf(&format!("templates/{}", template_name), &auftrag, &kunde, None, None, None, None).map_err(AppError::PdfError)?;
+    let (pdf_content, _, _) = pdf::generate_dynamic_pdf(&format!("templates/{}", template_name), &auftrag, &kunde, None, None, None, None).map_err(AppError::PdfError)?;
     let filename = format!("{}_{}_{}.pdf", template_name.replace(".html", ""), id, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;

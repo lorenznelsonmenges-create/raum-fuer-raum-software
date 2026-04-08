@@ -56,10 +56,9 @@
                         </div>
                     </div>
                 </header>
-                <div class="grid grid-cols-3 gap-12 text-center">
+                <div class="grid grid-cols-2 gap-12 text-center">
                     <div @click="view = 'kunden'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div><p class="text-[10px] uppercase font-bold opacity-40">Kunden</p></div>
                     <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="activeAuftraegeCount()"></div><p class="text-[10px] uppercase font-bold opacity-40">Aktive Projekte</p></div>
-                    <div @click="view = 'archiviert'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-on-surface/20 font-bold" x-text="archivedAuftraegeCount()"></div><p class="text-[10px] uppercase font-bold opacity-40">Archiv</p></div>
                 </div>
             </div>
         </template>
@@ -143,7 +142,10 @@
         <!-- Auftragsverwaltung -->
         <template x-if="view === 'auftraege'">
             <div>
-                <h1 class="font-headline text-4xl text-primary font-bold mb-16">Aktive Projekte</h1>
+                <div class="flex justify-between items-end mb-16">
+                    <h1 class="font-headline text-4xl text-primary font-bold">Aktive Projekte</h1>
+                    <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neues Projekt</button>
+                </div>
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
                     <table class="w-full text-left font-body">
                         <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
@@ -208,14 +210,19 @@
 
     <!-- Archiv -->
     <template x-if="view === 'archiviert'">
-        <div class="px-16 py-16">
-            <h1 class="font-headline text-4xl text-on-surface/40 font-bold mb-16 uppercase tracking-tight">Archivierte Aufträge</h1>
-            <div class="bg-white rounded-3xl overflow-hidden shadow-sm opacity-60 font-body">
-                <table class="w-full text-left">
+        <div>
+            <h1 class="font-headline text-4xl text-primary font-bold mb-16">Abgeschlossene Projekte</h1>
+            <div class="bg-white rounded-3xl overflow-hidden shadow-sm font-body">
+                <table class="w-full text-left font-body">
                     <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
                     <tbody class="divide-y divide-surface-low text-on-surface">
                         <template x-for="a in auftraege.filter(a => isArchiv(a))" :key="a.id">
-                            <tr class="hover:bg-surface-low cursor-pointer group" @click="openAuftragDetail(a)"><td class="px-12 py-8 font-bold" x-text="formatAuftragID(a.id)"></td><td class="px-12 py-8 font-bold" x-text="getKundeName(a.kunde_id)"></td><td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td><td class="px-12 py-8 text-right"><span class="material-icons-outlined opacity-20 group-hover:opacity-100 transition-all">visibility</span></td></tr>
+                            <tr class="hover:bg-surface-low transition-all cursor-pointer group" @click="openAuftragDetail(a)">
+                                <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
+                                <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
+                                <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
+                                <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary font-body">east</span></td>
+                            </tr>
                         </template>
                     </tbody>
                 </table>

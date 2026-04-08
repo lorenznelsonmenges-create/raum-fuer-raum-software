@@ -1,6 +1,6 @@
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool, Row};
 use std::env;
-use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungsNotiz, Rechnung};
+use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
     let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:achtsam.db".to_string());
@@ -67,7 +67,8 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
         id: row.get("id"), kunde_id: row.get("kunde_id"), status,
         beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
         stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
-        einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?
+        einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
+        rechnungs_notizen: get_rechnungs_notizen_for_auftrag(pool, id).await?
     })
 }
 
@@ -87,15 +88,23 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
             id, kunde_id: row.get("kunde_id"), status,
             beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
             stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
-            einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?
+            einsaetze: Vec::new(), dateien: Vec::new(), rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
+            rechnungs_notizen: get_rechnungs_notizen_for_auftrag(pool, id).await?
         });
     }
     Ok(list)
 }
 
 pub async fn create_auftrag(pool: &SqlitePool, auftrag: Auftrag) -> Result<i64, sqlx::Error> {
+    let status_str = format!("{:?}", auftrag.status);
     let res = sqlx::query("INSERT INTO auftraege (kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(auftrag.kunde_id).bind(format!("{:?}", auftrag.status)).bind(auftrag.beschreibung).bind(auftrag.basis_pauschale).bind(auftrag.stundensatz).bind(auftrag.kilometer_satz).bind(auftrag.notizen)
+        .bind(auftrag.kunde_id)
+        .bind(status_str)
+        .bind(auftrag.beschreibung)
+        .bind(auftrag.basis_pauschale)
+        .bind(auftrag.stundensatz)
+        .bind(auftrag.kilometer_satz)
+        .bind(auftrag.notizen)
         .execute(pool).await?;
     Ok(res.last_insert_rowid())
 }
@@ -171,9 +180,9 @@ pub async fn get_rechnungen_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> R
     }).collect())
 }
 
-pub async fn get_rechnungs_notizen_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Result<Vec<RechnungsNotiz>, sqlx::Error> {
+pub async fn get_rechnungs_notizen_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Result<Vec<RechnungNotiz>, sqlx::Error> {
     let rows = sqlx::query("SELECT id, auftrag_id, text, auf_rechnung FROM rechnungs_notizen WHERE auftrag_id = ?").bind(auftrag_id).fetch_all(pool).await?;
-    Ok(rows.into_iter().map(|row| RechnungsNotiz {
+    Ok(rows.into_iter().map(|row| RechnungNotiz {
         id: row.get("id"), auftrag_id: row.get("auftrag_id"), text: row.get("text"), auf_rechnung: row.get("auf_rechnung")
     }).collect())
 }
