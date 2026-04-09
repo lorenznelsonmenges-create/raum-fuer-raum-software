@@ -25,14 +25,25 @@
             position: relative;
         }
 
-        /* Header mit Logo oben rechts */
+        /* Header mit Logo oben links */
         .header {
             display: flex;
-            justify-content: flex-end;
+            justify-content: flex-start;
             margin-bottom: 2cm;
         }
 
-        .brand-box { text-align: right; }
+        .brand-box { 
+            display: flex; 
+            align-items: center; 
+            text-align: left; 
+        }
+        
+        .brand-logo {
+            height: 45px;
+            width: auto;
+            margin-right: 15px;
+        }
+
         .brand-name {
             font-family: 'Playfair Display', serif;
             font-size: 32pt;
@@ -134,6 +145,12 @@
 <body>
     <div class="header">
         <div class="brand-box">
+            <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C12 22 16 18 16 13C16 11 15 9 12 7C9 9 8 11 8 13C8 18 12 22 12 22Z" fill="#526447"/>
+                <path d="M12 22C12 22 19 20 21 13C22 11 21 8 18 7C16 9 15 11 15 13C15 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <path d="M12 22C12 22 5 20 3 13C2 11 3 8 6 7C8 9 9 11 9 13C9 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <circle cx="12" cy="5" r="2" fill="#526447"/>
+            </svg>
             <div class="brand-name">Achtsam Entrümpeln</div>
         </div>
     </div>
