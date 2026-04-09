@@ -89,7 +89,7 @@
             border-bottom: 1px solid var(--border-color); 
             vertical-align: top;
         }
-        .right-align { text-align: right; }
+        .invoice-table .right-align { text-align: right; }
         
         .item-description {
             font-size: 9pt;
@@ -135,7 +135,6 @@
     <div class="header">
         <div class="brand-box">
             <div class="brand-name">Achtsam Entrümpeln</div>
-            <div class="brand-sub">In der Ruhe liegt die Kraft</div>
         </div>
     </div>
 
@@ -170,7 +169,6 @@
             <tr>
                 <td>
                     <strong>Basis-Pauschale</strong>
-                    <div class="item-description">Anfahrt & Organisation</div>
                 </td>
                 <td class="right-align">1</td>
                 <td class="right-align">{{basis_pauschale}} €</td>
@@ -181,7 +179,6 @@
             <tr>
                 <td>
                     <strong>{{#eq typ "ARBEIT"}}Arbeitszeit{{else}}Fahrtkosten{{/eq}}</strong>
-                    <div class="item-description">{{datum}} - {{notiz}}</div>
                 </td>
                 <td class="right-align">{{#eq typ "ARBEIT"}}{{stunden}} Std.{{else}}{{kilometer}} km{{/eq}}</td>
                 <td class="right-align">{{einzelpreis}} €</td>
@@ -232,7 +229,6 @@
         </div>
         <div class="footer-col">
             <strong>Achtsam Entrümpeln</strong><br>
-            In der Ruhe liegt die Kraft.<br>
             Vielen Dank für Ihren Auftrag!
         </div>
     </div>
