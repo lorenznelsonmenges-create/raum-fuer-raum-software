@@ -5,10 +5,15 @@
 ---
 
 ## Was gerade gebaut wird
-<!-- Beispiel: PDF-Rechnungs-Workflow -->
+- Branding-Anpassung in index.html (achtsam -> achtsam entrümpeln)
+- Workspace-Hygiene (Prüfung auf Log-Dateien & Junk)
 
 ## Bekannte offene Punkte dieser Sitzung
-<!-- Beispiel: Handler kompiliert noch nicht -->
+- Keine unmittelbaren Fehler nach der Branding-Änderung bekannt.
+- Test-Uploads in uploads/ bleiben vorerst zur Entwicklungserleichterung bestehen.
 
 ## Letzte Entscheidungen
-<!-- Beispiel: PDF via headless_chrome, kein chromiumoxide -->
+- Branding wird nun kleingeschrieben ("achtsam entrümpeln") im HTML-Header.
+
+## Letzte Aktivität
+- Letzte Sitzung: 09.04.2026, ca. 23:35 Uhr.
