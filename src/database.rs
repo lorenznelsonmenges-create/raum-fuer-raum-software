@@ -1,16 +1,21 @@
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool, Row};
-use std::env;
+use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool, Row};
 use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:achtsam.db".to_string());
-    if !std::path::Path::new("achtsam.db").exists() {
-        std::fs::File::create("achtsam.db").expect("Datenbankdatei konnte nicht erstellt werden");
-    }
     if !std::path::Path::new("uploads").exists() {
         std::fs::create_dir("uploads").expect("Uploads-Verzeichnis konnte nicht erstellt werden");
     }
-    let pool = SqlitePoolOptions::new().max_connections(5).connect(&database_url).await?;
+
+    let options = SqliteConnectOptions::new()
+        .filename("achtsam.db")
+        .create_if_missing(true)
+        .foreign_keys(true);
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(options)
+        .await?;
+
     sqlx::migrate!("./migrations").run(&pool).await?;
     Ok(pool)
 }
@@ -49,6 +54,16 @@ pub async fn update_kunde(pool: &SqlitePool, id: i64, kunde: Kunde) -> Result<()
 }
 
 pub async fn delete_kunde(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    // 1. Finde alle Aufträge dieses Kunden
+    let auftraege = sqlx::query("SELECT id FROM auftraege WHERE kunde_id = ?").bind(id).fetch_all(pool).await?;
+    
+    // 2. Lösche jeden Auftrag einzeln (inkl. physischer Dateien)
+    for row in auftraege {
+        let a_id: i64 = row.get("id");
+        delete_auftrag(pool, a_id).await?;
+    }
+
+    // 3. Lösche den Kunden selbst
     sqlx::query("DELETE FROM kunden WHERE id = ?").bind(id).execute(pool).await?;
     Ok(())
 }
@@ -117,6 +132,50 @@ pub async fn update_auftrag(pool: &SqlitePool, id: i64, auftrag: Auftrag) -> Res
     sqlx::query("UPDATE auftraege SET status = ?, beschreibung = ?, basis_pauschale = ?, stundensatz = ?, kilometer_satz = ?, notizen = ? WHERE id = ?")
         .bind(format!("{:?}", auftrag.status)).bind(auftrag.beschreibung).bind(auftrag.basis_pauschale).bind(auftrag.stundensatz).bind(auftrag.kilometer_satz).bind(auftrag.notizen).bind(id)
         .execute(pool).await?;
+    Ok(())
+}
+
+pub async fn delete_auftrag(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    // 1. Hole alle physischen Pfade aus verschiedenen Tabellen
+    let mut file_paths = Vec::new();
+
+    // Pfade aus 'dateien'
+    let d_rows = sqlx::query("SELECT dateipfad FROM dateien WHERE auftrag_id = ?").bind(id).fetch_all(pool).await?;
+    for row in d_rows {
+        let path: String = row.get("dateipfad");
+        if !path.is_empty() {
+            file_paths.push(path);
+        }
+    }
+
+    // Pfade aus 'rechnungen'
+    let r_rows = sqlx::query("SELECT pdf_pfad FROM rechnungen WHERE auftrag_id = ?").bind(id).fetch_all(pool).await?;
+    for row in r_rows {
+        let path: String = row.get("pdf_pfad");
+        if !path.is_empty() {
+            file_paths.push(path);
+        }
+    }
+
+    // Pfade aus 'einsaetze'
+    let e_rows = sqlx::query("SELECT signatur_pfad FROM einsaetze WHERE auftrag_id = ?").bind(id).fetch_all(pool).await?;
+    for row in e_rows {
+        if let Some(path) = row.get::<Option<String>, _>("signatur_pfad") {
+            if !path.is_empty() {
+                file_paths.push(path);
+            }
+        }
+    }
+
+    // 2. Lösche Dateien physisch von der Festplatte
+    for path in file_paths {
+        if std::path::Path::new(&path).exists() {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+
+    // 3. Lösche Auftrag (Kaskade löscht Einsätze, Dateien, Rechnungen etc. in DB)
+    sqlx::query("DELETE FROM auftraege WHERE id = ?").bind(id).execute(pool).await?;
     Ok(())
 }
 

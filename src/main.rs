@@ -30,7 +30,7 @@ async fn main() {
         .route("/api/kunden/:id", get(get_kunde).post(update_kunde))
         .route("/api/kunden/:id/delete", post(delete_kunde_handler))
         .route("/api/auftraege", get(list_auftraege).post(add_auftrag))
-        .route("/api/auftraege/:id", get(get_auftrag).post(update_auftrag))
+        .route("/api/auftraege/:id", get(get_auftrag).post(update_auftrag).delete(delete_auftrag_handler))
         .route("/api/auftraege/:id/einsaetze", get(list_einsaetze))
         .route("/api/auftraege/:id/dateien", get(list_dateien))
         .route("/api/auftraege/:id/upload", post(files::upload_datei))
@@ -131,6 +131,20 @@ async fn get_auftrag(State(pool): State<SqlitePool>, Path(id): Path<i64>) -> Res
 async fn update_auftrag(State(pool): State<SqlitePool>, Path(id): Path<i64>, Json(auftrag): Json<Auftrag>) -> Result<(), AppError> {
     database::update_auftrag(&pool, id, auftrag).await?;
     Ok(())
+}
+
+async fn delete_auftrag_handler(State(pool): State<SqlitePool>, Path(id): Path<i64>) -> Result<(), AppError> {
+    println!("Versuche Auftrag zu löschen: ID={}", id);
+    match database::delete_auftrag(&pool, id).await {
+        Ok(_) => {
+            println!("Auftrag ID={} erfolgreich gelöscht", id);
+            Ok(())
+        },
+        Err(e) => {
+            eprintln!("Fehler beim Löschen von Auftrag ID={}: {:?}", id, e);
+            Err(e.into())
+        }
+    }
 }
 
 async fn add_einsatz(State(pool): State<SqlitePool>, Json(einsatz): Json<Einsatz>) -> Result<Json<i64>, AppError> {

@@ -88,8 +88,13 @@
         <!-- Kunden Liste -->
         <template x-if="view === 'kunden'">
             <div>
-                <div class="flex justify-between items-end mb-16">
-                    <h1 class="font-headline text-4xl text-primary font-bold">Kundenverwaltung</h1>
+                <div class="flex justify-between items-end mb-16 gap-8">
+                    <div class="flex items-end gap-12">
+                        <h1 class="font-headline text-4xl text-primary font-bold">Kundenverwaltung</h1>
+                        <div class="relative w-72">
+                            <input x-model="kundeSearchQuery" placeholder="Name, Ort oder ID..." class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/10 transition-all font-body text-sm">
+                        </div>
+                    </div>
                     <button @click="openNewKunde()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neuer Kunde</button>
                 </div>
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
@@ -159,8 +164,13 @@
         <!-- Auftragsverwaltung -->
         <template x-if="view === 'auftraege'">
             <div>
-                <div class="flex justify-between items-end mb-16">
-                    <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Projekte</h1>
+                <div class="flex justify-between items-end mb-16 gap-8">
+                    <div class="flex items-end gap-12">
+                        <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Projekte</h1>
+                        <div class="relative w-72">
+                            <input x-model="auftragSearchQuery" placeholder="Kunde oder ID..." class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/10 transition-all font-body text-sm">
+                        </div>
+                    </div>
                     <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neues Projekt</button>
                 </div>
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
@@ -190,9 +200,14 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde-Nr</p><div class="text-xl font-bold" x-text="formatKundeID(activeKundeForAuftrag.id)"></div></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
                     </div>
-                    <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-20 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all">
-                        <option value="AnfrageLaeuft">Anfrage läuft</option><option value="InBearbeitung">In Bearbeitung</option><option value="Abgeschlossen">Abgeschlossen</option><option value="Storniert">Storniert</option>
-                    </select>
+                    <div class="flex items-center gap-6">
+                        <button @click="showDeleteAuftragModal = true" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
+                            <span class="material-icons-outlined">delete</span>
+                        </button>
+                        <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-20 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all">
+                            <option value="AnfrageLaeuft">Anfrage läuft</option><option value="InBearbeitung">In Bearbeitung</option><option value="Abgeschlossen">Abgeschlossen</option><option value="Storniert">Storniert</option>
+                        </select>
+                    </div>
                 </header>
 
                 <div class="grid grid-cols-2 gap-12">
@@ -298,6 +313,21 @@
     
     <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteAuftragModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center">
+            <div class="w-20 h-20 bg-red-50 text-red-400 rounded-full flex items-center justify-center mx-auto mb-8">
+                <span class="material-icons-outlined text-4xl">delete_forever</span>
+            </div>
+            <h2 class="font-headline text-3xl mb-4 text-primary font-bold">Auftrag löschen?</h2>
+            <p class="text-sm opacity-60 mb-10 leading-relaxed">Möchten Sie diesen Auftrag unwiderruflich löschen? Alle zugehörigen Daten und Dateien werden entfernt.</p>
+            <div class="flex flex-col gap-4">
+                <button @click="deleteAuftrag(activeAuftrag.id)" class="bg-red-500 text-white py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg">Ja, unwiderruflich löschen</button>
+                <button @click="showDeleteAuftragModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <div x-show="feedback.show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
         <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
         <span class="text-lg" x-text="feedback.message"></span>
@@ -317,7 +347,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false,
+                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
                 async init() { await this.fetchKunden(); await this.fetchAuftraege(); await this.fetchTemplates(); },
                 showFeedback(msg, type = 'success') { this.feedback = { show: true, message: msg, type: type }; setTimeout(() => { this.feedback.show = false; }, 3000); },
                 async fetchTemplates() { this.templates = await (await fetch('/api/templates')).json(); },
@@ -333,12 +363,33 @@
                 getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },                formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
                 get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) r.push({ type: 'kunde', key: 'k_'+k.id, title: k.vorname+' '+k.nachname, subtitle: this.formatKundeID(k.id), data: k }); }); this.auftraege.forEach(a => { const kn = this.getKundeName(a.kunde_id).toLowerCase(); if (kn.includes(q) || this.formatAuftragID(a.id).toLowerCase().includes(q)) r.push({ type: 'auftrag', key: 'a_'+a.id, title: this.getKundeName(a.kunde_id), subtitle: this.formatAuftragID(a.id), data: a }); }); return r.slice(0, 5); },
                 handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') this.openKundeDetail(res.data); else this.openAuftragDetail(res.data); },
-                get filteredKunden() { const q = this.searchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)); },
-                get uniqueFilteredAuftraege() { const q = this.searchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q)); },
+                get filteredKunden() { const q = this.kundeSearchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || (k.ort && k.ort.toLowerCase().includes(q)) || this.formatKundeID(k.id).toLowerCase().includes(q)); },
+                get uniqueFilteredAuftraege() { const q = this.auftragSearchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q) || this.formatAuftragID(a.id).toLowerCase().includes(q)); },
                 get uniqueAuftraegeForKunde() { if (!this.activeKunde) return []; return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
                 formatKundeID(id) { return 'K' + String(id).padStart(6, '0'); },
                 formatAuftragID(id) { return 'A' + String(id).padStart(6, '0'); },
                 async deleteKunde(id) { if (confirm("Kunde wirklich löschen?")) { await fetch(`/api/kunden/${id}/delete`, { method: 'POST' }); this.view = 'kunden'; await this.fetchKunden(); } },
+                async deleteAuftrag(id) {
+                    if (!id) return;
+                    this.isProcessing = true;
+                    try {
+                        const res = await fetch(`/api/auftraege/${id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            this.showDeleteAuftragModal = false;
+                            this.view = 'auftraege';
+                            await this.fetchAuftraege();
+                            this.showFeedback("Auftrag erfolgreich gelöscht.");
+                        } else {
+                            const err = await res.json().catch(() => ({ error: "Unbekannter Fehler" }));
+                            this.showFeedback(err.error || "Fehler beim Löschen des Auftrags.", "error");
+                        }
+                    } catch (e) {
+                        this.showFeedback("Netzwerkfehler: " + e.message, "error");
+                    } finally {
+                        this.isProcessing = false;
+                        this.showDeleteAuftragModal = false;
+                    }
+                },
                 async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
                 formatDate(d) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }); },

@@ -20,3 +20,4 @@ achtsam.db*
 *.bak
 target/
 target/
+Cargo.lock
