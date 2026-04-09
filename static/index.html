@@ -26,7 +26,7 @@
     <aside class="w-80 h-full bg-surface-lowest border-r border-surface-low flex flex-col py-12 px-6 font-body">
         <div class="flex items-center gap-4 mb-24 px-4 cursor-pointer" @click="view = 'dashboard'">
             <span class="font-headline text-3xl font-bold text-primary">A</span>
-            <span class="font-headline text-xl font-bold text-primary">Achtsam</span>
+            <span class="font-headline text-xl font-bold text-primary">achtsam entrümpeln</span>
         </div>
         <nav class="flex-1 space-y-2">
             <button @click="view = 'dashboard'" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
@@ -222,35 +222,79 @@
                 </section>
             </div>
         </template>
-    </main>
 
-    <!-- Archiv -->
-    <template x-if="view === 'archiviert'">
-        <div>
-            <h1 class="font-headline text-4xl text-primary font-bold mb-16">Abgeschlossene Projekte</h1>
-            <div class="bg-white rounded-3xl overflow-hidden shadow-sm font-body">
-                <table class="w-full text-left font-body">
-                    <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
-                    <tbody class="divide-y divide-surface-low text-on-surface">
-                        <template x-for="a in auftraege.filter(a => isArchiv(a))" :key="a.id">
-                            <tr class="hover:bg-surface-low transition-all cursor-pointer group" @click="openAuftragDetail(a)">
-                                <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
-                                <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
-                                <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
-                                <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                            </tr>
-                        </template>
-                    </tbody>
-                </table>
+        <!-- Archiv -->
+        <template x-if="view === 'archiviert'">
+            <div>
+                <div class="flex justify-between items-end mb-16">
+                    <h1 class="font-headline text-4xl text-primary font-bold">Abgeschlossene Projekte</h1>
+                </div>
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm font-body">
+                    <table class="w-full text-left font-body">
+                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
+                        <tbody class="divide-y divide-surface-low text-on-surface">
+                            <template x-for="a in auftraege.filter(a => isArchiv(a))" :key="a.id">
+                                <tr class="hover:bg-surface-low transition-all cursor-pointer group" @click="openAuftragDetail(a)">
+                                    <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
+                                    <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
+                                    <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
+                                    <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                            </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </template>
+        </template>
+    </main>
 
     <!-- Modals -->
     <div x-show="templateEditorOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] p-16 relative flex flex-col shadow-2xl text-on-surface font-body"><button @click="templateEditorOpen = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-8 text-primary font-bold" x-text="'Vorlage: ' + editingTemplateName"></h2><textarea x-model="editingTemplateContent" class="flex-1 bg-surface-low p-10 rounded-3xl font-mono text-sm border-none shadow-inner no-scrollbar text-on-surface"></textarea><div class="pt-8 flex justify-end gap-6 font-bold font-body"><button @click="templateEditorOpen = false" class="text-xs uppercase opacity-40">Abbrechen</button><button @click="saveTemplateContent()" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Speichern</button></div></div></div>
     
     <div x-show="newKundeModal" class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" x-cloak><div class="bg-surface-lowest w-full max-w-2xl rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="newKundeModal = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-10 text-primary font-bold">Neuer Kundenkontakt</h2><form @submit.prevent="createNewKunde()" class="space-y-8 font-body"><div class="grid grid-cols-2 gap-8"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Vorname *</label><input x-model="newKundeData.vorname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nachname *</label><input x-model="newKundeData.nachname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div></div><div class="grid grid-cols-3 gap-8 text-on-surface"><div class="col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Straße</label><input x-model="newKundeData.strasse" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nr.</label><input x-model="newKundeData.hausnummer" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><div class="grid grid-cols-3 gap-8 text-on-surface"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">PLZ</label><input x-model="newKundeData.plz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Ort</label><input x-model="newKundeData.ort" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><button type="submit" class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl hover:bg-primary-dim transition-all mt-4 font-bold font-body">Kunden anlegen</button></form></div></div>
 
-    <div x-show="newAuftragModal" class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" x-cloak><div class="bg-surface-lowest w-full max-w-2xl rounded-[48px] p-20 relative shadow-2xl text-on-surface text-center font-body"><button @click="newAuftragModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold">Neues Projekt starten</h2><select x-model.number="newAuftragKundeID" class="w-full bg-surface-low p-6 rounded-2xl mb-12 appearance-none text-center shadow-inner"><option value="">-- Kunden auswählen --</option><template x-for="k in kunden" :key="k.id"><option :value="k.id" x-text="k.vorname + ' ' + k.nachname"></option></template></select><button @click="createNewAuftrag()" class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl">Projekt anlegen</button></div></div>
+    <div x-show="newAuftragModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" 
+         x-cloak 
+         x-data="{ search: '', open: false }"
+         x-init="$watch('newAuftragModal', v => { if(v && newAuftragKundeID) search = getKundeName(newAuftragKundeID); else if(v) { search = ''; open = false; } })">
+        <div class="bg-surface-lowest w-full max-w-2xl rounded-[48px] p-20 relative shadow-2xl text-on-surface text-center font-body">
+            <button @click="newAuftragModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body hover:text-primary transition-colors">
+                <span class="material-icons-outlined text-4xl">close</span>
+            </button>
+            <h2 class="font-headline text-4xl mb-12 text-primary font-bold">Neues Projekt starten</h2>
+            
+            <div class="relative mb-12">
+                <input type="text" 
+                       placeholder="Kunde suchen..." 
+                       x-model="search" 
+                       @focus="open = true" 
+                       @input="open = true; newAuftragKundeID = null"
+                       class="w-full bg-surface-low p-6 rounded-2xl text-center shadow-inner focus:ring-1 ring-primary/20 transition-all font-bold"
+                       @click.away="open = false">
+                
+                <div x-show="open && (search.length > 0 || kunden.length > 0)" 
+                     class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-[110] border border-surface-low max-h-60 overflow-y-auto no-scrollbar">
+                    <template x-for="k in kunden.filter(k => (k.vorname + ' ' + k.nachname).toLowerCase().includes(search.toLowerCase()))" :key="k.id">
+                        <div @click="newAuftragKundeID = k.id; search = k.vorname + ' ' + k.nachname; open = false" 
+                             class="px-8 py-4 hover:bg-surface-low cursor-pointer border-b last:border-0 text-left transition-colors">
+                            <div class="font-bold text-primary" x-text="k.vorname + ' ' + k.nachname"></div>
+                            <div class="text-[10px] uppercase opacity-40 font-bold" x-text="formatKundeID(k.id)"></div>
+                        </div>
+                    </template>
+                    <template x-if="kunden.filter(k => (k.vorname + ' ' + k.nachname).toLowerCase().includes(search.toLowerCase())).length === 0">
+                        <div class="px-8 py-6 text-sm italic opacity-40">Keine Kunden gefunden.</div>
+                    </template>
+                </div>
+            </div>
+
+            <button @click="createNewAuftrag()" 
+                    :disabled="!newAuftragKundeID"
+                    :class="!newAuftragKundeID ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dim'"
+                    class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl transition-all">
+                Projekt anlegen
+            </button>
+        </div>
+    </div>
     
     <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
