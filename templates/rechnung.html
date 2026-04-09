@@ -2,190 +2,239 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
-            --surface: #fbf9f3;
-            --surface-low: #f5f4ec;
-            --surface-lowest: #ffffff;
-            --primary: #526447;
-            --primary-container: #d4e9c4;
-            --on-surface: #31332c;
-            --outline-variant: rgba(178, 179, 169, 0.15);
+            --primary-green: #4A7C59;
+            --text-main: #333333;
+            --text-light: #666666;
+            --border-color: #E0E0E0;
         }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background-color: var(--surface);
-            color: var(--on-surface);
-            font-family: 'Manrope', sans-serif;
-            margin: 0; padding: 0;
-            line-height: 1.6;
-            font-size: 11pt;
-        }
-        .page {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--text-main);
+            background-color: #ffffff;
             width: 210mm;
             min-height: 297mm;
-            padding: 30mm 25mm;
-            background: var(--surface);
+            margin: 0 auto;
+            padding: 2.5cm;
+            -webkit-print-color-adjust: exact !important;
             position: relative;
         }
-        h1, .display-lg {
-            font-family: 'Noto Serif', serif;
-            color: var(--primary);
-            font-size: 3.5rem;
-            margin: 0;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
+
+        /* Header mit Logo oben rechts */
+        .header {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 2cm;
         }
-        .label-md {
-            font-size: 0.75rem;
-            font-weight: 600;
+
+        .brand-box { text-align: right; }
+        .brand-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 32pt;
+            color: var(--primary-green);
+            line-height: 1;
+        }
+        .brand-sub {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 11pt;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        /* Adressen & Meta */
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5cm;
+        }
+
+        .sender-line {
+            font-size: 8pt;
+            color: var(--primary-green);
+            margin-bottom: 10px;
+            text-decoration: underline;
+            text-decoration-color: var(--border-color);
+        }
+
+        .recipient-address { 
+            font-size: 11pt; 
+            line-height: 1.5; 
+        }
+
+        .meta-table { font-size: 10pt; border-collapse: collapse; }
+        .meta-table td { padding: 4px 0 4px 20px; text-align: right; }
+        .meta-table td:first-child { font-weight: 600; color: var(--text-light); }
+
+        /* Artikeltabelle */
+        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 1cm; }
+        .invoice-table th {
+            text-align: left;
+            font-size: 9pt;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(49, 51, 44, 0.4);
-            margin-bottom: 8pt;
-            display: block;
+            color: var(--primary-green);
+            padding: 12px 5px;
+            border-top: 2px solid var(--primary-green);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
         }
-        .header-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            margin-bottom: 40mm;
-            align-items: end;
+        .invoice-table td { 
+            padding: 12px 5px; 
+            font-size: 10pt; 
+            border-bottom: 1px solid var(--border-color); 
+            vertical-align: top;
         }
-        .brand-gradient {
-            font-family: 'Noto Serif', serif;
+        .right-align { text-align: right; }
+        
+        .item-description {
+            font-size: 9pt;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* Summen */
+        .totals-wrapper { display: flex; justify-content: flex-end; }
+        .totals-table { width: 280px; border-collapse: collapse; }
+        .totals-table td { padding: 8px 5px; font-size: 10pt; text-align: right; }
+        .grand-total td {
             font-weight: 700;
-            font-size: 24pt;
-            background: linear-gradient(135deg, var(--primary), var(--primary-container));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--primary-green);
+            border-top: 2px solid var(--primary-green);
+            border-bottom: 2px solid var(--primary-green);
+            font-size: 12pt;
+            padding-top: 12px;
+            padding-bottom: 12px;
         }
-        .address-block {
-            margin-bottom: 30mm;
-            max-width: 100mm;
-        }
-        .meta-section {
-            background: var(--surface-low);
-            padding: 24pt;
-            border-radius: 12pt;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20pt;
-            margin-bottom: 20mm;
-        }
-        /* Table without hard lines */
-        .items-container {
-            margin-bottom: 30mm;
-        }
-        .item-row {
-            padding: 16pt 0;
-            display: grid;
-            grid-template-columns: 3fr 1fr 1fr 1fr;
-            align-items: center;
-        }
-        .item-row:nth-child(even) {
-            background: rgba(245, 244, 236, 0.4);
-            margin: 0 -10pt;
-            padding: 16pt 10pt;
-            border-radius: 8pt;
-        }
-        .total-card {
-            background: var(--surface-lowest);
-            padding: 40pt;
-            border-radius: 20pt;
-            box-shadow: 0 20px 40px rgba(49, 51, 44, 0.06); /* Ambient Shadow */
-            width: 100mm;
-            margin-left: auto;
-        }
-        .grand-total {
-            font-family: 'Noto Serif', serif;
-            font-size: 2rem;
-            color: var(--primary);
-            margin-top: 15pt;
-            padding-top: 15pt;
-            border-top: 1px solid var(--outline-variant);
-        }
+
+        /* Footer */
         .footer {
             position: absolute;
-            bottom: 20mm;
-            left: 25mm;
-            right: 25mm;
+            bottom: 2cm;
+            left: 2.5cm;
+            right: 2.5cm;
+            text-align: center;
             font-size: 8pt;
-            opacity: 0.5;
+            color: var(--text-light);
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            border-top: 1px solid var(--outline-variant);
-            padding-top: 20pt;
+            gap: 20px;
         }
+        .footer-col { text-align: left; line-height: 1.4; }
+        .footer-col:nth-child(2) { text-align: center; }
+        .footer-col:nth-child(3) { text-align: right; }
     </style>
 </head>
 <body>
-    <div class="page">
-        <div class="header-grid">
-            <div class="brand-gradient">Achtsam Entrümpeln</div>
-            <div style="text-align: right">
-                <span class="label-md">Rechnung</span>
-                <div style="font-family: 'Noto Serif'; font-size: 1.5rem">{{rechnungs_nummer}}</div>
-            </div>
+    <div class="header">
+        <div class="brand-box">
+            <div class="brand-name">Achtsam Entrümpeln</div>
+            <div class="brand-sub">In der Ruhe liegt die Kraft</div>
         </div>
+    </div>
 
-        <div class="address-block">
-            <span class="label-md">Empfänger</span>
-            <div style="font-size: 1.2rem; font-weight: 400">
+    <div class="info-section">
+        <div>
+            <div class="sender-line">Achtsam Entrümpeln | Stefanie Ruf | hallo@achtsam-entruempeln.de</div>
+            <div class="recipient-address">
                 {{kunde_name}}<br>
                 {{kunde_strasse}} {{kunde_hausnummer}}<br>
                 {{kunde_plz}} {{kunde_ort}}
             </div>
         </div>
+        <table class="meta-table">
+            <tr><td>Datum:</td><td>{{datum_heute}}</td></tr>
+            <tr><td>Rg.-Nr.:</td><td>{{rechnungs_nummer}}</td></tr>
+            <tr><td>Kunde-Nr:</td><td>{{kunde_id}}</td></tr>
+            <tr><td>Auftrag-Nr:</td><td>{{auftrag_id}}</td></tr>
+        </table>
+    </div>
 
-        <div class="meta-section">
-            <div><span class="label-md">Datum</span><div style="font-weight: 600">{{datum_heute}}</div></div>
-            <div><span class="label-md">Kunde-Nr</span><div style="font-weight: 600">{{kunde_id}}</div></div>
-            <div><span class="label-md">Auftrag-Nr</span><div style="font-weight: 600">{{auftrag_id}}</div></div>
-        </div>
-
-        <div class="items-container">
-            <div class="item-row" style="background: none; border-bottom: 1px solid var(--outline-variant)">
-                <span class="label-md">Leistung</span>
-                <span class="label-md" style="text-align: center">Menge</span>
-                <span class="label-md" style="text-align: right">Einzel</span>
-                <span class="label-md" style="text-align: right">Gesamt</span>
-            </div>
+    <table class="invoice-table">
+        <thead>
+            <tr>
+                <th>Leistung</th>
+                <th class="right-align">Anzahl</th>
+                <th class="right-align">Einzel</th>
+                <th class="right-align">Summe</th>
+            </tr>
+        </thead>
+        <tbody>
             {{#if basis_pauschale}}
-            <div class="item-row">
-                <div><strong>Basis-Pauschale</strong><div style="font-size: 9pt; opacity: 0.5">Anfahrt & Organisation</div></div>
-                <div style="text-align: center">1</div>
-                <div style="text-align: right">{{basis_pauschale}} €</div>
-                <div style="text-align: right">{{basis_pauschale}} €</div>
-            </div>
+            <tr>
+                <td>
+                    <strong>Basis-Pauschale</strong>
+                    <div class="item-description">Anfahrt & Organisation</div>
+                </td>
+                <td class="right-align">1</td>
+                <td class="right-align">{{basis_pauschale}} €</td>
+                <td class="right-align">{{basis_pauschale}} €</td>
+            </tr>
             {{/if}}
             {{#each einsaetze}}
-            <div class="item-row">
-                <div><strong>{{#if (eq typ "ARBEIT")}}Arbeitszeit{{else}}Fahrtkosten{{/if}}</strong><div style="font-size: 9pt; opacity: 0.5">{{datum}} - {{notiz}}</div></div>
-                <div style="text-align: center">{{#if (eq typ "ARBEIT")}}{{stunden}} Std.{{else}}{{kilometer}} km{{/if}}</div>
-                <div style="text-align: right">{{einzelpreis}} €</div>
-                <div style="text-align: right">{{zeilen_summe}} €</div>
-            </div>
+            <tr>
+                <td>
+                    <strong>{{#eq typ "ARBEIT"}}Arbeitszeit{{else}}Fahrtkosten{{/eq}}</strong>
+                    <div class="item-description">{{datum}} - {{notiz}}</div>
+                </td>
+                <td class="right-align">{{#eq typ "ARBEIT"}}{{stunden}} Std.{{else}}{{kilometer}} km{{/eq}}</td>
+                <td class="right-align">{{einzelpreis}} €</td>
+                <td class="right-align">{{zeilen_summe}} €</td>
+            </tr>
             {{/each}}
-        </div>
+        </tbody>
+    </table>
 
-        <div class="total-card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8pt; font-size: 0.9rem; opacity: 0.6">
-                <span>Netto Gesamt</span><span>{{gesamt_netto}} €</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8pt; font-size: 0.9rem; opacity: 0.6">
-                <span>USt. 19%</span><span>{{mwst}} €</span>
-            </div>
-            <div class="grand-total" style="display: flex; justify-content: space-between; align-items: baseline">
-                <span>Gesamt</span><span>{{gesamt_brutto}} €</span>
-            </div>
-        </div>
+    {{#if rechnungs_notizen}}
+    <div style="margin-bottom: 1.5cm; font-size: 10pt;">
+        <p style="font-weight: 600; margin-bottom: 5px; color: var(--primary-green);">Hinweise:</p>
+        {{#each rechnungs_notizen}}
+            <p style="margin-bottom: 4px;">- {{text}}</p>
+        {{/each}}
+    </div>
+    {{/if}}
 
-        <footer class="footer">
-            <div><strong>Kontakt</strong><br>Stefanie Ruf<br>hallo@achtsam-entruempeln.de</div>
-            <div><strong>Zahlung</strong><br>Binnen 14 Tagen ohne Abzug<br>Bank: DE12 3456...</div>
-            <div style="text-align: right"><strong>Achtsam</strong><br>In der Ruhe liegt die Kraft.<br>Vielen Dank für Ihr Vertrauen.</div>
-        </footer>
+    <div class="totals-wrapper">
+        <table class="totals-table">
+            <tr>
+                <td>Netto Gesamt</td>
+                <td>{{gesamt_netto}} €</td>
+            </tr>
+            <tr>
+                <td>USt. 19%</td>
+                <td>{{mwst}} €</td>
+            </tr>
+            <tr class="grand-total">
+                <td>Gesamtsumme</td>
+                <td>{{gesamt_brutto}} €</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <div class="footer-col">
+            <strong>Kontakt</strong><br>
+            Stefanie Ruf<br>
+            hallo@achtsam-entruempeln.de<br>
+            achtsam-entruempeln.de
+        </div>
+        <div class="footer-col">
+            <strong>Zahlungsinformationen</strong><br>
+            Zahlbar innerhalb von 14 Tagen<br>
+            IBAN: DE12 3456 7890 1234 5678 90<br>
+            BIC: ABCDEFGHXXX
+        </div>
+        <div class="footer-col">
+            <strong>Achtsam Entrümpeln</strong><br>
+            In der Ruhe liegt die Kraft.<br>
+            Vielen Dank für Ihren Auftrag!
+        </div>
     </div>
 </body>
 </html>

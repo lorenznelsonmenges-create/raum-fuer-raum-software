@@ -172,7 +172,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
         fs::create_dir_all("uploads/rechnungen").map_err(|e| AppError::Internal(e.to_string()))?;
     }
 
-    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None).map_err(AppError::PdfError)?;
+    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None)?;
     let filename = format!("rechnung_{}.pdf", id);
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
@@ -218,7 +218,7 @@ async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64
         Some(&notizen), 
         None, 
         None
-    ).map_err(AppError::PdfError)?;
+    )?;
 
     let filename = format!("{}_{}_{}.pdf", template_name.replace(".html", ""), id, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/{}", filename);

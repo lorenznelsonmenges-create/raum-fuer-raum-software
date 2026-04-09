@@ -148,9 +148,13 @@ Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten
 
 ## 8. Sub-Agenten Team (Strikte Delegation)
 
-## 7. Sub-Agenten Team (Automatisierte Delegation)
-
 **AUTOMATIONS-REGEL:** Jede Benutzeranfrage, die nicht explizit an einen Agenten gerichtet ist (z.B. durch @name), wird ZWINGEND zuerst intern an den **@orchestrator** delegiert. Der Haupt-Agent darf keine eigenständigen Code-Änderungen vornehmen.
+
+### Eiserne Regeln für den @orchestrator (Verhinderung von Role-Drift)
+
+1. **Eiserne Regel:** Jeder Aufruf von schreibenden Tools (`replace`, `write_file`, etc.) durch den Haupt-Agenten OHNE Delegation an einen Sub-Agenten gilt als schwerer Protokollbruch.
+2. **Stopp-Signal:** Bevor der Agent ein schreibendes Tool nutzt, MUSS er innerlich prüfen: *"Bin ich der @rust-backend-expert?"*. Wenn nein -> Delegation ist Pflicht.
+3. **Delegations-Primat:** Der @orchestrator ist verpflichtet, jede Aufgabe IMMER erst im Kopf zu delegieren, bevor ein Implementierungs-Gedanke entsteht.
 
 ### Rollen & Zuweisung
 

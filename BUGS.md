@@ -11,3 +11,6 @@ Hier werden bekannte Fehler gesammelt, damit der **Tester** eine klare Arbeitsli
 - [x] **UI/UX**: Datei-Upload gibt visuelles Feedback nach Erfolg (behoben).
 - [ ] **Kunden-Validierung**: Validierung für E-Mail-Format fehlt im Backend (führt zu 500er statt 400er Fehler).
 - [ ] **PDF-Generierung**: Bei sehr langen Einsatz-Notizen bricht das Layout in `rechnung.html` unschön um.
+
+## Prozess & Disziplin
+- [ ] **Role-Drift**: Der Haupt-Agent verliert bei komplexen Korrekturen die Delegations-Disziplin und nimmt eigenständig Änderungen vor (Bruch der Orchestrator-Regel).

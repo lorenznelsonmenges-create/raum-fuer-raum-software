@@ -45,8 +45,7 @@ pub async fn upload_datei(
                     None,
                     None,
                     Some(&abs_sig),
-                )
-                .map_err(AppError::PdfError)?;
+                )?;
 
                 let pdf_name = format!("Datenschutz_{}_{}.pdf", auftrag_id, Local::now().format("%Y%m%d"));
                 let pdf_path = format!("uploads/{}", pdf_name);

@@ -2,6 +2,7 @@ use handlebars::{Handlebars, Renderable};
 use serde_json::json;
 use headless_chrome::{Browser, LaunchOptions};
 use crate::models::{Auftrag, Kunde, Einsatz, RechnungNotiz};
+use crate::error::AppError;
 use chrono::Local;
 use std::fs;
 
@@ -15,7 +16,7 @@ pub fn generate_dynamic_pdf(
     notizen: Option<&[RechnungNotiz]>,
     rechnungs_nummer: Option<&str>,
     signature_path: Option<&str>,
-) -> Result<(Vec<u8>, f64, f64), String> {
+) -> Result<(Vec<u8>, f64, f64), AppError> {
     let mut hb = Handlebars::new();
     
     // Helper für Preisberechnung oder Bedingungen
@@ -50,7 +51,7 @@ pub fn generate_dynamic_pdf(
     hb.register_helper("eq", Box::new(EqHelper));
 
     let template_content = fs::read_to_string(template_path)
-        .map_err(|e| format!("Konnte Vorlage nicht lesen: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("Konnte Vorlage '{}' nicht lesen: {}", template_path, e)))?;
 
     // Berechnungen für Rechnung (falls vorhanden)
     let mut gesamt_netto_einsaetze = 0.0;
@@ -115,14 +116,14 @@ pub fn generate_dynamic_pdf(
     });
 
     let html = hb.render_template(&template_content, &data)
-        .map_err(|e| format!("Fehler beim Render der Vorlage: {}", e))?;
+        .map_err(|e| AppError::PdfError(format!("Fehler beim Render der Vorlage: {}", e)))?;
 
     // PDF Generierung via Headless Chrome
     let pdf_bytes = print_html_to_pdf(html)?;
     Ok((pdf_bytes, netto_total, brutto_total))
 }
 
-fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {
+fn print_html_to_pdf(html: String) -> Result<Vec<u8>, AppError> {
     let options = LaunchOptions::default_builder()
         .headless(true)
         .args(vec![
@@ -132,21 +133,21 @@ fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {
         ])
         .build()
         .map_err(|e| {
-            let err_msg = format!("CRITICAL: Headless Chrome LaunchOptions error: {}", e);
-            eprintln!("{}", err_msg);
-            err_msg
+            let err_msg = format!("Headless Chrome LaunchOptions Fehler: {}", e);
+            eprintln!("CRITICAL: {}", err_msg);
+            AppError::PdfError(err_msg)
         })?;
     
     let browser = Browser::new(options).map_err(|e| {
-        let err_msg = format!("CRITICAL: Headless Chrome Browser::new error: {}. Is Chrome/Chromium installed?", e);
-        eprintln!("{}", err_msg);
-        err_msg
+        let err_msg = format!("Headless Chrome Browser::new Fehler: {}. Ist Chrome/Chromium installiert?", e);
+        eprintln!("CRITICAL: {}", err_msg);
+        AppError::PdfError(err_msg)
     })?;
 
     let tab = browser.new_tab().map_err(|e| {
-        let err_msg = format!("CRITICAL: Headless Chrome browser.new_tab error: {}", e);
-        eprintln!("{}", err_msg);
-        err_msg
+        let err_msg = format!("Headless Chrome browser.new_tab Fehler: {}", e);
+        eprintln!("CRITICAL: {}", err_msg);
+        AppError::PdfError(err_msg)
     })?;
 
     // Wir laden das HTML direkt als Data-URL
@@ -154,22 +155,22 @@ fn print_html_to_pdf(html: String) -> Result<Vec<u8>, String> {
     let data_url = format!("data:text/html;base64,{}", b64_html);
     
     tab.navigate_to(&data_url).map_err(|e| {
-        let err_msg = format!("CRITICAL: Headless Chrome tab.navigate_to error: {}", e);
-        eprintln!("{}", err_msg);
-        err_msg
+        let err_msg = format!("Headless Chrome tab.navigate_to Fehler: {}", e);
+        eprintln!("CRITICAL: {}", err_msg);
+        AppError::PdfError(err_msg)
     })?;
 
     tab.wait_until_navigated().map_err(|e| {
-        let err_msg = format!("CRITICAL: Headless Chrome tab.wait_until_navigated error: {}", e);
-        eprintln!("{}", err_msg);
-        err_msg
+        let err_msg = format!("Headless Chrome tab.wait_until_navigated Fehler: {}", e);
+        eprintln!("CRITICAL: {}", err_msg);
+        AppError::PdfError(err_msg)
     })?;
 
     let pdf_options = None; // Default A4
     let pdf_data = tab.print_to_pdf(pdf_options).map_err(|e| {
-        let err_msg = format!("CRITICAL: Headless Chrome tab.print_to_pdf error: {}", e);
-        eprintln!("{}", err_msg);
-        err_msg
+        let err_msg = format!("Headless Chrome tab.print_to_pdf Fehler: {}", e);
+        eprintln!("CRITICAL: {}", err_msg);
+        AppError::PdfError(err_msg)
     })?;
 
     Ok(pdf_data)

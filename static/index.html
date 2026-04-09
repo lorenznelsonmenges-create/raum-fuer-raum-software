@@ -312,9 +312,49 @@
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); if (r.ok) { await this.fetchDateien(this.activeAuftrag.id); this.showFeedback("Datei erfolgreich hochgeladen!"); } } },
                 async addWork(t) { const s = prompt(t === 'ARBEIT' ? "Stunden:" : "Kilometer:"); if(s) { const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t === 'ARBEIT' ? parseFloat(s) : 0, kilometer: t === 'FAHRT' ? parseFloat(s) : 0, notiz: '', typ: t, signatur_pfad: null }; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gespeichert."); } },
                 async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gelöscht.", "error"); } },
-                async generateDocFromTemplate(t) { this.isProcessing = true; try { const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); if (r.ok) { this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.showFeedback("Dokument erfolgreich erstellt!"); } else { this.showFeedback("Fehler bei der PDF-Erstellung", "error"); } } finally { this.isProcessing = false; } },
+                async generateDocFromTemplate(t) {
+                    this.isProcessing = true;
+                    try {
+                        const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ template: t })
+                        });
+                        if (r.ok) {
+                            this.showTemplateModal = false;
+                            await this.fetchDateien(this.activeAuftrag.id);
+                            this.showFeedback("Dokument erfolgreich erstellt!");
+                        } else {
+                            const err = await r.json();
+                            this.showFeedback(err.error || "Fehler bei der PDF-Erstellung", "error");
+                        }
+                    } catch (e) {
+                        this.showFeedback("Netzwerkfehler: " + e.message, "error");
+                    } finally {
+                        this.isProcessing = false;
+                    }
+                },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); this.showFeedback("Auftrag synchronisiert."); },
-                async createInvoice() { if (confirm("Rechnung generieren?")) { this.isProcessing = true; try { const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); if (r.ok) { await this.fetchAuftraege(); await this.openAuftragDetail(this.auftraege.find(a => a.id === this.activeAuftrag.id)); this.showFeedback("Rechnung wurde erstellt!"); } else { this.showFeedback("Fehler bei der Rechnungs-Erstellung", "error"); } } finally { this.isProcessing = false; } } }
+                async createInvoice() {
+                    if (confirm("Rechnung generieren?")) {
+                        this.isProcessing = true;
+                        try {
+                            const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' });
+                            if (r.ok) {
+                                await this.fetchAuftraege();
+                                await this.openAuftragDetail(this.auftraege.find(a => a.id === this.activeAuftrag.id));
+                                this.showFeedback("Rechnung wurde erstellt!");
+                            } else {
+                                const err = await r.json();
+                                this.showFeedback(err.error || "Fehler bei der Rechnungs-Erstellung", "error");
+                            }
+                        } catch (e) {
+                            this.showFeedback("Netzwerkfehler: " + e.message, "error");
+                        } finally {
+                            this.isProcessing = false;
+                        }
+                    }
+                }
             }
         }
     </script>
