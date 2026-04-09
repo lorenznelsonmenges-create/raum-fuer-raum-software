@@ -2,14 +2,16 @@ mod models;
 mod database;
 mod error;
 mod pdf;
+mod files;
 
 use axum::{
-    routing::{get, post, delete},
+    routing::{get, post},
     extract::{State, Path, Multipart},
     response::Html,
     Json,
     Router,
 };
+use tower_http::services::ServeDir;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::fs;
@@ -22,6 +24,8 @@ async fn main() {
     let pool = database::init_db().await.expect("Failed to initialize database");
 
     let app = Router::new()
+        .nest_service("/uploads", ServeDir::new("./uploads"))
+        .nest_service("/static", ServeDir::new("./static"))
         .route("/api/kunden", get(list_kunden).post(add_kunde))
         .route("/api/kunden/:id", get(get_kunde).post(update_kunde))
         .route("/api/kunden/:id/delete", post(delete_kunde_handler))
@@ -29,7 +33,7 @@ async fn main() {
         .route("/api/auftraege/:id", get(get_auftrag).post(update_auftrag))
         .route("/api/auftraege/:id/einsaetze", get(list_einsaetze))
         .route("/api/auftraege/:id/dateien", get(list_dateien))
-        .route("/api/auftraege/:id/upload", post(upload_datei))
+        .route("/api/auftraege/:id/upload", post(files::upload_datei))
         .route("/api/auftraege/:id/rechnung", post(create_rechnung))
         .route("/api/auftraege/:id/send_nachweis", post(send_stundennachweis))
         .route("/api/auftraege/:id/generate_doc", post(generate_doc_handler))
@@ -156,39 +160,6 @@ async fn list_dateien(State(pool): State<SqlitePool>, Path(auftrag_id): Path<i64
     Ok(Json(database::get_dateien_for_auftrag(&pool, auftrag_id).await?))
 }
 
-async fn upload_datei(State(pool): State<SqlitePool>, Path(auftrag_id): Path<i64>, mut multipart: Multipart) -> Result<Json<Vec<i64>>, AppError> {
-    let mut ids = Vec::new();
-    let mut category = "SONSTIGES".to_string();
-    while let Some(field) = multipart.next_field().await.map_err(|e| AppError::Internal(e.to_string()))? {
-        let name = field.name().unwrap_or_default().to_string();
-        if name == "kategorie" { category = field.text().await.unwrap_or_else(|_| "SONSTIGES".to_string()); }
-        else if name == "file" {
-            let filename = field.file_name().unwrap_or("upload").to_string();
-            let content_type = field.content_type().unwrap_or("application/octet-stream").to_string();
-            let data = field.bytes().await.map_err(|e| AppError::Internal(e.to_string()))?;
-            let final_name = format!("{}_{}", auftrag_id, filename);
-            let filepath = format!("uploads/{}", final_name);
-            fs::write(&filepath, &data).map_err(|e| AppError::Internal(e.to_string()))?;
-            if category == "SIGNATUR" {
-                let auftrag = database::get_auftrag_by_id(&pool, auftrag_id).await?;
-                let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
-                let abs_sig = fs::canonicalize(&filepath)
-                    .map_err(|e| AppError::Internal(e.to_string()))?
-                    .to_str()
-                    .ok_or_else(|| AppError::Internal("Konnte Signaturpfad nicht konvertieren".to_string()))?
-                    .to_string();
-                let (pdf_content, _, _) = pdf::generate_dynamic_pdf("templates/datenschutz.html", &auftrag, &kunde, None, None, None, Some(&abs_sig)).map_err(AppError::PdfError)?;
-                let pdf_name = format!("Datenschutz_{}_{}.pdf", auftrag_id, Local::now().format("%Y%m%d"));
-                let pdf_path = format!("uploads/{}", pdf_name);
-                fs::write(&pdf_path, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
-                ids.push(database::create_datei(&pool, Datei { id: 0, auftrag_id, dateiname: pdf_name, dateipfad: pdf_path, dateityp: "application/pdf".into(), hochgeladen_am: Local::now().to_rfc3339(), kategorie: "DATENSCHUTZ".into() }).await?);
-            }
-            ids.push(database::create_datei(&pool, Datei { id: 0, auftrag_id, dateiname: final_name, dateipfad: filepath, dateityp: content_type, hochgeladen_am: Local::now().to_rfc3339(), kategorie: category.clone() }).await?);
-        }
-    }
-    Ok(Json(ids))
-}
-
 async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) -> Result<Json<i64>, AppError> {
     let auftrag = database::get_auftrag_by_id(&pool, id).await?;
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
@@ -201,7 +172,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
         fs::create_dir_all("uploads/rechnungen").map_err(|e| AppError::Internal(e.to_string()))?;
     }
 
-    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None).map_err(AppError::PdfError)?;
+    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None)?;
     let filename = format!("rechnung_{}.pdf", id);
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
@@ -236,7 +207,19 @@ async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64
     let template_name = payload["template"].as_str().unwrap_or("vertrag.html");
     let auftrag = database::get_auftrag_by_id(&pool, id).await?;
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
-    let (pdf_content, _, _) = pdf::generate_dynamic_pdf(&format!("templates/{}", template_name), &auftrag, &kunde, None, None, None, None).map_err(AppError::PdfError)?;
+    let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
+    let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
+
+    let (pdf_content, _, _) = pdf::generate_dynamic_pdf(
+        &format!("templates/{}", template_name), 
+        &auftrag, 
+        &kunde, 
+        Some(&einsaetze), 
+        Some(&notizen), 
+        None, 
+        None
+    )?;
+
     let filename = format!("{}_{}_{}.pdf", template_name.replace(".html", ""), id, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;

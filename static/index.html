@@ -298,11 +298,28 @@
     
     <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
+    <div x-show="feedback.show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
+        <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
+        <span class="text-lg" x-text="feedback.message"></span>
+    </div>
+
+    <div x-show="isProcessing" x-cloak class="fixed inset-0 z-[400] bg-surface/60 backdrop-blur-md flex flex-col items-center justify-center gap-8 transition-all duration-500">
+        <div class="relative">
+            <div class="w-24 h-24 rounded-full border-4 border-primary/10 border-t-primary animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center font-headline font-bold text-primary">A</div>
+        </div>
+        <div class="text-center font-body">
+            <p class="font-headline text-3xl font-bold text-primary mb-2">Dokument wird erstellt</p>
+            <p class="text-sm opacity-40 uppercase tracking-widest font-bold">Bitte einen Moment Geduld...</p>
+        </div>
+    </div>
+
     <script>
         function app() {
             return {
-                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '',
+                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false,
                 async init() { await this.fetchKunden(); await this.fetchAuftraege(); await this.fetchTemplates(); },
+                showFeedback(msg, type = 'success') { this.feedback = { show: true, message: msg, type: type }; setTimeout(() => { this.feedback.show = false; }, 3000); },
                 async fetchTemplates() { this.templates = await (await fetch('/api/templates')).json(); },
                 async fetchKunden() { this.kunden = await (await fetch('/api/kunden')).json(); },
                 async fetchAuftraege() { this.auftraege = await (await fetch('/api/auftraege')).json(); },
@@ -336,12 +353,52 @@
                 async openAuftragDetail(a) { this.activeAuftrag = a; this.activeKundeForAuftrag = this.kunden.find(k => k.id === a.kunde_id) || { vorname: '?', nachname: '' }; await this.fetchEinsaetze(a.id); await this.fetchDateien(a.id); this.view = 'auftrag_detail'; },
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
-                async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
-                async addWork(t) { const s = prompt(t === 'ARBEIT' ? "Stunden:" : "Kilometer:"); if(s) { const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t === 'ARBEIT' ? parseFloat(s) : 0, kilometer: t === 'FAHRT' ? parseFloat(s) : 0, notiz: '', typ: t, signatur_pfad: null }; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
-                async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
-                async generateDocFromTemplate(t) { const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); if (r.ok) { this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); alert("Erfolgreich erstellt!"); } },
-                async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
-                async createInvoice() { if (confirm("Rechnung generieren?")) { await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchAuftraege(); await this.openAuftragDetail(this.auftraege.find(a => a.id === this.activeAuftrag.id)); } }
+                async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); if (r.ok) { await this.fetchDateien(this.activeAuftrag.id); this.showFeedback("Datei erfolgreich hochgeladen!"); } } },
+                async addWork(t) { const s = prompt(t === 'ARBEIT' ? "Stunden:" : "Kilometer:"); if(s) { const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t === 'ARBEIT' ? parseFloat(s) : 0, kilometer: t === 'FAHRT' ? parseFloat(s) : 0, notiz: '', typ: t, signatur_pfad: null }; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gespeichert."); } },
+                async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gelöscht.", "error"); } },
+                async generateDocFromTemplate(t) {
+                    this.isProcessing = true;
+                    try {
+                        const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ template: t })
+                        });
+                        if (r.ok) {
+                            this.showTemplateModal = false;
+                            await this.fetchDateien(this.activeAuftrag.id);
+                            this.showFeedback("Dokument erfolgreich erstellt!");
+                        } else {
+                            const err = await r.json();
+                            this.showFeedback(err.error || "Fehler bei der PDF-Erstellung", "error");
+                        }
+                    } catch (e) {
+                        this.showFeedback("Netzwerkfehler: " + e.message, "error");
+                    } finally {
+                        this.isProcessing = false;
+                    }
+                },
+                async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); this.showFeedback("Auftrag synchronisiert."); },
+                async createInvoice() {
+                    if (confirm("Rechnung generieren?")) {
+                        this.isProcessing = true;
+                        try {
+                            const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' });
+                            if (r.ok) {
+                                await this.fetchAuftraege();
+                                await this.openAuftragDetail(this.auftraege.find(a => a.id === this.activeAuftrag.id));
+                                this.showFeedback("Rechnung wurde erstellt!");
+                            } else {
+                                const err = await r.json();
+                                this.showFeedback(err.error || "Fehler bei der Rechnungs-Erstellung", "error");
+                            }
+                        } catch (e) {
+                            this.showFeedback("Netzwerkfehler: " + e.message, "error");
+                        } finally {
+                            this.isProcessing = false;
+                        }
+                    }
+                }
             }
         }
     </script>
