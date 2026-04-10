@@ -1,8 +1,6 @@
-mod models;
-mod database;
-mod error;
-mod pdf;
-mod files;
+use achtsam_entruempeln_software::{models, database, pdf, files};
+use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei};
+use achtsam_entruempeln_software::error::AppError;
 
 use axum::{
     routing::{get, post},
@@ -15,8 +13,6 @@ use tower_http::services::ServeDir;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::fs;
-use crate::models::{Kunde, Auftrag, Einsatz, Datei};
-use crate::error::AppError;
 use chrono::Local;
 
 #[tokio::main]
@@ -179,7 +175,13 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
     let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
     let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
-    let re_nr = format!("RE-{}-{}", Local::now().format("%Y"), id);
+    let existing_rechnungen = database::get_rechnungen_for_auftrag(&pool, id).await?;
+    let count = existing_rechnungen.len();
+    let re_nr = if count == 0 {
+        format!("RE-{}-{}", Local::now().format("%Y"), id)
+    } else {
+        format!("RE-{}-{}-{}", Local::now().format("%Y"), id, count + 1)
+    };
     
     // Verzeichnis sicherstellen
     if !std::path::Path::new("uploads/rechnungen").exists() {
@@ -187,7 +189,8 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     }
 
     let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None)?;
-    let filename = format!("rechnung_{}.pdf", id);
+    let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let filename = format!("rechnung_{}_{}.pdf", id, timestamp);
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
     

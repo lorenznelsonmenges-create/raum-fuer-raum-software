@@ -53,10 +53,29 @@ pub struct Auftrag {
     pub rechnungs_notizen: Vec<RechnungNotiz>,
 }
 
+impl Default for Auftrag {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            kunde_id: 0,
+            status: AuftragStatus::default(),
+            beschreibung: String::new(),
+            basis_pauschale: None,
+            stundensatz: default_stundensatz(),
+            kilometer_satz: default_kilometer_satz(),
+            notizen: String::new(),
+            einsaetze: Vec::new(),
+            dateien: Vec::new(),
+            rechnungen: Vec::new(),
+            rechnungs_notizen: Vec::new(),
+        }
+    }
+}
+
 fn default_stundensatz() -> f64 { 45.0 }
 fn default_kilometer_satz() -> f64 { 0.50 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Einsatz {
     #[serde(default)]
     pub id: i64,
@@ -69,7 +88,7 @@ pub struct Einsatz {
     pub signatur_pfad: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Datei {
     #[serde(default)]
     pub id: i64,
@@ -81,7 +100,7 @@ pub struct Datei {
     pub kategorie: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Rechnung {
     #[serde(default)]
     pub id: i64,
@@ -94,7 +113,7 @@ pub struct Rechnung {
     pub pdf_pfad: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RechnungNotiz {
     #[serde(default)]
     pub id: i64,

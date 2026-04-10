@@ -21,3 +21,4 @@ achtsam.db*
 target/
 target/
 Cargo.lock
+server_*.txt
