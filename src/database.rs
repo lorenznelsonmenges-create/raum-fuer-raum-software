@@ -249,3 +249,9 @@ pub async fn get_rechnungs_notizen_for_auftrag(pool: &SqlitePool, auftrag_id: i6
         id: row.get("id"), auftrag_id: row.get("auftrag_id"), text: row.get("text"), auf_rechnung: row.get("auf_rechnung")
     }).collect())
 }
+
+pub async fn get_total_rechnung_count(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
+    let row = sqlx::query("SELECT COUNT(*) as count FROM rechnungen").fetch_one(pool).await?;
+    let count: i64 = row.get("count");
+    Ok(count)
+}

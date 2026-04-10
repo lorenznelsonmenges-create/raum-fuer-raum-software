@@ -175,13 +175,9 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
     let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
     let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
-    let existing_rechnungen = database::get_rechnungen_for_auftrag(&pool, id).await?;
-    let count = existing_rechnungen.len();
-    let re_nr = if count == 0 {
-        format!("RE-{}-{}", Local::now().format("%Y"), id)
-    } else {
-        format!("RE-{}-{}-{}", Local::now().format("%Y"), id, count + 1)
-    };
+    
+    let total_count = database::get_total_rechnung_count(&pool).await?;
+    let re_nr = format!("R{:06}", total_count);
     
     // Verzeichnis sicherstellen
     if !std::path::Path::new("uploads/rechnungen").exists() {
