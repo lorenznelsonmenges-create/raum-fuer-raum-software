@@ -328,7 +328,37 @@
         </div>
     </div>
 
-    <div x-show="feedback.show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
+    <!-- Modal für Arbeit/Fahrten -->
+    <div x-show="showWorkModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center relative">
+            <button @click="showWorkModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body hover:text-primary transition-colors">
+                <span class="material-icons-outlined text-4xl">close</span>
+            </button>
+            <div class="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-8">
+                <span class="material-icons-outlined text-4xl" x-text="workModalType === 'ARBEIT' ? 'schedule' : 'directions_car'"></span>
+            </div>
+            <h2 class="font-headline text-3xl mb-8 text-primary font-bold" x-text="workModalType === 'ARBEIT' ? 'Stunden erfassen' : 'Fahrt dokumentieren'"></h2>
+
+            <div class="space-y-6 mb-10">
+                <div class="relative">
+                    <input type="text" 
+                           :placeholder="workModalType === 'ARBEIT' ? 'Anzahl Stunden (z.B. 3.5)' : 'Anzahl Kilometer (z.B. 12)'" 
+                           x-model="workModalValue" 
+                           class="w-full bg-surface-low p-6 rounded-2xl text-center shadow-inner focus:ring-2 ring-primary/20 transition-all font-bold text-2xl"
+                           @keyup.enter="submitWork()">
+                    <div class="absolute right-6 top-1/2 -translate-y-1/2 font-bold opacity-30 text-xl" x-text="workModalType === 'ARBEIT' ? 'h' : 'km'"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <button @click="submitWork()" class="bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl hover:bg-primary-dim transition-all">Speichern</button>
+                <button @click="showWorkModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="feedback.show"
+ x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
         <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
         <span class="text-lg" x-text="feedback.message"></span>
     </div>
@@ -347,7 +377,8 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
+                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false,
+ newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
                 async init() { await this.fetchKunden(); await this.fetchAuftraege(); await this.fetchTemplates(); },
                 showFeedback(msg, type = 'success') { this.feedback = { show: true, message: msg, type: type }; setTimeout(() => { this.feedback.show = false; }, 3000); },
                 async fetchTemplates() { this.templates = await (await fetch('/api/templates')).json(); },
@@ -405,7 +436,17 @@
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); if (r.ok) { await this.fetchDateien(this.activeAuftrag.id); this.showFeedback("Datei erfolgreich hochgeladen!"); } } },
-                async addWork(t) { const s = prompt(t === 'ARBEIT' ? "Stunden:" : "Kilometer:"); if(s) { const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t === 'ARBEIT' ? parseFloat(s) : 0, kilometer: t === 'FAHRT' ? parseFloat(s) : 0, notiz: '', typ: t, signatur_pfad: null }; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gespeichert."); } },
+                addWork(t) { this.workModalType = t; this.workModalValue = ''; this.showWorkModal = true; },
+                async submitWork() {
+                    if(this.workModalValue) {
+                        const val = parseFloat(this.workModalValue.replace(',', '.'));
+                        const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: this.workModalType === 'ARBEIT' ? val : 0, kilometer: this.workModalType === 'FAHRT' ? val : 0, notiz: '', typ: this.workModalType, signatur_pfad: null }; 
+                        await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+                        await this.fetchEinsaetze(this.activeAuftrag.id); 
+                        this.showWorkModal = false;
+                        this.showFeedback("Eintrag gespeichert."); 
+                    }
+                },
                 async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gelöscht.", "error"); } },
                 async generateDocFromTemplate(t) {
                     this.isProcessing = true;
@@ -434,6 +475,9 @@
                     if (confirm("Rechnung generieren?")) {
                         this.isProcessing = true;
                         try {
+                            // Erst synchronisieren, damit die aktuelle Pauschale gespeichert ist
+                            await this.updateAuftragSync();
+                            
                             const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' });
                             if (r.ok) {
                                 await this.fetchAuftraege();
