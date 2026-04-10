@@ -198,7 +198,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     database::create_datei(&pool, Datei { 
         id: 0, 
         auftrag_id: id, 
-        dateiname: filename.clone(), 
+        dateiname: re_nr.clone(), 
         dateipfad: filepath.clone(), 
         dateityp: "application/pdf".into(), 
         hochgeladen_am: Local::now().to_rfc3339(), 
