@@ -73,3 +73,10 @@ Alle Änderungen MUSS ein Agent über neue `.sql`-Dateien in `migrations/` vorne
 | `auftrag_id` | `INTEGER` | Fremdschlüssel auf `auftraege` |
 | `text` | `TEXT` | Textinhalt |
 | `auf_rechnung` | `BOOLEAN` | Soll auf dem PDF erscheinen (0 oder 1) |
+
+### einstellungen
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `INTEGER` | Primärschlüssel (Check id = 1) |
+| `stundensatz` | `REAL` | Standard-Stundensatz (Default: 45.0) |
+| `kilometer_satz` | `REAL` | Standard-Kilometersatz (Default: 0.5) |

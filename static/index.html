@@ -19,6 +19,8 @@
         .secondary-button { display: inline-flex; align-items: center; gap: 0.5rem; color: #526447; cursor: pointer; }
         .glass { background: rgba(251, 249, 243, 0.8); backdrop-filter: blur(12px); }
         input:focus, select:focus, textarea:focus { outline: none; background-color: #e3e3d9 !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body x-data="app()" x-init="init()" class="h-screen flex text-on-surface" @click="searchOpen = false">
@@ -30,10 +32,10 @@
         </div>
         <nav class="flex-1 space-y-2">
             <button @click="view = 'dashboard'" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
-            <button @click="view = 'dokumente'" :class="view === 'dokumente' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">description</span><span>Dokumente</span></button>
             <button @click="view = 'kunden'" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">people</span><span>Kunden</span></button>
             <button @click="view = 'auftraege'" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
             <button @click="view = 'archiviert'" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
+            <button @click="view = 'admin'" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
     </aside>
 
@@ -56,31 +58,124 @@
                         </div>
                     </div>
                 </header>
+
+                <!-- Fehleranzeige -->
+                <template x-if="error">
+                    <div class="bg-red-50 border border-red-200 p-12 rounded-3xl mb-12 flex items-center gap-8 shadow-sm">
+                        <span class="material-icons-outlined text-red-500 text-5xl">error_outline</span>
+                        <div class="text-left">
+                            <h3 class="font-headline text-2xl text-red-700 font-bold mb-1">System-Fehler</h3>
+                            <p class="text-red-600/80 font-medium" x-text="error"></p>
+                        </div>
+                    </div>
+                </template>
+
                 <div class="grid grid-cols-2 gap-12 text-center">
-                    <div @click="view = 'kunden'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div><p class="text-[10px] uppercase font-bold opacity-40">Kunden</p></div>
-                    <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"><div class="text-5xl font-headline text-primary font-bold" x-text="activeAuftraegeCount()"></div><p class="text-[10px] uppercase font-bold opacity-40">Aktuelle Projekte</p></div>
+                    <div @click="view = 'kunden'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div>
+                        <p class="text-[10px] uppercase font-bold opacity-40">Kunden</p>
+                    </div>
+                    <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-5xl font-headline text-primary font-bold" x-text="stats.aktuelle_auftraege"></div>
+                        <p class="text-[10px] uppercase font-bold opacity-40">Aktuelle Aufträge</p>
+                    </div>
+                </div>
+
+                <!-- Status-Verteilung (Horizontales Balkendiagramm) -->
+                <div class="bg-white p-12 rounded-3xl shadow-sm mt-12 font-body">
+                    <h3 class="font-headline text-2xl text-primary font-bold mb-12 text-left">Status-Verteilung</h3>
+                    <div class="space-y-8">
+                        <!-- Anfrage -->
+                        <div class="group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] uppercase font-bold opacity-40">Anfragen</span>
+                                <span class="text-sm font-bold text-blue-500" x-text="stats.anfrage_laeuft"></span>
+                            </div>
+                            <div class="w-full bg-surface-low h-4 rounded-full overflow-hidden">
+                                <div class="bg-blue-400 h-full rounded-full transition-all duration-1000" :style="'width: ' + (stats.anfrage_laeuft / Math.max(stats.anfrage_laeuft, stats.in_bearbeitung, stats.abgeschlossen, stats.storniert, 1) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- In Arbeit -->
+                        <div class="group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] uppercase font-bold opacity-40">In Arbeit</span>
+                                <span class="text-sm font-bold text-amber-600" x-text="stats.in_bearbeitung"></span>
+                            </div>
+                            <div class="w-full bg-surface-low h-4 rounded-full overflow-hidden">
+                                <div class="bg-amber-400 h-full rounded-full transition-all duration-1000" :style="'width: ' + (stats.in_bearbeitung / Math.max(stats.anfrage_laeuft, stats.in_bearbeitung, stats.abgeschlossen, stats.storniert, 1) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- Abgeschlossen -->
+                        <div class="group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] uppercase font-bold opacity-40">Fertig</span>
+                                <span class="text-sm font-bold text-green-600" x-text="stats.abgeschlossen"></span>
+                            </div>
+                            <div class="w-full bg-surface-low h-4 rounded-full overflow-hidden">
+                                <div class="bg-green-400 h-full rounded-full transition-all duration-1000" :style="'width: ' + (stats.abgeschlossen / Math.max(stats.anfrage_laeuft, stats.in_bearbeitung, stats.abgeschlossen, stats.storniert, 1) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- Storniert -->
+                        <div class="group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] uppercase font-bold opacity-40">Storno</span>
+                                <span class="text-sm font-bold text-red-500" x-text="stats.storniert"></span>
+                            </div>
+                            <div class="w-full bg-surface-low h-4 rounded-full overflow-hidden">
+                                <div class="bg-red-300 h-full rounded-full transition-all duration-1000" :style="'width: ' + (stats.storniert / Math.max(stats.anfrage_laeuft, stats.in_bearbeitung, stats.abgeschlossen, stats.storniert, 1) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </template>
 
-        <!-- Dokumente -->
-        <template x-if="view === 'dokumente'">
-            <div>
-                <div class="flex justify-between mb-16">
-                    <h1 class="font-headline text-5xl text-primary font-bold">Dokumente</h1>
-                    <button @click="$refs.tplUpload.click()" class="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase shadow-lg">Vorlage hochladen</button>
-                    <input type="file" x-ref="tplUpload" class="hidden" @change="uploadTemplateFile($event)">
-                </div>
-                <div class="grid grid-cols-3 gap-12">
-                    <template x-for="t in templates" :key="t">
-                        <div class="bg-white p-10 rounded-[32px] shadow-sm flex flex-col h-full group hover:shadow-soft transition-all">
-                            <h3 class="text-2xl font-headline font-bold mb-4 text-primary" x-text="t.toUpperCase()"></h3>
-                            <div class="flex justify-between items-center mt-auto pt-6 border-t border-surface-low/50">
-                                <button @click="openTemplateEditor(t)" class="bg-surface-low text-primary px-6 py-3 rounded-xl font-bold text-xs uppercase hover:bg-primary-container/40">Bearbeiten</button>
-                                <button @click="deleteTemplateFile(t)" class="text-red-400 p-2 hover:bg-red-50 rounded-lg"><span class="material-icons-outlined text-sm">delete</span></button>
+        <!-- Admin View -->
+        <template x-if="view === 'admin'">
+            <div class="space-y-16">
+                <h1 class="font-headline text-5xl text-primary font-bold mb-12">Administration</h1>
+                
+                <!-- Vorlagenverwaltung -->
+                <div class="bg-white p-12 rounded-[40px] shadow-sm">
+                    <div class="flex justify-between items-center mb-10">
+                        <h2 class="font-headline text-3xl text-primary font-bold">Dokumentvorlagen</h2>
+                        <label class="bg-primary text-white px-8 py-4 rounded-2xl font-bold cursor-pointer shadow-lg hover:bg-primary-dim transition-all">
+                            <span>+ Vorlage hochladen</span>
+                            <input type="file" class="hidden" @change="uploadTemplateFile($event)">
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <template x-for="t in templates" :key="t">
+                            <div class="flex items-center justify-between p-6 bg-surface-low/50 rounded-2xl hover:bg-surface-low transition-all group">
+                                <div class="flex items-center gap-6">
+                                    <span class="material-icons-outlined text-primary">description</span>
+                                    <span class="font-bold text-lg" x-text="t"></span>
+                                </div>
+                                <div class="flex gap-4">
+                                    <button @click="openTemplateEditor(t)" class="p-3 bg-white text-primary rounded-xl shadow-sm hover:shadow-md transition-all"><span class="material-icons-outlined">edit</span></button>
+                                    <button @click="deleteTemplateFile(t)" class="p-3 bg-white text-red-400 rounded-xl shadow-sm hover:shadow-md transition-all"><span class="material-icons-outlined">delete</span></button>
+                                </div>
                             </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- System-Einstellungen -->
+                <div class="bg-white p-12 rounded-[40px] shadow-sm">
+                    <h2 class="font-headline text-3xl text-primary font-bold mb-10">System-Einstellungen</h2>
+                    <div class="grid grid-cols-2 gap-12">
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 px-2">Standard-Stundensatz (€)</label>
+                            <input type="number" step="0.5" x-model.number="settings.stundensatz" class="w-full bg-surface-low p-6 rounded-2xl text-2xl font-headline font-bold text-primary border-none shadow-inner">
                         </div>
-                    </template>
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 px-2">Standard-Kilometersatz (€)</label>
+                            <input type="number" step="0.05" x-model.number="settings.kilometer_satz" class="w-full bg-surface-low p-6 rounded-2xl text-2xl font-headline font-bold text-primary border-none shadow-inner">
+                        </div>
+                    </div>
+                    <div class="mt-12 flex justify-end">
+                        <button @click="saveSettings()" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Einstellungen speichern</button>
+                    </div>
                 </div>
             </div>
         </template>
@@ -118,7 +213,7 @@
         <template x-if="view === 'kunde_detail'">
             <div class="space-y-12">
                 <div class="secondary-button" @click="view = 'kunden'"><span class="material-icons-outlined text-xl">west</span><span>Zurück</span></div>
-                <div class="bg-white p-16 rounded-[40px] shadow-soft font-body">
+                <div class="bg-white p-16 rounded-[40px] shadow-sm font-body">
                     <header class="mb-12 flex justify-between items-start">
                         <div><div class="font-bold text-primary text-lg mb-2" x-text="formatKundeID(activeKunde.id)"></div><h1 class="font-headline text-5xl font-bold text-on-surface" x-text="activeKunde.vorname + ' ' + activeKunde.nachname"></h1></div>
                         <button @click="deleteKunde(activeKunde.id)" class="text-red-400 bg-red-50 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all">Löschen</button>
@@ -131,9 +226,7 @@
                         <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Stammdaten speichern</button></div>
                     </form>
 
-                    <!-- Integrierte Projekt-Übersicht & Notizen nebeneinander -->
                     <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-2 gap-16">
-                        <!-- Projekt-Übersicht -->
                         <div class="space-y-8">
                             <h3 class="font-headline text-2xl text-primary font-bold">Aktuelle Projekte</h3>
                             <div class="grid grid-cols-1 gap-3">
@@ -150,8 +243,6 @@
                                 </template>
                             </div>
                         </div>
-
-                        <!-- Notizen -->
                         <div class="space-y-6">
                             <h3 class="font-headline text-2xl text-primary font-bold">Interne Notizen</h3>
                             <textarea x-model="activeKunde.notizen" class="w-full bg-surface-low/30 rounded-2xl p-8 text-sm border-none shadow-inner min-h-[250px] focus:ring-1 ring-primary/10 placeholder:opacity-20 font-body" placeholder="Hier können wichtige Informationen zum Kunden hinterlegt werden..."></textarea>
@@ -178,7 +269,7 @@
                         <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
                         <tbody class="divide-y divide-surface-low">
                             <template x-for="a in uniqueFilteredAuftraege.filter(a => !isArchiv(a))" :key="a.id">
-                                <tr class="hover:bg-surface-low transition-all cursor-pointer group" @click="openAuftragDetail(a)">
+                                <tr class="hover:bg-surface-low cursor-pointer group" @click="openAuftragDetail(a)">
                                     <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
                                     <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
                                     <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
@@ -296,9 +387,6 @@
                             <div class="text-[10px] uppercase opacity-40 font-bold" x-text="formatKundeID(k.id)"></div>
                         </div>
                     </template>
-                    <template x-if="kunden.filter(k => (k.vorname + ' ' + k.nachname).toLowerCase().includes(search.toLowerCase())).length === 0">
-                        <div class="px-8 py-6 text-sm italic opacity-40">Keine Kunden gefunden.</div>
-                    </template>
                 </div>
             </div>
 
@@ -313,14 +401,13 @@
     
     <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
-    <!-- Delete Confirmation Modal -->
     <div x-show="showDeleteAuftragModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
         <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center">
             <div class="w-20 h-20 bg-red-50 text-red-400 rounded-full flex items-center justify-center mx-auto mb-8">
                 <span class="material-icons-outlined text-4xl">delete_forever</span>
             </div>
             <h2 class="font-headline text-3xl mb-4 text-primary font-bold">Auftrag löschen?</h2>
-            <p class="text-sm opacity-60 mb-10 leading-relaxed">Möchten Sie diesen Auftrag unwiderruflich löschen? Alle zugehörigen Daten und Dateien werden entfernt.</p>
+            <p class="text-sm opacity-60 mb-10 leading-relaxed">Möchten Sie diesen Auftrag unwiderruflich löschen?</p>
             <div class="flex flex-col gap-4">
                 <button @click="deleteAuftrag(activeAuftrag.id)" class="bg-red-500 text-white py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg">Ja, unwiderruflich löschen</button>
                 <button @click="showDeleteAuftragModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
@@ -328,172 +415,80 @@
         </div>
     </div>
 
-    <!-- Modal für Arbeit/Fahrten -->
-    <div x-show="showWorkModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
-        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center relative">
-            <button @click="showWorkModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body hover:text-primary transition-colors">
-                <span class="material-icons-outlined text-4xl">close</span>
-            </button>
-            <div class="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-8">
-                <span class="material-icons-outlined text-4xl" x-text="workModalType === 'ARBEIT' ? 'schedule' : 'directions_car'"></span>
-            </div>
-            <h2 class="font-headline text-3xl mb-8 text-primary font-bold" x-text="workModalType === 'ARBEIT' ? 'Stunden erfassen' : 'Fahrt dokumentieren'"></h2>
-
-            <div class="space-y-6 mb-10">
-                <div class="relative">
-                    <input type="text" 
-                           :placeholder="workModalType === 'ARBEIT' ? 'Anzahl Stunden (z.B. 3.5)' : 'Anzahl Kilometer (z.B. 12)'" 
-                           x-model="workModalValue" 
-                           class="w-full bg-surface-low p-6 rounded-2xl text-center shadow-inner focus:ring-2 ring-primary/20 transition-all font-bold text-2xl"
-                           @keyup.enter="submitWork()">
-                    <div class="absolute right-6 top-1/2 -translate-y-1/2 font-bold opacity-30 text-xl" x-text="workModalType === 'ARBEIT' ? 'h' : 'km'"></div>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-4">
-                <button @click="submitWork()" class="bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl hover:bg-primary-dim transition-all">Speichern</button>
-                <button @click="showWorkModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
-            </div>
-        </div>
-    </div>
-
-    <div x-show="feedback.show"
- x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
+    <!-- Feedback -->
+    <div x-show="feedback.show" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
         <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
         <span class="text-lg" x-text="feedback.message"></span>
     </div>
 
-    <div x-show="isProcessing" x-cloak class="fixed inset-0 z-[400] bg-surface/60 backdrop-blur-md flex flex-col items-center justify-center gap-8 transition-all duration-500">
-        <div class="relative">
-            <div class="w-24 h-24 rounded-full border-4 border-primary/10 border-t-primary animate-spin"></div>
-            <div class="absolute inset-0 flex items-center justify-center font-headline font-bold text-primary">A</div>
-        </div>
-        <div class="text-center font-body">
-            <p class="font-headline text-3xl font-bold text-primary mb-2">Dokument wird erstellt</p>
-            <p class="text-sm opacity-40 uppercase tracking-widest font-bold">Bitte einen Moment Geduld...</p>
-        </div>
+    <!-- Loading -->
+    <div x-show="isProcessing" x-cloak class="fixed inset-0 z-[400] bg-surface/60 backdrop-blur-md flex flex-col items-center justify-center gap-8">
+        <div class="w-24 h-24 rounded-full border-4 border-primary/10 border-t-primary animate-spin"></div>
+        <p class="font-headline text-3xl font-bold text-primary">Bitte warten...</p>
     </div>
 
     <script>
         function app() {
             return {
-                view: 'dashboard', kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false,
- newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
-                async init() { await this.fetchKunden(); await this.fetchAuftraege(); await this.fetchTemplates(); },
+                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
+                stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
+                settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
+                
+                async init() { 
+                    this.error = null;
+                    try {
+                        await Promise.all([this.fetchKunden(), this.fetchAuftraege(), this.fetchTemplates(), this.fetchStats(), this.fetchSettings()]);
+                    } catch (e) {
+                        this.error = "Daten konnten nicht vollständig geladen werden.";
+                        console.error(e);
+                    }
+                },
+                async fetchStats() { const r = await fetch('/api/stats'); if (!r.ok) throw new Error(); this.stats = await r.json(); },
+                async fetchSettings() { const r = await fetch('/api/settings'); if (!r.ok) throw new Error(); this.settings = await r.json(); },
+                async saveSettings() {
+                    const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.settings) });
+                    if (r.ok) this.showFeedback("Gespeichert."); else this.showFeedback("Fehler.", "error");
+                },
                 showFeedback(msg, type = 'success') { this.feedback = { show: true, message: msg, type: type }; setTimeout(() => { this.feedback.show = false; }, 3000); },
-                async fetchTemplates() { this.templates = await (await fetch('/api/templates')).json(); },
-                async fetchKunden() { this.kunden = await (await fetch('/api/kunden')).json(); },
-                async fetchAuftraege() { this.auftraege = await (await fetch('/api/auftraege')).json(); },
+                async fetchTemplates() { const r = await fetch('/api/templates'); if (!r.ok) throw new Error(); this.templates = await r.json(); },
+                async fetchKunden() { const r = await fetch('/api/kunden'); if (!r.ok) throw new Error(); this.kunden = await r.json(); },
+                async fetchAuftraege() { const r = await fetch('/api/auftraege'); if (!r.ok) throw new Error(); this.auftraege = await r.json(); },
                 async openTemplateEditor(n) { this.editingTemplateName = n; this.editingTemplateContent = await (await fetch(`/api/templates/${n}`)).text(); this.templateEditorOpen = true; },
-                async saveTemplateContent() { const r = await fetch(`/api/templates/${this.editingTemplateName}`, { method: 'POST', body: this.editingTemplateContent }); if (r.ok) { this.templateEditorOpen = false; alert("Gespeichert."); } },
+                async saveTemplateContent() { await fetch(`/api/templates/${this.editingTemplateName}`, { method: 'POST', body: this.editingTemplateContent }); this.templateEditorOpen = false; this.showFeedback("Gespeichert."); },
                 async deleteTemplateFile(n) { if (confirm("Löschen?")) { await fetch(`/api/templates/${n}`, { method: 'DELETE' }); await this.fetchTemplates(); } },
                 async uploadTemplateFile(e) { const f = e.target.files[0]; if (f) { const fd = new FormData(); fd.append('file', f); await fetch('/api/templates', { method: 'POST', body: fd }); await this.fetchTemplates(); } },
-                activeAuftraegeCount() { return this.auftraege.filter(a => !this.isArchiv(a)).length; },
-                archivedAuftraegeCount() { return this.auftraege.filter(a => this.isArchiv(a)).length; },
-                isArchiv(a) { if(!a) return false; return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
-                getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },                formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
-                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) r.push({ type: 'kunde', key: 'k_'+k.id, title: k.vorname+' '+k.nachname, subtitle: this.formatKundeID(k.id), data: k }); }); this.auftraege.forEach(a => { const kn = this.getKundeName(a.kunde_id).toLowerCase(); if (kn.includes(q) || this.formatAuftragID(a.id).toLowerCase().includes(q)) r.push({ type: 'auftrag', key: 'a_'+a.id, title: this.getKundeName(a.kunde_id), subtitle: this.formatAuftragID(a.id), data: a }); }); return r.slice(0, 5); },
-                handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') this.openKundeDetail(res.data); else this.openAuftragDetail(res.data); },
-                get filteredKunden() { const q = this.kundeSearchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || (k.ort && k.ort.toLowerCase().includes(q)) || this.formatKundeID(k.id).toLowerCase().includes(q)); },
-                get uniqueFilteredAuftraege() { const q = this.auftragSearchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q) || this.formatAuftragID(a.id).toLowerCase().includes(q)); },
-                get uniqueAuftraegeForKunde() { if (!this.activeKunde) return []; return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
+                isArchiv(a) { return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
+                getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },
+                formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
+                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)) r.push({ type: 'kunde', title: k.vorname+' '+k.nachname, data: k }); }); return r.slice(0, 5); },
+                handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') this.openKundeDetail(res.data); },
+                get filteredKunden() { const q = this.kundeSearchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)); },
+                get uniqueFilteredAuftraege() { const q = this.auftragSearchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q)); },
+                get uniqueAuftraegeForKunde() { return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
                 formatKundeID(id) { return 'K' + String(id).padStart(6, '0'); },
                 formatAuftragID(id) { return 'A' + String(id).padStart(6, '0'); },
-                async deleteKunde(id) { if (confirm("Kunde wirklich löschen?")) { await fetch(`/api/kunden/${id}/delete`, { method: 'POST' }); this.view = 'kunden'; await this.fetchKunden(); } },
-                async deleteAuftrag(id) {
-                    if (!id) return;
-                    this.isProcessing = true;
-                    try {
-                        const res = await fetch(`/api/auftraege/${id}`, { method: 'DELETE' });
-                        if (res.ok) {
-                            this.showDeleteAuftragModal = false;
-                            this.view = 'auftraege';
-                            await this.fetchAuftraege();
-                            this.showFeedback("Auftrag erfolgreich gelöscht.");
-                        } else {
-                            const err = await res.json().catch(() => ({ error: "Unbekannter Fehler" }));
-                            this.showFeedback(err.error || "Fehler beim Löschen des Auftrags.", "error");
-                        }
-                    } catch (e) {
-                        this.showFeedback("Netzwerkfehler: " + e.message, "error");
-                    } finally {
-                        this.isProcessing = false;
-                        this.showDeleteAuftragModal = false;
-                    }
-                },
-                async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
+                async deleteKunde(id) { if (confirm("Löschen?")) { await fetch(`/api/kunden/${id}/delete`, { method: 'POST' }); await this.fetchKunden(); this.view = 'kunden'; } },
+                async deleteAuftrag(id) { await fetch(`/api/auftraege/${id}`, { method: 'DELETE' }); await this.fetchAuftraege(); this.view = 'auftraege'; this.showDeleteAuftragModal = false; },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
-                formatDate(d) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }); },
-                totalStunden() { if(!this.activeEinsaetze) return '0'; return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
-                totalKM() { if(!this.activeEinsaetze) return '0'; return this.activeEinsaetze.filter(e=>e.typ==='FAHRT').reduce((s, e) => s + e.kilometer, 0); },
-                openNewKunde() { this.newKundeData = { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }; this.newKundeModal = true; },
-                async createNewKunde() { const res = await fetch('/api/kunden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.newKundeData) }); if (res.ok) { this.newKundeModal = false; await this.fetchKunden(); alert("Kunde angelegt!"); } },
+                formatDate(d) { return new Date(d).toLocaleDateString('de-DE'); },
+                totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
+                totalKM() { return this.activeEinsaetze.filter(e=>e.typ==='FAHRT').reduce((s, e) => s + e.kilometer, 0); },
+                openNewKunde() { this.newKundeModal = true; },
+                async createNewKunde() { const res = await fetch('/api/kunden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.newKundeData) }); if (res.ok) { this.newKundeModal = false; await this.fetchKunden(); } },
                 openKundeDetail(k) { this.activeKunde = JSON.parse(JSON.stringify(k)); this.view = 'kunde_detail'; },
-                async saveKundeDetail() { const res = await fetch(`/api/kunden/${this.activeKunde.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeKunde) }); if (res.ok) { await this.fetchKunden(); alert("Gespeichert."); } },
+                async saveKundeDetail() { await fetch(`/api/kunden/${this.activeKunde.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeKunde) }); await this.fetchKunden(); this.showFeedback("Gespeichert."); },
                 openAuftragErstellung(kid = null) { this.newAuftragKundeID = kid; this.newAuftragModal = true; },
-                async createNewAuftrag() { const res = await fetch('/api/auftraege', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, kunde_id: this.newAuftragKundeID, status: 'AnfrageLaeuft', beschreibung: '', basis_pauschale: 0, stundensatz: 45.0, kilometer_satz: 0.5, notizen: '', einsaetze: [], dateien: [], rechnungen: [], rechnungs_notizen: [] }) }); if (res.ok) { await this.fetchAuftraege(); this.newAuftragModal = false; const a = this.auftraege.find(a => a.kunde_id === this.newAuftragKundeID); if(a) this.openAuftragDetail(a); } },
-                async openAuftragDetail(a) { this.activeAuftrag = a; this.activeKundeForAuftrag = this.kunden.find(k => k.id === a.kunde_id) || { vorname: '?', nachname: '' }; await this.fetchEinsaetze(a.id); await this.fetchDateien(a.id); this.view = 'auftrag_detail'; },
+                async createNewAuftrag() { const res = await fetch('/api/auftraege', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, kunde_id: this.newAuftragKundeID, status: 'AnfrageLaeuft', beschreibung: '', stundensatz: 0, kilometer_satz: 0, notizen: '' }) }); if (res.ok) { await this.fetchAuftraege(); this.newAuftragModal = false; } },
+                async openAuftragDetail(a) { this.activeAuftrag = a; this.activeKundeForAuftrag = this.kunden.find(k => k.id === a.kunde_id) || { vorname: '?', nachname: '' }; await Promise.all([this.fetchEinsaetze(a.id), this.fetchDateien(a.id)]); this.view = 'auftrag_detail'; },
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
-                async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); if (r.ok) { await this.fetchDateien(this.activeAuftrag.id); this.showFeedback("Datei erfolgreich hochgeladen!"); } } },
-                addWork(t) { this.workModalType = t; this.workModalValue = ''; this.showWorkModal = true; },
-                async submitWork() {
-                    if(this.workModalValue) {
-                        const val = parseFloat(this.workModalValue.replace(',', '.'));
-                        const payload = { id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: this.workModalType === 'ARBEIT' ? val : 0, kilometer: this.workModalType === 'FAHRT' ? val : 0, notiz: '', typ: this.workModalType, signatur_pfad: null }; 
-                        await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                        await this.fetchEinsaetze(this.activeAuftrag.id); 
-                        this.showWorkModal = false;
-                        this.showFeedback("Eintrag gespeichert."); 
-                    }
-                },
-                async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); this.showFeedback("Eintrag gelöscht.", "error"); } },
-                async generateDocFromTemplate(t) {
-                    this.isProcessing = true;
-                    try {
-                        const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ template: t })
-                        });
-                        if (r.ok) {
-                            this.showTemplateModal = false;
-                            await this.fetchDateien(this.activeAuftrag.id);
-                            this.showFeedback("Dokument erfolgreich erstellt!");
-                        } else {
-                            const err = await r.json();
-                            this.showFeedback(err.error || "Fehler bei der PDF-Erstellung", "error");
-                        }
-                    } catch (e) {
-                        this.showFeedback("Netzwerkfehler: " + e.message, "error");
-                    } finally {
-                        this.isProcessing = false;
-                    }
-                },
-                async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); this.showFeedback("Auftrag synchronisiert."); },
-                async createInvoice() {
-                    if (confirm("Rechnung generieren?")) {
-                        this.isProcessing = true;
-                        try {
-                            // Erst synchronisieren, damit die aktuelle Pauschale gespeichert ist
-                            await this.updateAuftragSync();
-                            
-                            const r = await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' });
-                            if (r.ok) {
-                                await this.fetchAuftraege();
-                                await this.openAuftragDetail(this.auftraege.find(a => a.id === this.activeAuftrag.id));
-                                this.showFeedback("Rechnung wurde erstellt!");
-                            } else {
-                                const err = await r.json();
-                                this.showFeedback(err.error || "Fehler bei der Rechnungs-Erstellung", "error");
-                            }
-                        } catch (e) {
-                            this.showFeedback("Netzwerkfehler: " + e.message, "error");
-                        } finally {
-                            this.isProcessing = false;
-                        }
-                    }
-                }
+                async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
+                async addWork(t) { const v = prompt(t === 'ARBEIT' ? 'Stunden:' : 'Kilometer:'); if(v) { await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t==='ARBEIT'?parseFloat(v):0, kilometer: t==='FAHRT'?parseFloat(v):0, typ: t, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
+                async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
+                async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
+                async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
+                async generateDocFromTemplate(t) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; },
+                async createInvoice() { if (confirm("Rechnung erstellen?")) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; } }
             }
         }
     </script>

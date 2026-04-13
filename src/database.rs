@@ -1,5 +1,5 @@
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool, Row};
-use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung};
+use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
     if !std::path::Path::new("uploads").exists() {
@@ -254,4 +254,47 @@ pub async fn get_total_rechnung_count(pool: &SqlitePool) -> Result<i64, sqlx::Er
     let row = sqlx::query("SELECT COUNT(*) as count FROM rechnungen").fetch_one(pool).await?;
     let count: i64 = row.get("count");
     Ok(count)
+}
+
+pub async fn get_dashboard_stats(pool: &SqlitePool) -> Result<DashboardStats, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT status, COUNT(*) as count FROM auftraege GROUP BY status"
+    ).fetch_all(pool).await?;
+
+    let mut stats = DashboardStats::default();
+
+    for row in rows {
+        let status: String = row.get("status");
+        let count: i64 = row.get("count");
+
+        match status.as_str() {
+            "AnfrageLaeuft" => stats.anfrage_laeuft = count,
+            "InBearbeitung" => stats.in_bearbeitung = count,
+            "Abgeschlossen" => stats.abgeschlossen = count,
+            "Storniert" => stats.storniert = count,
+            _ => {}
+        }
+    }
+
+    stats.aktuelle_auftraege = stats.anfrage_laeuft + stats.in_bearbeitung;
+
+    Ok(stats)
+}
+
+// --- Einstellungen ---
+pub async fn get_settings(pool: &SqlitePool) -> Result<Settings, sqlx::Error> {
+    let row = sqlx::query("SELECT id, stundensatz, kilometer_satz FROM einstellungen WHERE id = 1").fetch_one(pool).await?;
+    Ok(Settings {
+        id: row.get("id"),
+        stundensatz: row.get("stundensatz"),
+        kilometer_satz: row.get("kilometer_satz"),
+    })
+}
+
+pub async fn update_settings(pool: &SqlitePool, settings: Settings) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE einstellungen SET stundensatz = ?, kilometer_satz = ? WHERE id = 1")
+        .bind(settings.stundensatz)
+        .bind(settings.kilometer_satz)
+        .execute(pool).await?;
+    Ok(())
 }

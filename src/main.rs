@@ -1,5 +1,5 @@
 use achtsam_entruempeln_software::{models, database, pdf, files};
-use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei};
+use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings};
 use achtsam_entruempeln_software::error::AppError;
 
 use axum::{
@@ -19,26 +19,38 @@ use chrono::Local;
 async fn main() {
     let pool = database::init_db().await.expect("Failed to initialize database");
 
+    // WICHTIG: Axum-Router-Reihenfolge
+    // Statische Pfade muessen in einem Router definiert werden, 
+    // bevor parametrisierte Pfade dazukommen, die sie sonst "verschlucken".
+    
+    let api_routes = Router::new()
+        // 1. Statische API-Pfade (keine Parameter)
+        .route("/stats", get(get_stats))
+        .route("/settings", get(get_settings).post(update_settings))
+        .route("/templates", get(list_templates).post(upload_template))
+        .route("/kunden", get(list_kunden).post(add_kunde))
+        .route("/auftraege", get(list_auftraege).post(add_auftrag))
+        .route("/einsaetze", post(add_einsatz))
+        
+        // 2. Parametrisierte API-Pfade
+        .route("/templates/:name", get(get_template).post(save_template).delete(delete_template))
+        .route("/kunden/:id", get(get_kunde).post(update_kunde))
+        .route("/kunden/:id/delete", post(delete_kunde_handler))
+        .route("/auftraege/:id", get(get_auftrag).post(update_auftrag).delete(delete_auftrag_handler))
+        .route("/auftraege/:id/einsaetze", get(list_einsaetze))
+        .route("/auftraege/:id/dateien", get(list_dateien))
+        .route("/auftraege/:id/upload", post(files::upload_datei))
+        .route("/auftraege/:id/rechnung", post(create_rechnung))
+        .route("/auftraege/:id/send_nachweis", post(send_stundennachweis))
+        .route("/auftraege/:id/generate_doc", post(generate_doc_handler))
+        .route("/einsaetze/:id", post(update_einsatz))
+        .route("/einsaetze/:id/delete", post(delete_einsatz_handler))
+        .route("/dateien/:id/delete", post(delete_datei_handler));
+
     let app = Router::new()
+        .nest("/api", api_routes)
         .nest_service("/uploads", ServeDir::new("./uploads"))
         .nest_service("/static", ServeDir::new("./static"))
-        .route("/api/kunden", get(list_kunden).post(add_kunde))
-        .route("/api/kunden/:id", get(get_kunde).post(update_kunde))
-        .route("/api/kunden/:id/delete", post(delete_kunde_handler))
-        .route("/api/auftraege", get(list_auftraege).post(add_auftrag))
-        .route("/api/auftraege/:id", get(get_auftrag).post(update_auftrag).delete(delete_auftrag_handler))
-        .route("/api/auftraege/:id/einsaetze", get(list_einsaetze))
-        .route("/api/auftraege/:id/dateien", get(list_dateien))
-        .route("/api/auftraege/:id/upload", post(files::upload_datei))
-        .route("/api/auftraege/:id/rechnung", post(create_rechnung))
-        .route("/api/auftraege/:id/send_nachweis", post(send_stundennachweis))
-        .route("/api/auftraege/:id/generate_doc", post(generate_doc_handler))
-        .route("/api/templates", get(list_templates).post(upload_template))
-        .route("/api/templates/:name", get(get_template).post(save_template).delete(delete_template))
-        .route("/api/einsaetze", post(add_einsatz))
-        .route("/api/einsaetze/:id", post(update_einsatz))
-        .route("/api/einsaetze/:id/delete", post(delete_einsatz_handler))
-        .route("/api/dateien/:id/delete", post(delete_datei_handler))
         .fallback(get(serve_index))
         .with_state(pool);
 
@@ -89,6 +101,19 @@ async fn upload_template(mut multipart: Multipart) -> Result<(), AppError> {
 }
 
 // Handlers
+async fn get_stats(State(pool): State<SqlitePool>) -> Result<Json<DashboardStats>, AppError> {
+    Ok(Json(database::get_dashboard_stats(&pool).await?))
+}
+
+async fn get_settings(State(pool): State<SqlitePool>) -> Result<Json<Settings>, AppError> {
+    Ok(Json(database::get_settings(&pool).await?))
+}
+
+async fn update_settings(State(pool): State<SqlitePool>, Json(settings): Json<Settings>) -> Result<(), AppError> {
+    database::update_settings(&pool, settings).await?;
+    Ok(())
+}
+
 async fn list_kunden(State(pool): State<SqlitePool>) -> Result<Json<Vec<Kunde>>, AppError> {
     Ok(Json(database::get_all_kunden(&pool).await?))
 }
@@ -116,7 +141,16 @@ async fn list_auftraege(State(pool): State<SqlitePool>) -> Result<Json<Vec<Auftr
     Ok(Json(database::get_all_auftraege(&pool).await?))
 }
 
-async fn add_auftrag(State(pool): State<SqlitePool>, Json(auftrag): Json<Auftrag>) -> Result<Json<i64>, AppError> {
+async fn add_auftrag(State(pool): State<SqlitePool>, Json(mut auftrag): Json<Auftrag>) -> Result<Json<i64>, AppError> {
+    if auftrag.stundensatz == 0.0 || auftrag.kilometer_satz == 0.0 {
+        let settings = database::get_settings(&pool).await?;
+        if auftrag.stundensatz == 0.0 {
+            auftrag.stundensatz = settings.stundensatz;
+        }
+        if auftrag.kilometer_satz == 0.0 {
+            auftrag.kilometer_satz = settings.kilometer_satz;
+        }
+    }
     Ok(Json(database::create_auftrag(&pool, auftrag).await?))
 }
 

@@ -46,8 +46,8 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `status` | `Enum` | AnfrageLaeuft, InBearbeitung, Abgeschlossen, Storniert |
 | `beschreibung` | `String` | Kurzbeschreibung des Auftrags |
 | `basis_pauschale` | `Option<f64>` | Optionale Fixkosten-Pauschale |
-| `stundensatz` | `f64` | Stundensatz (Default: 45.00) |
-| `kilometer_satz` | `f64` | Kilometersatz (Default: 0.50) |
+| `stundensatz` | `f64` | Stundensatz (Default: 0.00) |
+| `kilometer_satz` | `f64` | Kilometersatz (Default: 0.00) |
 | `notizen` | `String` | Interne Auftragsnotizen |
 
 ### Einsatz (Arbeitszeit & Fahrtkosten)
@@ -81,6 +81,13 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `text` | `String` | Inhalt der Notiz |
 | `auf_rechnung` | `bool` | Haken: Erscheint diese Notiz auf der finalen PDF-Rechnung? |
 
+### Settings (Einstellungen) 
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel (immer 1) |
+| `stundensatz` | `f64` | Standard-Stundensatz (45.00) |
+| `kilometer_satz` | `f64` | Standard-Kilometersatz (0.50) |
+
 ## 3. Datenbankschema – Migrations-Übersicht
 
 Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`).
@@ -97,6 +104,9 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20240408120000_add_signature_to_einsaetze.sql` | `signatur_pfad` zu `einsaetze` |
 | `20240408150000_add_prices_to_auftraege.sql` | `stundensatz`, `kilometer_satz` zu `auftraege` |
 | `20240408160000_fix_km_satz_naming.sql` | `km_satz` → `kilometer_satz` (Namenskorrektur) |
+| `20240409000000_add_indices.sql` | Performance-Indizes für Fremdschlüssel (Kunde/Auftrag) |
+| `20240409000001_add_status_index.sql` | Index auf `auftraege.status` für Performance |
+| `20240409000002_add_settings.sql` | Tabelle `einstellungen` |
 
 ### Wichtige Spalten-Hinweise
 - `kunden.ort` (nicht `stadt` – wurde umbenannt)
@@ -107,25 +117,47 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 
 - [x] **Kunden:** CRUD-Operationen (Erstellen, Lesen, Liste, Update, Löschen).
 - [x] **Aufträge:** Erstellung, Status-Management und Update.
+### Rechnung
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `rechnungs_nummer` | `String` | Rechnungsnummer (fortlaufend) |
+| `datum` | `String` | Ausstellungsdatum |
+| `gesamt_netto` | `f64` | Gesamtsumme (Netto) |
+| `gesamt_brutto` | `f64` | Gesamtsumme (Brutto) |
+| `status` | `String` | z.B. ENTWURF, GESENDET, BEZAHLT |
+| `pdf_pfad` | `String` | Relativer Pfad zur PDF-Datei |
+
+### DashboardStats (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `anfrage_laeuft` | `i64` | Anzahl Aufträge mit Status 'AnfrageLaeuft' |
+| `in_bearbeitung` | `i64` | Anzahl Aufträge mit Status 'InBearbeitung' |
+| `abgeschlossen` | `i64` | Anzahl Aufträge mit Status 'Abgeschlossen' |
+| `storniert` | `i64` | Anzahl Aufträge mit Status 'Storniert' |
+| `aktuelle_auftraege` | `i64` | Summe aller nicht-stornierten & nicht-abgeschlossenen Aufträge |
+
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur.
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
 
 ## 5. Nächste Schritte
 
-1. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
-2. [ ] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
-3. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
-4. [ ] **Login:** Absicherung der API.
-5. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
+1. [x] **Dashboard-Chart:** Statistische Auswertung der Auftragszahlen.
+2. [x] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
+3. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
+4. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
+5. [ ] **Login:** Absicherung der API.
+6. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
 
 ## 6. Betriebliche Hinweise
 
 - **Hosting:** Geplant auf Hetzner-Server via Git-Deployment.
-- **Email:** Finalisierung der Adressen (Platzhalter: `hallo@achtsam-entruempeln.de`).
-- **Entwicklung:** `target/`, `achtsam.db*`, `uploads/` und `Cargo.lock` werden ignoriert.
-- **PDF-Generierung:** `headless_chrome` (Crate) benötigt Chromium auf dem Server.
-  Bei Deployment via Git: `apt install chromium-browser` im Setup-Script sicherstellen.
+- **Email:** Finalisierung der Adressen (Platzhalter: hallo@achtsam-entruempeln.de).
+- **Entwicklung:** target/, achtsam.db*, uploads/ und Cargo.lock werden ignoriert.
+- **PDF-Generierung:** headless_chrome (Crate) benötigt Chromium auf dem Server.
+  Bei Deployment via Git: apt install chromium-browser im Setup-Script sicherstellen.
 
 ## 7. Quality & Validation (Globale Checkliste)
 

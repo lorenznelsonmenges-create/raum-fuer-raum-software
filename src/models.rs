@@ -72,8 +72,8 @@ impl Default for Auftrag {
     }
 }
 
-fn default_stundensatz() -> f64 { 45.0 }
-fn default_kilometer_satz() -> f64 { 0.50 }
+fn default_stundensatz() -> f64 { 0.0 }
+fn default_kilometer_satz() -> f64 { 0.0 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Einsatz {
@@ -120,4 +120,31 @@ pub struct RechnungNotiz {
     pub auftrag_id: i64,
     pub text: String,
     pub auf_rechnung: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DashboardStats {
+    pub anfrage_laeuft: i64,
+    pub in_bearbeitung: i64,
+    pub abgeschlossen: i64,
+    pub storniert: i64,
+    pub aktuelle_auftraege: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    #[serde(default)]
+    pub id: i64,
+    pub stundensatz: f64,
+    pub kilometer_satz: f64,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            id: 1,
+            stundensatz: 45.0,
+            kilometer_satz: 0.5,
+        }
+    }
 }
