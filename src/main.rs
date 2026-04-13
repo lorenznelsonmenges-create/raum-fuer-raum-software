@@ -122,19 +122,22 @@ async fn login_handler(
     session: Session,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<User>, AppError> {
-    println!("DEBUG: Login-Versuch für Benutzer: '{}'", payload.username);
+    let username = payload.username.trim();
+    let password = payload.password.trim();
+
+    println!("DEBUG: Login-Versuch für Benutzer: '{}'", username);
     
-    let user = match database::get_user_by_username(&pool, &payload.username).await {
+    let user = match database::get_user_by_username(&pool, username).await {
         Ok(u) => u,
         Err(e) => {
-            eprintln!("DEBUG: Benutzer '{}' nicht gefunden oder DB-Fehler: {:?}", payload.username, e);
+            eprintln!("DEBUG: Benutzer '{}' nicht gefunden oder DB-Fehler: {:?}", username, e);
             return Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()));
         }
     };
 
-    match verify(&payload.password, &user.password_hash) {
+    match verify(password, &user.password_hash) {
         Ok(true) => {
-            println!("DEBUG: Login erfolgreich für Benutzer: '{}'", payload.username);
+            println!("DEBUG: Login erfolgreich für Benutzer: '{}'", username);
             session.insert("user", user.clone()).await.map_err(|e| {
                 eprintln!("DEBUG: Session-Insert Fehler: {:?}", e);
                 AppError::Internal(e.to_string())
@@ -142,7 +145,7 @@ async fn login_handler(
             Ok(Json(user))
         },
         Ok(false) => {
-            eprintln!("DEBUG: Passwort falsch für Benutzer: '{}'", payload.username);
+            eprintln!("DEBUG: Passwort falsch für Benutzer: '{}'", username);
             Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))
         },
         Err(e) => {
