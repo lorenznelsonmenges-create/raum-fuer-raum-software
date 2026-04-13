@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Achtsam Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { surface: '#fbf9f3', 'surface-low': '#f5f4ec', 'surface-lowest': '#ffffff', primary: '#526447', 'primary-dim': '#46583c', 'primary-container': '#d4e9c4', 'on-surface': '#31332c' }, fontFamily: { headline: ['Noto Serif', 'serif'], body: ['Manrope', 'sans-serif'] } } } }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body { background-color: #fbf9f3; color: #31332c; font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body x-data="loginApp()" class="h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-md bg-white p-12 rounded-[40px] shadow-sm text-center">
+        <div class="mb-12">
+            <span class="font-headline text-5xl font-bold text-primary block mb-2">A</span>
+            <h1 class="font-headline text-2xl font-bold text-primary">achtsam entrümpeln</h1>
+            <p class="text-[10px] uppercase font-bold opacity-40 mt-2 tracking-widest">Admin-Bereich</p>
+        </div>
+
+        <form @submit.prevent="login()" class="space-y-6">
+            <div class="text-left space-y-2">
+                <label class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Benutzername</label>
+                <input type="text" x-model="username" required
+                       class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/20 transition-all font-body">
+            </div>
+            <div class="text-left space-y-2">
+                <label class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Passwort</label>
+                <input type="password" x-model="password" required
+                       class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/20 transition-all font-body">
+            </div>
+
+            <template x-if="error">
+                <div class="text-red-500 text-xs font-bold py-2" x-text="error"></div>
+            </template>
+
+            <button type="submit" :disabled="loading"
+                    class="w-full bg-primary text-white py-5 rounded-2xl font-bold text-lg shadow-lg hover:bg-primary-dim transition-all disabled:opacity-50">
+                <span x-show="!loading">Anmelden</span>
+                <span x-show="loading">Bitte warten...</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function loginApp() {
+            return {
+                username: '',
+                password: '',
+                error: null,
+                loading: false,
+                async login() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: this.username, password: this.password })
+                        });
+                        if (res.ok) {
+                            window.location.href = '/';
+                        } else {
+                            const data = await res.json();
+                            this.error = data.error || 'Anmeldung fehlgeschlagen';
+                        }
+                    } catch (e) {
+                        this.error = 'Systemfehler';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

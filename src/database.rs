@@ -1,5 +1,5 @@
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool, Row};
-use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings};
+use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings, User};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
     if !std::path::Path::new("uploads").exists() {
@@ -297,4 +297,12 @@ pub async fn update_settings(pool: &SqlitePool, settings: Settings) -> Result<()
         .bind(settings.kilometer_satz)
         .execute(pool).await?;
     Ok(())
+}
+
+// --- Benutzer ---
+pub async fn get_user_by_username(pool: &SqlitePool, username: &str) -> Result<User, sqlx::Error> {
+    sqlx::query_as::<_, User>("SELECT id, username, password_hash, role FROM users WHERE username = ?")
+        .bind(username)
+        .fetch_one(pool)
+        .await
 }

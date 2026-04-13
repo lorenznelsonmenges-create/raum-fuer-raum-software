@@ -12,6 +12,7 @@ pub enum AppError {
     PdfError(String),
     NotFound,
     BadRequest(String),
+    AuthError(String),
 }
 
 impl IntoResponse for AppError {
@@ -22,6 +23,7 @@ impl IntoResponse for AppError {
             AppError::PdfError(s) => (StatusCode::INTERNAL_SERVER_ERROR, s),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Ressource nicht gefunden".to_string()),
             AppError::BadRequest(s) => (StatusCode::BAD_REQUEST, s),
+            AppError::AuthError(s) => (StatusCode::UNAUTHORIZED, s),
         };
 
         let body = Json(json!({

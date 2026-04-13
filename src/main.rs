@@ -1,29 +1,48 @@
 use achtsam_entruempeln_software::{models, database, pdf, files};
-use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings};
+use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
 use achtsam_entruempeln_software::error::AppError;
 
 use axum::{
     routing::{get, post},
-    extract::{State, Path, Multipart},
-    response::Html,
+    extract::{State, Path, Multipart, FromRequestParts, Request},
+    http::{request::Parts, StatusCode},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Redirect},
     Json,
     Router,
+    async_trait,
 };
 use tower_http::services::ServeDir;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::fs;
 use chrono::Local;
+use tower_sessions::{Session, SessionManagerLayer, Expiry};
+use tower_sessions_sqlx_store::SqliteStore;
+use bcrypt::verify;
 
 #[tokio::main]
 async fn main() {
     let pool = database::init_db().await.expect("Failed to initialize database");
 
+    // Session Store initialisieren
+    let session_store = SqliteStore::new(pool.clone());
+    session_store.migrate().await.expect("Failed to run session migrations");
+
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false) // TODO: Auf true setzen wenn HTTPS genutzt wird
+        .with_expiry(Expiry::OnInactivity(time::Duration::hours(24)));
+
     // WICHTIG: Axum-Router-Reihenfolge
     // Statische Pfade muessen in einem Router definiert werden, 
     // bevor parametrisierte Pfade dazukommen, die sie sonst "verschlucken".
     
-    let api_routes = Router::new()
+    let public_routes = Router::new()
+        .route("/login", post(login_handler))
+        .route("/logout", get(logout_handler));
+
+    let protected_routes = Router::new()
+        .route("/check_auth", get(check_auth))
         // 1. Statische API-Pfade (keine Parameter)
         .route("/stats", get(get_stats))
         .route("/settings", get(get_settings).post(update_settings))
@@ -45,13 +64,15 @@ async fn main() {
         .route("/auftraege/:id/generate_doc", post(generate_doc_handler))
         .route("/einsaetze/:id", post(update_einsatz))
         .route("/einsaetze/:id/delete", post(delete_einsatz_handler))
-        .route("/dateien/:id/delete", post(delete_datei_handler));
+        .route("/dateien/:id/delete", post(delete_datei_handler))
+        .route_layer(middleware::from_fn(auth_middleware));
 
     let app = Router::new()
-        .nest("/api", api_routes)
+        .nest("/api", public_routes.merge(protected_routes))
         .nest_service("/uploads", ServeDir::new("./uploads"))
         .nest_service("/static", ServeDir::new("./static"))
         .fallback(get(serve_index))
+        .layer(session_layer)
         .with_state(pool);
 
     let port = std::env::var("PORT")
@@ -65,8 +86,78 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+pub struct AuthUser(pub User);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AuthUser
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let session = Session::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::AuthError("Session error".into()))?;
+
+        let user: Option<User> = session
+            .get("user")
+            .await
+            .map_err(|_| AppError::AuthError("Session error".into()))?;
+
+        if let Some(user) = user {
+            Ok(AuthUser(user))
+        } else {
+            Err(AppError::AuthError("Not logged in".into()))
+        }
+    }
+}
+
 async fn serve_index() -> Html<String> {
     Html(std::fs::read_to_string("static/index.html").unwrap_or_default())
+}
+
+async fn login_handler(
+    State(pool): State<SqlitePool>,
+    session: Session,
+    Json(payload): Json<LoginRequest>,
+) -> Result<Json<User>, AppError> {
+    let user = database::get_user_by_username(&pool, &payload.username)
+        .await
+        .map_err(|_| AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))?;
+
+    if verify(&payload.password, &user.password_hash).map_err(|_| AppError::Internal("Bcrypt error".into()))? {
+        session.insert("user", user.clone()).await.map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(Json(user))
+    } else {
+        Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))
+    }
+}
+
+async fn logout_handler(session: Session) -> impl IntoResponse {
+    session.clear().await;
+    Redirect::to("/static/login.html")
+}
+
+async fn check_auth(_auth: AuthUser) -> impl IntoResponse {
+    StatusCode::OK
+}
+
+async fn auth_middleware(
+    session: Session,
+    request: Request,
+    next: Next,
+) -> Result<impl IntoResponse, AppError> {
+    let user: Option<User> = session
+        .get("user")
+        .await
+        .map_err(|_| AppError::AuthError("Session-Fehler".into()))?;
+
+    if user.is_some() {
+        Ok(next.run(request).await)
+    } else {
+        Err(AppError::AuthError("Nicht angemeldet".into()))
+    }
 }
 
 // Template Handlers

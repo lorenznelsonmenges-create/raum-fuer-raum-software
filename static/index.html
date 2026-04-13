@@ -37,6 +37,13 @@
             <button @click="view = 'archiviert'" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
             <button @click="view = 'admin'" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
+        
+        <div class="pt-8 mt-8 border-t border-surface-low px-4">
+            <a href="/api/logout" class="flex items-center gap-4 px-6 py-4 text-on-surface opacity-40 hover:opacity-100 transition-all font-bold text-sm uppercase">
+                <span class="material-icons-outlined">logout</span>
+                <span>Abmelden</span>
+            </a>
+        </div>
     </aside>
 
     <main class="flex-1 h-full overflow-y-auto px-16 py-16 no-scrollbar font-body" x-cloak>
@@ -437,6 +444,11 @@
                 async init() { 
                     this.error = null;
                     try {
+                        const checkAuth = await fetch('/api/check_auth');
+                        if (!checkAuth.ok) {
+                            window.location.href = '/static/login.html';
+                            return;
+                        }
                         await Promise.all([this.fetchKunden(), this.fetchAuftraege(), this.fetchTemplates(), this.fetchStats(), this.fetchSettings()]);
                     } catch (e) {
                         this.error = "Daten konnten nicht vollständig geladen werden.";

@@ -16,3 +16,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 base64 = "0.22"
 handlebars = "6.4.0"
 headless_chrome = "1.0.15"
+bcrypt = "0.15"
+tower-sessions = "0.10"
+tower-sessions-sqlx-store = { version = "0.10", features = ["sqlite"] }
+time = "0.3"

@@ -73,6 +73,18 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `hochgeladen_am` | `String` | Zeitstempel des Uploads |
 | `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR, RECHNUNG |
 
+### Rechnung
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `rechnungs_nummer` | `String` | Rechnungsnummer (fortlaufend) |
+| `datum` | `String` | Ausstellungsdatum |
+| `gesamt_netto` | `f64` | Gesamtsumme (Netto) |
+| `gesamt_brutto` | `f64` | Gesamtsumme (Brutto) |
+| `status` | `String` | z.B. ENTWURF, GESENDET, BEZAHLT |
+| `pdf_pfad` | `String` | Relativer Pfad zur PDF-Datei |
+
 ### RechnungsNotiz
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
@@ -87,6 +99,29 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `id` | `i64` | Primärschlüssel (immer 1) |
 | `stundensatz` | `f64` | Standard-Stundensatz (45.00) |
 | `kilometer_satz` | `f64` | Standard-Kilometersatz (0.50) |
+
+### User
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `username` | `String` | Benutzername |
+| `password_hash` | `String` | Gehashtes Passwort |
+| `role` | `String` | Benutzerrolle (z.B. ADMIN) |
+
+### LoginRequest (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `username` | `String` | Benutzername |
+| `password` | `String` | Passwort (Klartext für Login-Prozess) |
+
+### DashboardStats (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `anfrage_laeuft` | `i64` | Anzahl Aufträge mit Status 'AnfrageLaeuft' |
+| `in_bearbeitung` | `i64` | Anzahl Aufträge mit Status 'InBearbeitung' |
+| `abgeschlossen` | `i64` | Anzahl Aufträge mit Status 'Abgeschlossen' |
+| `storniert` | `i64` | Anzahl Aufträge mit Status 'Storniert' |
+| `aktuelle_auftraege` | `i64` | Summe aller nicht-stornierten & nicht-abgeschlossenen Aufträge |
 
 ## 3. Datenbankschema – Migrations-Übersicht
 
@@ -107,6 +142,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20240409000000_add_indices.sql` | Performance-Indizes für Fremdschlüssel (Kunde/Auftrag) |
 | `20240409000001_add_status_index.sql` | Index auf `auftraege.status` für Performance |
 | `20240409000002_add_settings.sql` | Tabelle `einstellungen` |
+| `20240410000000_add_users.sql` | Tabelle `users` |
 
 ### Wichtige Spalten-Hinweise
 - `kunden.ort` (nicht `stadt` – wurde umbenannt)
@@ -117,27 +153,6 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 
 - [x] **Kunden:** CRUD-Operationen (Erstellen, Lesen, Liste, Update, Löschen).
 - [x] **Aufträge:** Erstellung, Status-Management und Update.
-### Rechnung
-| Feld | Typ | Beschreibung |
-| :--- | :--- | :--- |
-| `id` | `i64` | Primärschlüssel |
-| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
-| `rechnungs_nummer` | `String` | Rechnungsnummer (fortlaufend) |
-| `datum` | `String` | Ausstellungsdatum |
-| `gesamt_netto` | `f64` | Gesamtsumme (Netto) |
-| `gesamt_brutto` | `f64` | Gesamtsumme (Brutto) |
-| `status` | `String` | z.B. ENTWURF, GESENDET, BEZAHLT |
-| `pdf_pfad` | `String` | Relativer Pfad zur PDF-Datei |
-
-### DashboardStats (DTO)
-| Feld | Typ | Beschreibung |
-| :--- | :--- | :--- |
-| `anfrage_laeuft` | `i64` | Anzahl Aufträge mit Status 'AnfrageLaeuft' |
-| `in_bearbeitung` | `i64` | Anzahl Aufträge mit Status 'InBearbeitung' |
-| `abgeschlossen` | `i64` | Anzahl Aufträge mit Status 'Abgeschlossen' |
-| `storniert` | `i64` | Anzahl Aufträge mit Status 'Storniert' |
-| `aktuelle_auftraege` | `i64` | Summe aller nicht-stornierten & nicht-abgeschlossenen Aufträge |
-
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur.
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
@@ -148,16 +163,18 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 2. [x] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
 3. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
 4. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
-5. [ ] **Login:** Absicherung der API.
+5. [x] **Login:** Absicherung der API.
 6. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
 
 ## 6. Betriebliche Hinweise
 
-- **Hosting:** Geplant auf Hetzner-Server via Git-Deployment.
+- **Hosting:** Aktiv auf Hetzner-Server (`ubuntu-4gb-hel1-1`) unter `https://achtsam.codeboarden.de`.
+- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy auf Port 3001.
+- **SSL:** Let's Encrypt via Certbot (Auto-Renewal aktiv).
+- **Prozess-Management:** Systemd-Service `achtsam.service` (Restart=always, Port=3001 via ENV).
+- **Dateipfade:** App liegt in `/var/www/achtsam-backend/`, Uploads in `uploads/`, DB ist `achtsam.db`.
 - **Email:** Finalisierung der Adressen (Platzhalter: hallo@achtsam-entruempeln.de).
-- **Entwicklung:** target/, achtsam.db*, uploads/ und Cargo.lock werden ignoriert.
-- **PDF-Generierung:** headless_chrome (Crate) benötigt Chromium auf dem Server.
-  Bei Deployment via Git: apt install chromium-browser im Setup-Script sicherstellen.
+- **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` (Snap) auf dem Server.
 
 ## 7. Quality & Validation (Globale Checkliste)
 
