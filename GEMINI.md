@@ -175,6 +175,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - **Dateipfade:** App liegt in `/var/www/achtsam-backend/`, Uploads in `uploads/`, DB ist `achtsam.db`.
 - **Email:** Finalisierung der Adressen (Platzhalter: hallo@achtsam-entruempeln.de).
 - **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` (Snap) auf dem Server.
+- **Sicherheit/Sessions:** Da die App hinter einem Nginx-Reverse-Proxy mit HTTPS läuft, MUSS `tower_sessions` in `src/main.rs` zwingend mit `.with_secure(true)` konfiguriert sein, andernfalls verweigern Browser (wie Firefox/Chrome) das Speichern des Login-Cookies.
 
 ## 7. Quality & Validation (Globale Checkliste)
 
