@@ -30,7 +30,7 @@ async fn main() {
     session_store.migrate().await.expect("Failed to run session migrations");
 
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false) // TODO: Auf true setzen wenn HTTPS genutzt wird
+        .with_secure(true) // Muss auf true sein bei HTTPS
         .with_expiry(Expiry::OnInactivity(time::Duration::hours(24)));
 
     // WICHTIG: Axum-Router-Reihenfolge
@@ -122,15 +122,33 @@ async fn login_handler(
     session: Session,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<User>, AppError> {
-    let user = database::get_user_by_username(&pool, &payload.username)
-        .await
-        .map_err(|_| AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))?;
+    println!("DEBUG: Login-Versuch für Benutzer: '{}'", payload.username);
+    
+    let user = match database::get_user_by_username(&pool, &payload.username).await {
+        Ok(u) => u,
+        Err(e) => {
+            eprintln!("DEBUG: Benutzer '{}' nicht gefunden oder DB-Fehler: {:?}", payload.username, e);
+            return Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()));
+        }
+    };
 
-    if verify(&payload.password, &user.password_hash).map_err(|_| AppError::Internal("Bcrypt error".into()))? {
-        session.insert("user", user.clone()).await.map_err(|e| AppError::Internal(e.to_string()))?;
-        Ok(Json(user))
-    } else {
-        Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))
+    match verify(&payload.password, &user.password_hash) {
+        Ok(true) => {
+            println!("DEBUG: Login erfolgreich für Benutzer: '{}'", payload.username);
+            session.insert("user", user.clone()).await.map_err(|e| {
+                eprintln!("DEBUG: Session-Insert Fehler: {:?}", e);
+                AppError::Internal(e.to_string())
+            })?;
+            Ok(Json(user))
+        },
+        Ok(false) => {
+            eprintln!("DEBUG: Passwort falsch für Benutzer: '{}'", payload.username);
+            Err(AppError::AuthError("Ungültiger Benutzername oder Passwort".into()))
+        },
+        Err(e) => {
+            eprintln!("DEBUG: Bcrypt-Verifikationsfehler: {:?}", e);
+            Err(AppError::Internal("Bcrypt error".into()))
+        }
     }
 }
 
