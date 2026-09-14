@@ -556,7 +556,7 @@
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
                 async generateDocFromTemplate(t) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; },
                 createInvoice() { this.showInvoiceModal = true; },
-                async confirmCreateInvoice() { this.showInvoiceModal = false; this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; } }
+                async confirmCreateInvoice() { this.showInvoiceModal = false; this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; }
             }
         }
     </script>
