@@ -360,8 +360,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     }
 
     let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None)?;
-    let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
-    let filename = format!("rechnung_{}_{}.pdf", id, timestamp);
+    let filename = format!("Rechnung_{}_{}.pdf", re_nr, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
     
@@ -369,7 +368,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     database::create_datei(&pool, Datei { 
         id: 0, 
         auftrag_id: id, 
-        dateiname: re_nr.clone(), 
+        dateiname: filename.clone(), 
         dateipfad: filepath.clone(), 
         dateityp: "application/pdf".into(), 
         hochgeladen_am: Local::now().to_rfc3339(), 
@@ -408,7 +407,14 @@ async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64
         None
     )?;
 
-    let filename = format!("{}_{}_{}.pdf", template_name.replace(".html", ""), id, Local::now().format("%Y%m%d"));
+    let template_base = template_name.replace(".html", "");
+    let doc_type = match template_base.as_str() {
+        "datenschutz" => "Datenschutz",
+        "vertrag" => "Vertrag",
+        "selbststaendigkeitserklaerung" => "Selbststaendigkeitserklaerung",
+        _ => "Dokument"
+    };
+    let filename = format!("{}_A{:06}_{}.pdf", doc_type, id, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Json(database::create_datei(&pool, Datei { id: 0, auftrag_id: id, dateiname: filename, dateipfad: filepath, dateityp: "application/pdf".into(), hochgeladen_am: Local::now().to_rfc3339(), kategorie: if template_name.contains("vertrag") { "VERTRAG" } else { "DATENSCHUTZ" }.into() }).await?))
