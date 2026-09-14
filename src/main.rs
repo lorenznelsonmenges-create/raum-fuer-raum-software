@@ -175,8 +175,8 @@ async fn logout_handler(session: Session) -> impl IntoResponse {
     Redirect::to("/static/login.html")
 }
 
-async fn check_auth(_auth: AuthUser) -> impl IntoResponse {
-    StatusCode::OK
+async fn check_auth(auth: AuthUser) -> Result<Json<User>, AppError> {
+    Ok(Json(auth.0))
 }
 
 async fn auth_middleware(

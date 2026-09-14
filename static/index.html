@@ -304,7 +304,7 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde</p><h1 class="text-3xl font-headline font-bold text-primary" x-text="activeKundeForAuftrag.vorname + ' ' + activeKundeForAuftrag.nachname"></h1></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde-Nr</p><div class="text-xl font-bold" x-text="formatKundeID(activeKundeForAuftrag.id)"></div></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
-                        <div><p class="text-[9px] font-bold uppercase opacity-30">Erstellt von</p><div class="text-xl font-bold capitalize text-primary" x-text="activeAuftrag.created_by || 'Unbekannt'"></div></div>
+                        <div><p class="text-[9px] font-bold uppercase opacity-30">Erstellt von</p><div class="text-xl font-bold capitalize text-primary" x-text="activeAuftrag.created_by || (currentUser ? currentUser.username : 'Unbekannt')"></div></div>
                     </div>
                     <div class="flex items-center gap-6">
                         <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Projekt löschen?', 'Möchten Sie dieses Projekt wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
@@ -496,6 +496,7 @@
         function app() {
             return {
                 view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
+                currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
                 
@@ -507,6 +508,7 @@
                             window.location.href = '/static/login.html';
                             return;
                         }
+                        this.currentUser = await checkAuth.json();
                         await Promise.all([this.fetchKunden(), this.fetchAuftraege(), this.fetchTemplates(), this.fetchStats(), this.fetchSettings()]);
                     } catch (e) {
                         this.error = "Daten konnten nicht vollständig geladen werden.";
