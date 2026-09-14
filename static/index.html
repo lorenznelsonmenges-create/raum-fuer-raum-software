@@ -54,7 +54,7 @@
                 <header class="mb-24 flex justify-between">
                     <h1 class="font-headline text-5xl text-primary font-bold">Übersicht</h1>
                     <div class="relative w-96" @click.stop>
-                        <input x-model="searchQuery" @input="searchOpen = true" placeholder="Suchen..." class="w-full bg-white border border-surface-low rounded-2xl p-4 shadow-sm">
+                        <input x-model="searchQuery" @input="searchOpen = true" placeholder="Kunden oder Aufträge suchen..." class="w-full bg-white border border-surface-low rounded-2xl p-4 shadow-sm font-body">
                         <div x-show="searchOpen && searchQuery.length > 0" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 border border-surface-low overflow-hidden">
                             <template x-for="res in searchSuggestions" :key="res.key">
                                 <div @click="handleSearchResult(res)" class="px-6 py-4 hover:bg-surface-low cursor-pointer border-b last:border-0 font-body">
@@ -506,8 +506,8 @@
                 isArchiv(a) { return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
                 getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },
                 formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
-                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)) r.push({ type: 'kunde', title: k.vorname+' '+k.nachname, data: k }); }); return r.slice(0, 5); },
-                handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') this.openKundeDetail(res.data); },
+                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) { r.push({ type: 'kunde', title: k.vorname+' '+k.nachname, subtitle: 'Kunde (' + this.formatKundeID(k.id) + ')', data: k }); } }); this.auftraege.forEach(a => { const kname = this.getKundeName(a.kunde_id).toLowerCase(); if (this.formatAuftragID(a.id).toLowerCase().includes(q) || kname.includes(q)) { r.push({ type: 'auftrag', title: 'Projekt: ' + this.getKundeName(a.kunde_id), subtitle: 'Auftrag ' + this.formatAuftragID(a.id) + ' • ' + this.formatStatusLabel(a.status), data: a }); } }); return r.slice(0, 6); },
+                handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') { this.openKundeDetail(res.data); } else if (res.type === 'auftrag') { this.openAuftragDetail(res.data); } },
                 get filteredKunden() { const q = this.kundeSearchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)); },
                 get uniqueFilteredAuftraege() { const q = this.auftragSearchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q)); },
                 get uniqueAuftraegeForKunde() { return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
