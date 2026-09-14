@@ -426,6 +426,21 @@
         </div>
     </div>
 
+    <!-- Confirm Invoice Modal -->
+    <div x-show="showInvoiceModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center" @click.away="showInvoiceModal = false">
+            <div class="w-20 h-20 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <span class="material-icons-outlined text-4xl">receipt_long</span>
+            </div>
+            <h2 class="font-headline text-3xl mb-4 text-primary font-bold">Rechnung erstellen?</h2>
+            <p class="text-sm opacity-60 mb-10 leading-relaxed">Möchten Sie die finale Rechnung für diesen Auftrag jetzt generieren?</p>
+            <div class="flex flex-col gap-4">
+                <button @click="confirmCreateInvoice()" class="bg-primary text-white py-4 rounded-2xl font-bold hover:bg-primary-dim transition-all shadow-lg text-lg">Ja, generieren</button>
+                <button @click="showInvoiceModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Work Modal (Stunden / KM) -->
     <div x-show="showWorkModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
         <div class="bg-white w-full max-w-sm rounded-[40px] p-12 relative shadow-2xl text-on-surface font-body text-center" @click.away="showWorkModal = false">
@@ -463,7 +478,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false,
+                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false, showInvoiceModal: false,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
                 
@@ -539,7 +554,8 @@
                 async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
                 async generateDocFromTemplate(t) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; },
-                async createInvoice() { if (confirm("Rechnung erstellen?")) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; } }
+                createInvoice() { this.showInvoiceModal = true; },
+                async confirmCreateInvoice() { this.showInvoiceModal = false; this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; } }
             }
         }
     </script>
