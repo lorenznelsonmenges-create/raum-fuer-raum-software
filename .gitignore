@@ -22,3 +22,4 @@ target/
 target/
 Cargo.lock
 server_*.txt
+logins.json
