@@ -238,7 +238,10 @@
 
                     <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-2 gap-16">
                         <div class="space-y-8">
-                            <h3 class="font-headline text-2xl text-primary font-bold">Projekte (Aktuell & Archiv)</h3>
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-headline text-2xl text-primary font-bold">Projekte (Aktuell & Archiv)</h3>
+                                <button @click="openAuftragErstellung(activeKunde.id)" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary-dim transition-all shadow-sm">+ Neues Projekt</button>
+                            </div>
                             <div class="grid grid-cols-1 gap-3">
                                 <template x-for="a in uniqueAuftraegeForKunde" :key="a.id">
                                     <div @click="openAuftragDetail(a)" class="flex items-center justify-between p-6 bg-surface-low/50 hover:bg-surface-low rounded-2xl cursor-pointer transition-all group">
