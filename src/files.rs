@@ -45,6 +45,7 @@ pub async fn upload_datei(
                     None,
                     None,
                     Some(&abs_sig),
+                    None,
                 )?;
 
                 let pdf_name = format!("Datenschutz_{}_{}.pdf", auftrag_id, Local::now().format("%Y%m%d"));

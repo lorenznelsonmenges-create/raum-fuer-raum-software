@@ -65,16 +65,27 @@
             margin-bottom: 10pt;
             display: block;
         }
-        .party-grid {
+        .compact-header {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40pt;
-            margin-bottom: 20mm;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 20pt;
+            margin-bottom: 25mm;
+            padding-bottom: 15pt;
+            border-bottom: 1px solid var(--outline-variant);
         }
-        .party-card {
-            background: var(--surface-low);
-            padding: 30pt;
-            border-radius: 15pt;
+        .compact-header-item .label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(49, 51, 44, 0.4);
+            margin-bottom: 4pt;
+        }
+        .compact-header-item .value {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
         }
         .content-section {
             margin-bottom: 25pt;
@@ -121,19 +132,22 @@
 
         <h1>Datenschutz</h1>
 
-        <div class="party-grid">
-            <div class="party-card">
-                <span class="label-md">Verantwortliche Stelle</span>
-                <strong>Achtsam Entrümpeln</strong><br>
-                Stefanie Ruf<br>
-                Musterstraße 1<br>
-                12345 Musterstadt
+        <div class="compact-header">
+            <div class="compact-header-item">
+                <div class="label">Kunde</div>
+                <div class="value">{{kunde_name}}</div>
             </div>
-            <div class="party-card">
-                <span class="label-md">Kunde / Betroffener</span>
-                <strong>{{kunde_name}}</strong><br>
-                {{kunde_strasse}} {{kunde_hausnummer}}<br>
-                {{kunde_plz}} {{kunde_ort}}
+            <div class="compact-header-item">
+                <div class="label">Kunde-Nr</div>
+                <div class="value">{{kunde_id}}</div>
+            </div>
+            <div class="compact-header-item">
+                <div class="label">Auftrag-Nr</div>
+                <div class="value">{{auftrag_id}}</div>
+            </div>
+            <div class="compact-header-item">
+                <div class="label">Erstellt von</div>
+                <div class="value" style="text-transform: capitalize;">{{created_by}}</div>
             </div>
         </div>
 

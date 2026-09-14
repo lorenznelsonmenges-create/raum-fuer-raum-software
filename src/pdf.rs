@@ -16,6 +16,7 @@ pub fn generate_dynamic_pdf(
     notizen: Option<&[RechnungNotiz]>,
     rechnungs_nummer: Option<&str>,
     signature_path: Option<&str>,
+    created_by: Option<&str>,
 ) -> Result<(Vec<u8>, f64, f64), AppError> {
     let mut hb = Handlebars::new();
     
@@ -112,7 +113,8 @@ pub fn generate_dynamic_pdf(
         "gesamt_netto": format!("{:.2}", netto_total),
         "mwst": format!("{:.2}", mwst),
         "gesamt_brutto": format!("{:.2}", brutto_total),
-        "signatur_pfad": signature_path.unwrap_or("")
+        "signatur_pfad": signature_path.unwrap_or(""),
+        "created_by": created_by.unwrap_or("Unbekannt")
     });
 
     let html = hb.render_template(&template_content, &data)

@@ -360,7 +360,10 @@ async fn list_dateien(State(pool): State<SqlitePool>, Path(auftrag_id): Path<i64
     Ok(Json(database::get_dateien_for_auftrag(&pool, auftrag_id).await?))
 }
 
-async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) -> Result<Json<i64>, AppError> {
+async fn create_rechnung(State(pool): State<SqlitePool>, session: Session, Path(id): Path<i64>) -> Result<Json<i64>, AppError> {
+    let user: Option<User> = session.get("user").await.map_err(|e| AppError::Internal(e.to_string()))?;
+    let created_by = user.map(|u| u.username).unwrap_or_else(|| "Unbekannt".to_string());
+
     let auftrag = database::get_auftrag_by_id(&pool, id).await?;
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
     let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
@@ -374,7 +377,7 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
         fs::create_dir_all("uploads/rechnungen").map_err(|e| AppError::Internal(e.to_string()))?;
     }
 
-    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None)?;
+    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None, Some(&created_by))?;
     let filename = format!("Rechnung_{}_{}.pdf", re_nr, Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
@@ -405,7 +408,10 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     Ok(Json(re_id))
 }
 
-async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64>, Json(payload): Json<serde_json::Value>) -> Result<Json<i64>, AppError> {
+async fn generate_doc_handler(State(pool): State<SqlitePool>, session: Session, Path(id): Path<i64>, Json(payload): Json<serde_json::Value>) -> Result<Json<i64>, AppError> {
+    let user: Option<User> = session.get("user").await.map_err(|e| AppError::Internal(e.to_string()))?;
+    let created_by = user.map(|u| u.username).unwrap_or_else(|| "Unbekannt".to_string());
+
     let template_name = payload["template"].as_str().unwrap_or("vertrag.html");
     let auftrag = database::get_auftrag_by_id(&pool, id).await?;
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
@@ -419,7 +425,8 @@ async fn generate_doc_handler(State(pool): State<SqlitePool>, Path(id): Path<i64
         Some(&einsaetze), 
         Some(&notizen), 
         None, 
-        None
+        None,
+        Some(&created_by)
     )?;
 
     let template_base = template_name.replace(".html", "");
