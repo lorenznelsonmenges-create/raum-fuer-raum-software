@@ -303,7 +303,7 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
                     </div>
                     <div class="flex items-center gap-6">
-                        <button @click="showDeleteAuftragModal = true" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
+                        <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Projekt löschen?', 'Möchten Sie dieses Projekt wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
                             <span class="material-icons-outlined">delete</span>
                         </button>
                         <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-20 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all">
@@ -413,16 +413,16 @@
     
     <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
-    <div x-show="showDeleteAuftragModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
-        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center">
+    <div x-show="deleteModal.show" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center" @click.away="deleteModal.show = false">
             <div class="w-20 h-20 bg-red-50 text-red-400 rounded-full flex items-center justify-center mx-auto mb-8">
                 <span class="material-icons-outlined text-4xl">delete_forever</span>
             </div>
-            <h2 class="font-headline text-3xl mb-4 text-primary font-bold">Auftrag löschen?</h2>
-            <p class="text-sm opacity-60 mb-10 leading-relaxed">Möchten Sie diesen Auftrag unwiderruflich löschen?</p>
+            <h2 class="font-headline text-3xl mb-4 text-primary font-bold" x-text="deleteModal.title"></h2>
+            <p class="text-sm opacity-60 mb-10 leading-relaxed" x-text="deleteModal.msg"></p>
             <div class="flex flex-col gap-4">
-                <button @click="deleteAuftrag(activeAuftrag.id)" class="bg-red-500 text-white py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg">Ja, unwiderruflich löschen</button>
-                <button @click="showDeleteAuftragModal = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
+                <button @click="confirmDelete()" class="bg-red-500 text-white py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg text-lg">Ja, löschen</button>
+                <button @click="deleteModal.show = false" class="text-on-surface/40 py-2 font-bold uppercase text-xs tracking-widest hover:text-on-surface transition-all">Abbrechen</button>
             </div>
         </div>
     </div>
@@ -479,7 +479,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, showDeleteAuftragModal: false, showInvoiceModal: false,
+                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
                 
@@ -521,7 +521,18 @@
                 async fetchAuftraege() { const r = await fetch('/api/auftraege'); if (!r.ok) throw new Error(); this.auftraege = await r.json(); },
                 async openTemplateEditor(n) { this.editingTemplateName = n; this.editingTemplateContent = await (await fetch(`/api/templates/${n}`)).text(); this.templateEditorOpen = true; },
                 async saveTemplateContent() { await fetch(`/api/templates/${this.editingTemplateName}`, { method: 'POST', body: this.editingTemplateContent }); this.templateEditorOpen = false; this.showFeedback("Gespeichert."); },
-                async deleteTemplateFile(n) { if (confirm("Löschen?")) { await fetch(`/api/templates/${n}`, { method: 'DELETE' }); await this.fetchTemplates(); } },
+                openDeleteModal(t, id, title, msg) { this.deleteModal = { show: true, type: t, id, title, msg }; },
+                async confirmDelete() {
+                    const m = this.deleteModal; m.show = false; this.isProcessing = true;
+                    try {
+                        if (m.type === 'template') { await fetch(`/api/templates/${m.id}`, { method: 'DELETE' }); await this.fetchTemplates(); }
+                        else if (m.type === 'kunde') { await fetch(`/api/kunden/${m.id}/delete`, { method: 'POST' }); await this.fetchKunden(); this.view = 'kunden'; }
+                        else if (m.type === 'einsatz') { await fetch(`/api/einsaetze/${m.id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); }
+                        else if (m.type === 'doc') { await fetch(`/api/dateien/${m.id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); }
+                        else if (m.type === 'auftrag') { await fetch(`/api/auftraege/${m.id}`, { method: 'DELETE' }); await this.fetchAuftraege(); this.view = 'auftraege'; }
+                    } finally { this.isProcessing = false; }
+                },
+                deleteTemplateFile(n) { this.openDeleteModal('template', n, 'Vorlage löschen?', 'Möchten Sie diese Vorlage wirklich löschen?'); },
                 async uploadTemplateFile(e) { const f = e.target.files[0]; if (f) { const fd = new FormData(); fd.append('file', f); await fetch('/api/templates', { method: 'POST', body: fd }); await this.fetchTemplates(); } },
                 isArchiv(a) { return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
                 getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },
@@ -533,8 +544,8 @@
                 get uniqueAuftraegeForKunde() { return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
                 formatKundeID(id) { return 'K' + String(id).padStart(6, '0'); },
                 formatAuftragID(id) { return 'A' + String(id).padStart(6, '0'); },
-                async deleteKunde(id) { if (confirm("Löschen?")) { await fetch(`/api/kunden/${id}/delete`, { method: 'POST' }); await this.fetchKunden(); this.view = 'kunden'; } },
-                async deleteAuftrag(id) { await fetch(`/api/auftraege/${id}`, { method: 'DELETE' }); await this.fetchAuftraege(); this.view = 'auftraege'; this.showDeleteAuftragModal = false; },
+                deleteKunde(id) { this.openDeleteModal('kunde', id, 'Kunde löschen?', 'Möchten Sie diesen Kunden wirklich löschen? Alle zugehörigen Projekte werden ebenfalls entfernt.'); },
+                deleteAuftrag(id) { this.openDeleteModal('auftrag', id, 'Projekt löschen?', 'Möchten Sie dieses Projekt unwiderruflich löschen?'); },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
                 formatDate(d) { return new Date(d).toLocaleDateString('de-DE'); },
                 totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
@@ -551,8 +562,8 @@
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
                 openWorkModal(t) { this.workModalType = t; this.workModalValue = ''; this.showWorkModal = true; setTimeout(() => this.$refs.workInput.focus(), 50); },
                 async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: this.workModalType==='ARBEIT'?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='FAHRT'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
-                async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
-                async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
+                deleteEinsatz(id) { this.openDeleteModal('einsatz', id, 'Eintrag löschen?', 'Möchten Sie diesen Eintrag wirklich löschen?'); },
+                deleteDoc(id) { this.openDeleteModal('doc', id, 'Dokument löschen?', 'Möchten Sie dieses Dokument wirklich löschen?'); },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
                 async generateDocFromTemplate(t) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; },
                 createInvoice() { this.showInvoiceModal = true; },
