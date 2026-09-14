@@ -25,14 +25,14 @@
 
         <form @submit.prevent="login()" class="space-y-6">
             <div class="text-left space-y-2">
-                <label class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Benutzername</label>
-                <input type="text" x-model="username" required
+                <label for="username" class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Benutzername</label>
+                <input id="username" name="username" autocomplete="username" type="text" x-model="username" required
                        class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/20 transition-all font-body">
             </div>
             <div class="text-left space-y-2">
-                <label class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Passwort</label>
+                <label for="password" class="text-[9px] font-bold uppercase tracking-widest opacity-40 px-1">Passwort</label>
                 <div class="relative">
-                    <input :type="showPassword ? 'text' : 'password'" x-model="password" required
+                    <input id="password" name="password" autocomplete="current-password" :type="showPassword ? 'text' : 'password'" x-model="password" required
                            class="w-full bg-surface-low border-none rounded-2xl p-4 pr-12 shadow-inner focus:ring-1 ring-primary/20 transition-all font-body">
                     <button type="button" @click="showPassword = !showPassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-primary/50 hover:text-primary transition-colors focus:outline-none flex items-center justify-center">
                         <span class="material-icons-outlined" x-text="showPassword ? 'visibility_off' : 'visibility'"></span>
