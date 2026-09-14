@@ -309,9 +309,21 @@
                         <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Projekt löschen?', 'Möchten Sie dieses Projekt wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
                             <span class="material-icons-outlined">delete</span>
                         </button>
-                        <select x-model="activeAuftrag.status" @change="updateAuftragSync()" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-20 py-5 rounded-2xl appearance-none border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all">
-                            <option value="AnfrageLaeuft">Anfrage läuft</option><option value="InBearbeitung">In Bearbeitung</option><option value="Abgeschlossen">Abgeschlossen</option><option value="Storniert">Storniert</option>
-                        </select>
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" @click.away="open = false" :class="getStatusBadgeClass(activeAuftrag.status)" class="pl-8 pr-12 py-5 rounded-2xl border-none font-bold uppercase text-xs tracking-widest cursor-pointer shadow-xl transition-all flex items-center gap-2">
+                                <span x-text="formatStatusLabel(activeAuftrag.status)"></span>
+                                <span class="material-icons-outlined text-sm transition-transform duration-200" :class="open ? 'rotate-180' : ''">expand_more</span>
+                            </button>
+                            <div x-show="open" x-transition.opacity.duration.200ms class="absolute top-full right-0 mt-3 w-64 bg-white rounded-3xl shadow-2xl py-3 z-[600] border border-surface-low overflow-hidden font-body" style="display: none;">
+                                <template x-for="status in ['AnfrageLaeuft', 'InBearbeitung', 'Abgeschlossen', 'Storniert']">
+                                    <div @click="activeAuftrag.status = status; updateAuftragSync(); open = false" 
+                                         class="px-8 py-4 cursor-pointer hover:bg-surface-low transition-colors flex items-center justify-between group">
+                                        <span class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors" x-text="formatStatusLabel(status)"></span>
+                                        <span x-show="activeAuftrag.status === status" class="material-icons-outlined text-primary text-sm">check</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </header>
 
