@@ -565,7 +565,7 @@
                 deleteKunde(id) { this.openDeleteModal('kunde', id, 'Kunde löschen?', 'Möchten Sie diesen Kunden wirklich löschen? Alle zugehörigen Projekte werden ebenfalls entfernt.'); },
                 deleteAuftrag(id) { this.openDeleteModal('auftrag', id, 'Projekt löschen?', 'Möchten Sie dieses Projekt unwiderruflich löschen?'); },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
-                formatDate(d) { return new Date(d).toLocaleDateString('de-DE'); },
+                formatDate(d) { return new Date(d).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}); },
                 totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
                 totalKM() { return this.activeEinsaetze.filter(e=>e.typ==='FAHRT').reduce((s, e) => s + e.kilometer, 0); },
                 openNewKunde() { this.newKundeModal = true; },
