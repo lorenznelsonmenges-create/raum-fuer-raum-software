@@ -59,20 +59,42 @@ pub fn generate_dynamic_pdf(
     let mut einsaetze_data = Vec::new();
     
     if let Some(ee) = einsaetze {
+        let mut sum_stunden = 0.0;
+        let mut sum_kilometer = 0.0;
+
         for e in ee {
             let typ_upper = e.typ.to_uppercase();
-            let ist_arbeit = typ_upper == "ARBEIT";
-            let einzelpreis = if ist_arbeit { auftrag.stundensatz } else { auftrag.kilometer_satz };
-            let summe = if ist_arbeit { e.stunden * einzelpreis } else { e.kilometer * einzelpreis };
-            
+            if typ_upper == "ARBEIT" {
+                sum_stunden += e.stunden;
+            } else {
+                sum_kilometer += e.kilometer;
+            }
+        }
+
+        if sum_stunden > 0.0 {
+            let summe = sum_stunden * auftrag.stundensatz;
             gesamt_netto_einsaetze += summe;
             einsaetze_data.push(json!({
-                "datum": e.datum,
-                "typ": e.typ,
-                "stunden": e.stunden,
-                "kilometer": e.kilometer,
-                "notiz": e.notiz,
-                "einzelpreis": format!("{:.2}", einzelpreis),
+                "datum": "",
+                "typ": "ARBEIT",
+                "stunden": sum_stunden,
+                "kilometer": 0.0,
+                "notiz": "",
+                "einzelpreis": format!("{:.2}", auftrag.stundensatz),
+                "zeilen_summe": format!("{:.2}", summe)
+            }));
+        }
+
+        if sum_kilometer > 0.0 {
+            let summe = sum_kilometer * auftrag.kilometer_satz;
+            gesamt_netto_einsaetze += summe;
+            einsaetze_data.push(json!({
+                "datum": "",
+                "typ": "FAHRT",
+                "stunden": 0.0,
+                "kilometer": sum_kilometer,
+                "notiz": "",
+                "einzelpreis": format!("{:.2}", auftrag.kilometer_satz),
                 "zeilen_summe": format!("{:.2}", summe)
             }));
         }
