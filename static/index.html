@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Achtsam Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
@@ -26,10 +26,10 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body x-data="app()" x-init="init()" class="h-screen flex flex-col md:flex-row text-on-surface" @click="searchOpen = false">
+<body x-data="app()" x-init="init()" class="h-[100dvh] flex flex-col md:flex-row text-on-surface" @click="searchOpen = false">
 
     <!-- Mobile Header -->
-    <div class="md:hidden flex items-center justify-between bg-surface-lowest px-6 py-4 border-b border-surface-low z-40">
+    <div class="md:hidden flex items-center justify-between bg-surface-lowest px-6 py-4 border-b border-surface-low z-40" style="padding-top: max(1rem, env(safe-area-inset-top));">
         <div class="flex items-center gap-4 cursor-pointer" @click="view = 'dashboard'">
             <span class="font-headline text-2xl font-bold text-primary">A</span>
             <span class="font-headline text-lg font-bold text-primary">achtsam entrümpeln</span>
