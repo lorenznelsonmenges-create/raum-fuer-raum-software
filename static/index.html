@@ -18,6 +18,9 @@
         .sidebar-item.active { background-color: #f5f4ec; color: #526447; font-weight: 600; }
         .secondary-button { display: inline-flex; align-items: center; gap: 0.5rem; color: #526447; cursor: pointer; }
         .glass { background: rgba(251, 249, 243, 0.8); backdrop-filter: blur(12px); }
+        /* Hide number input spinner arrows */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
         input:focus, select:focus, textarea:focus { outline: none; background-color: #e3e3d9 !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
