@@ -26,19 +26,33 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body x-data="app()" x-init="init()" class="h-screen flex text-on-surface" @click="searchOpen = false">
+<body x-data="app()" x-init="init()" class="h-screen flex flex-col md:flex-row text-on-surface" @click="searchOpen = false">
 
-    <aside class="w-80 h-full bg-surface-lowest border-r border-surface-low flex flex-col py-12 px-6 font-body">
-        <div class="flex items-center gap-4 mb-24 px-4 cursor-pointer" @click="view = 'dashboard'">
+    <!-- Mobile Header -->
+    <div class="md:hidden flex items-center justify-between bg-surface-lowest px-6 py-4 border-b border-surface-low z-40">
+        <div class="flex items-center gap-4 cursor-pointer" @click="view = 'dashboard'">
+            <span class="font-headline text-2xl font-bold text-primary">A</span>
+            <span class="font-headline text-lg font-bold text-primary">achtsam entrümpeln</span>
+        </div>
+        <button @click.stop="mobileMenuOpen = !mobileMenuOpen" class="text-primary focus:outline-none">
+            <span class="material-icons-outlined" x-text="mobileMenuOpen ? 'close' : 'menu'"></span>
+        </button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div x-show="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/20 z-40 md:hidden" x-cloak></div>
+
+    <aside :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-50 w-80 h-full bg-surface-lowest border-r border-surface-low flex flex-col py-4 md:py-8 md:py-12 px-6 font-body transition-transform duration-300 md:translate-x-0">
+        <div class="hidden md:flex items-center gap-4 mb-12 md:mb-24 px-4 cursor-pointer" @click="view = 'dashboard'">
             <span class="font-headline text-3xl font-bold text-primary">A</span>
             <span class="font-headline text-xl font-bold text-primary">achtsam entrümpeln</span>
         </div>
         <nav class="flex-1 space-y-2">
-            <button @click="view = 'dashboard'" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
-            <button @click="view = 'kunden'" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">people</span><span>Kunden</span></button>
-            <button @click="view = 'auftraege'" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
-            <button @click="view = 'archiviert'" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
-            <button @click="view = 'admin'" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
+            <button @click="view = 'dashboard'; mobileMenuOpen = false" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
+            <button @click="view = 'kunden'; mobileMenuOpen = false" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">people</span><span>Kunden</span></button>
+            <button @click="view = 'auftraege'; mobileMenuOpen = false" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
+            <button @click="view = 'archiviert'; mobileMenuOpen = false" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
+            <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
         
         <div class="pt-8 mt-8 border-t border-surface-low px-4">
@@ -49,14 +63,14 @@
         </div>
     </aside>
 
-    <main class="flex-1 h-full overflow-y-auto px-16 py-16 no-scrollbar font-body" x-cloak>
+    <main class="flex-1 h-full overflow-y-auto px-4 py-4 md:py-8 md:px-16 md:py-16 no-scrollbar font-body relative" x-cloak>
         
         <!-- Dashboard -->
         <template x-if="view === 'dashboard'">
             <div>
-                <header class="mb-24 flex justify-between">
-                    <h1 class="font-headline text-5xl text-primary font-bold">Übersicht</h1>
-                    <div class="relative w-96" @click.stop>
+                <header class="mb-8 md:mb-12 md:mb-24 flex flex-col md:flex-row gap-6 md:gap-0 justify-between">
+                    <h1 class="font-headline text-3xl md:text-4xl md:text-5xl text-primary font-bold">Übersicht</h1>
+                    <div class="relative w-full md:w-96" @click.stop>
                         <input x-model="searchQuery" @input="searchOpen = true" placeholder="Kunden oder Aufträge suchen..." class="w-full bg-white border border-surface-low rounded-2xl p-4 shadow-sm font-body">
                         <div x-show="searchOpen && searchQuery.length > 0" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 border border-surface-low overflow-hidden">
                             <template x-for="res in searchSuggestions" :key="res.key">
@@ -71,7 +85,7 @@
 
                 <!-- Fehleranzeige -->
                 <template x-if="error">
-                    <div class="bg-red-50 border border-red-200 p-12 rounded-3xl mb-12 flex items-center gap-8 shadow-sm">
+                    <div class="bg-red-50 border border-red-200 p-6 md:p-12 rounded-3xl mb-12 flex items-center gap-8 shadow-sm">
                         <span class="material-icons-outlined text-red-500 text-5xl">error_outline</span>
                         <div class="text-left">
                             <h3 class="font-headline text-2xl text-red-700 font-bold mb-1">System-Fehler</h3>
@@ -80,19 +94,19 @@
                     </div>
                 </template>
 
-                <div class="grid grid-cols-2 gap-12 text-center">
-                    <div @click="view = 'kunden'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                        <div class="text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:p-12 text-center">
+                    <div @click="view = 'kunden'" class="bg-white p-6 md:p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-4xl md:text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div>
                         <p class="text-[10px] uppercase font-bold opacity-40">Kunden</p>
                     </div>
-                    <div @click="view = 'auftraege'" class="bg-white p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                        <div class="text-5xl font-headline text-primary font-bold" x-text="stats.aktuelle_auftraege"></div>
+                    <div @click="view = 'auftraege'" class="bg-white p-6 md:p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-4xl md:text-5xl font-headline text-primary font-bold" x-text="stats.aktuelle_auftraege"></div>
                         <p class="text-[10px] uppercase font-bold opacity-40">Aktuelle Aufträge</p>
                     </div>
                 </div>
 
                 <!-- Status-Verteilung (Horizontales Balkendiagramm) -->
-                <div class="bg-white p-12 rounded-3xl shadow-sm mt-12 font-body">
+                <div class="bg-white p-6 md:p-12 rounded-3xl shadow-sm mt-12 font-body">
                     <h3 class="font-headline text-2xl text-primary font-bold mb-12 text-left">Status-Verteilung</h3>
                     <div class="space-y-8">
                         <!-- Anfrage -->
@@ -143,10 +157,10 @@
         <!-- Admin View -->
         <template x-if="view === 'admin'">
             <div class="space-y-16">
-                <h1 class="font-headline text-5xl text-primary font-bold mb-12">Administration</h1>
+                <h1 class="font-headline text-4xl md:text-5xl text-primary font-bold mb-12">Administration</h1>
                 
                 <!-- Vorlagenverwaltung -->
-                <div class="bg-white p-12 rounded-[40px] shadow-sm">
+                <div class="bg-white p-6 md:p-12 rounded-[40px] shadow-sm">
                     <div class="flex justify-between items-center mb-10">
                         <h2 class="font-headline text-3xl text-primary font-bold">Dokumentvorlagen</h2>
                         <label class="bg-primary text-white px-8 py-4 rounded-2xl font-bold cursor-pointer shadow-lg hover:bg-primary-dim transition-all">
@@ -171,9 +185,9 @@
                 </div>
 
                 <!-- System-Einstellungen -->
-                <div class="bg-white p-12 rounded-[40px] shadow-sm">
+                <div class="bg-white p-6 md:p-12 rounded-[40px] shadow-sm">
                     <h2 class="font-headline text-3xl text-primary font-bold mb-10">System-Einstellungen</h2>
-                    <div class="grid grid-cols-2 gap-12">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:p-12">
                         <div class="space-y-4">
                             <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 px-2">Standard-Stundensatz (€)</label>
                             <input type="number" step="0.5" x-model.number="settings.stundensatz" class="w-full bg-surface-low p-6 rounded-2xl text-2xl font-headline font-bold text-primary border-none shadow-inner">
@@ -184,7 +198,7 @@
                         </div>
                     </div>
                     <div class="mt-12 flex justify-end">
-                        <button @click="saveSettings()" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Einstellungen speichern</button>
+                        <button @click="saveSettings()" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Einstellungen speichern</button>
                     </div>
                 </div>
             </div>
@@ -193,8 +207,8 @@
         <!-- Kunden Liste -->
         <template x-if="view === 'kunden'">
             <div>
-                <div class="flex justify-between items-end mb-16 gap-8">
-                    <div class="flex items-end gap-12">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16 gap-8">
+                    <div class="flex items-end gap-6 md:p-12">
                         <h1 class="font-headline text-4xl text-primary font-bold">Kundenverwaltung</h1>
                         <div class="relative w-72">
                             <input x-model="kundeSearchQuery" placeholder="Name, Ort oder ID..." class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/10 transition-all font-body text-sm">
@@ -202,15 +216,15 @@
                     </div>
                     <button @click="openNewKunde()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neuer Kunde</button>
                 </div>
-                <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
+                <div class="bg-white rounded-3xl overflow-x-auto shadow-sm">
                     <table class="w-full text-left font-body">
-                        <thead class="bg-surface-low/50 text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Name</th><th class="px-12 py-8"></th></tr></thead>
+                        <thead class="bg-surface-low/50 text-[10px] font-bold uppercase opacity-40"><tr><th class="px-4 md:px-12 py-4 md:py-8">Nr.</th><th class="px-4 md:px-12 py-4 md:py-8">Name</th><th class="px-4 md:px-12 py-4 md:py-8"></th></tr></thead>
                         <tbody class="divide-y divide-surface-low">
                             <template x-for="k in filteredKunden" :key="k.id">
                                 <tr class="hover:bg-surface-low cursor-pointer group" @click="openKundeDetail(k)">
-                                    <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatKundeID(k.id)"></td>
-                                    <td class="px-12 py-8 text-xl font-bold" x-text="k.vorname + ' ' + k.nachname"></td>
-                                    <td class="px-12 py-8 text-right"><span class="material-icons-outlined opacity-0 group-hover:opacity-100 transition-all text-primary">east</span></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 font-bold text-primary font-body" x-text="formatKundeID(k.id)"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-xl font-bold" x-text="k.vorname + ' ' + k.nachname"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-right"><span class="material-icons-outlined opacity-0 group-hover:opacity-100 transition-all text-primary">east</span></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -229,14 +243,14 @@
                         <button @click="deleteKunde(activeKunde.id)" class="text-red-400 bg-red-50 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all">Löschen</button>
                     </header>
                     <form @submit.prevent="saveKundeDetail()" class="space-y-8 pb-12 border-b border-surface-low">
-                        <div class="grid grid-cols-2 gap-8"><input x-model="activeKunde.vorname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Vorname"><input x-model="activeKunde.nachname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nachname"></div>
-                        <div class="grid grid-cols-3 gap-8"><input x-model="activeKunde.strasse" class="col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Straße"><input x-model="activeKunde.hausnummer" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nr."></div>
-                        <div class="grid grid-cols-3 gap-8"><input x-model="activeKunde.plz" class="bg-surface-low p-4 rounded-xl border-none" placeholder="PLZ"><input x-model="activeKunde.ort" class="col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Ort"></div>
-                        <div class="grid grid-cols-2 gap-8"><input x-model="activeKunde.email" class="bg-surface-low p-4 rounded-xl border-none" placeholder="E-Mail"><input x-model="activeKunde.telefon" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Telefon"></div>
-                        <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Stammdaten speichern</button></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8"><input x-model="activeKunde.vorname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Vorname"><input x-model="activeKunde.nachname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nachname"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8"><input x-model="activeKunde.strasse" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Straße"><input x-model="activeKunde.hausnummer" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nr."></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8"><input x-model="activeKunde.plz" class="bg-surface-low p-4 rounded-xl border-none" placeholder="PLZ"><input x-model="activeKunde.ort" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Ort"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8"><input x-model="activeKunde.email" class="bg-surface-low p-4 rounded-xl border-none" placeholder="E-Mail"><input x-model="activeKunde.telefon" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Telefon"></div>
+                        <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Stammdaten speichern</button></div>
                     </form>
 
-                    <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-2 gap-16">
+                    <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
                         <div class="space-y-8">
                             <div class="flex justify-between items-center">
                                 <h3 class="font-headline text-2xl text-primary font-bold">Projekte (Aktuell & Archiv)</h3>
@@ -269,8 +283,8 @@
         <!-- Auftragsverwaltung -->
         <template x-if="view === 'auftraege'">
             <div>
-                <div class="flex justify-between items-end mb-16 gap-8">
-                    <div class="flex items-end gap-12">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16 gap-8">
+                    <div class="flex items-end gap-6 md:p-12">
                         <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Projekte</h1>
                         <div class="relative w-72">
                             <input x-model="auftragSearchQuery" placeholder="Kunde oder ID..." class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/10 transition-all font-body text-sm">
@@ -278,16 +292,16 @@
                     </div>
                     <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neues Projekt</button>
                 </div>
-                <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
+                <div class="bg-white rounded-3xl overflow-x-auto shadow-sm">
                     <table class="w-full text-left font-body">
-                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
+                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-4 md:px-12 py-4 md:py-8">Nr.</th><th class="px-4 md:px-12 py-4 md:py-8">Kunde</th><th class="px-4 md:px-12 py-4 md:py-8">Status</th><th class="px-4 md:px-12 py-4 md:py-8"></th></tr></thead>
                         <tbody class="divide-y divide-surface-low">
                             <template x-for="a in uniqueFilteredAuftraege.filter(a => !isArchiv(a))" :key="a.id">
                                 <tr class="hover:bg-surface-low cursor-pointer group" @click="openAuftragDetail(a)">
-                                    <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
-                                    <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
-                                    <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
-                                    <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                                </tr>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                                </tr>
                             </template>
                         </tbody>
                     </table>
@@ -300,7 +314,7 @@
             <div class="space-y-12 font-body">
                 <div class="secondary-button" @click="view = 'auftraege'"><span class="material-icons-outlined text-xl">west</span><span>Auftragsverwaltung</span></div>
                 <header class="flex justify-between items-center bg-surface-low/30 p-8 rounded-[32px] border border-surface-low shadow-sm">
-                    <div class="flex gap-12 items-baseline text-on-surface">
+                    <div class="flex gap-6 md:p-12 items-baseline text-on-surface">
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde</p><h1 class="text-3xl font-headline font-bold text-primary" x-text="activeKundeForAuftrag.vorname + ' ' + activeKundeForAuftrag.nachname"></h1></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde-Nr</p><div class="text-xl font-bold" x-text="formatKundeID(activeKundeForAuftrag.id)"></div></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
@@ -328,7 +342,7 @@
                     </div>
                 </header>
 
-                <div class="grid grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Arbeit</h2><button @click="openWorkModal('ARBEIT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
                     <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Fahrten</h2><button @click="openWorkModal('FAHRT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Fahrt</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'FAHRT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.kilometer + 'km'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
                     <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Pauschale</h2></div><div class="mt-8 flex flex-col justify-center items-center pb-4"><label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Betrag in Euro</label><div class="relative w-full"><input x-model.number="activeAuftrag.basis_pauschale" @blur="updateAuftragSync()" class="w-full bg-surface-low p-6 rounded-3xl text-4xl font-headline font-bold text-primary text-center shadow-inner border-none focus:ring-1 ring-primary/20 transition-all" type="number" step="10" min="0"><span class="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-xl">€</span></div></div></div>
@@ -345,13 +359,13 @@
                 </div>
 
                 <section class="bg-primary p-10 rounded-[40px] shadow-2xl text-white font-body">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-12">
-                        <div class="flex-1 grid grid-cols-3 gap-12 items-center text-center">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6 md:p-12">
+                        <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 md:p-12 items-center text-center">
                             <div class="space-y-1"><span class="text-white/40 text-[9px] font-bold uppercase">Std. gesamt</span><div class="text-4xl font-headline font-bold text-white"><span x-text="totalStunden()"></span><span class="text-lg opacity-50 ml-1 font-body">h</span></div></div>
                             <div class="space-y-1"><span class="text-white/40 text-[9px] font-bold uppercase">KM gesamt</span><div class="text-4xl font-headline font-bold text-white"><span x-text="totalKM()"></span><span class="text-lg opacity-50 ml-1 font-body">km</span></div></div>
                             <div class="space-y-1"><span class="text-white/40 text-[9px] font-bold uppercase">Pauschale</span><div class="text-4xl font-headline font-bold text-white"><span x-text="activeAuftrag.basis_pauschale || 0"></span><span class="text-lg opacity-50 ml-1 font-body">€</span></div></div>
                         </div>
-                        <button @click="createInvoice()" class="md:w-auto px-12 bg-white text-primary py-6 rounded-[24px] font-bold text-xl flex items-center justify-center gap-4 hover:scale-[1.03] transition-all shadow-xl font-body text-primary">Rechnung generieren</button>
+                        <button @click="createInvoice()" class="md:w-auto px-4 md:px-12 bg-white text-primary py-6 rounded-[24px] font-bold text-xl flex items-center justify-center gap-4 hover:scale-[1.03] transition-all shadow-xl font-body text-primary">Rechnung generieren</button>
                     </div>
                 </section>
             </div>
@@ -360,19 +374,19 @@
         <!-- Archiv -->
         <template x-if="view === 'archiviert'">
             <div>
-                <div class="flex justify-between items-end mb-16">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16">
                     <h1 class="font-headline text-4xl text-primary font-bold">Abgeschlossene Projekte</h1>
                 </div>
-                <div class="bg-white rounded-3xl overflow-hidden shadow-sm font-body">
+                <div class="bg-white rounded-3xl overflow-x-auto shadow-sm font-body">
                     <table class="w-full text-left font-body">
-                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-12 py-8">Nr.</th><th class="px-12 py-8">Kunde</th><th class="px-12 py-8">Status</th><th class="px-12 py-8"></th></tr></thead>
+                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40"><tr><th class="px-4 md:px-12 py-4 md:py-8">Nr.</th><th class="px-4 md:px-12 py-4 md:py-8">Kunde</th><th class="px-4 md:px-12 py-4 md:py-8">Status</th><th class="px-4 md:px-12 py-4 md:py-8"></th></tr></thead>
                         <tbody class="divide-y divide-surface-low text-on-surface">
                             <template x-for="a in auftraege.filter(a => isArchiv(a))" :key="a.id">
                                 <tr class="hover:bg-surface-low transition-all cursor-pointer group" @click="openAuftragDetail(a)">
-                                    <td class="px-12 py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
-                                    <td class="px-12 py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
-                                    <td class="px-12 py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
-                                    <td class="px-12 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                            </tr>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 font-bold text-primary font-body" x-text="formatAuftragID(a.id)"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-xl font-bold font-body" x-text="getKundeName(a.kunde_id)"></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8"><span :class="getStatusBadgeClass(a.status)" x-text="formatStatusLabel(a.status)"></span></td>
+                                    <td class="px-4 md:px-12 py-4 md:py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-primary">arrow_forward</span></td>                            </tr>
                             </template>
                         </tbody>
                     </table>
@@ -382,9 +396,9 @@
     </main>
 
     <!-- Modals -->
-    <div x-show="templateEditorOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] p-16 relative flex flex-col shadow-2xl text-on-surface font-body"><button @click="templateEditorOpen = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-8 text-primary font-bold" x-text="'Vorlage: ' + editingTemplateName"></h2><textarea x-model="editingTemplateContent" class="flex-1 bg-surface-low p-10 rounded-3xl font-mono text-sm border-none shadow-inner no-scrollbar text-on-surface"></textarea><div class="pt-8 flex justify-end gap-6 font-bold font-body"><button @click="templateEditorOpen = false" class="text-xs uppercase opacity-40">Abbrechen</button><button @click="saveTemplateContent()" class="bg-primary text-white px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Speichern</button></div></div></div>
+    <div x-show="templateEditorOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] p-16 relative flex flex-col shadow-2xl text-on-surface font-body"><button @click="templateEditorOpen = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-8 text-primary font-bold" x-text="'Vorlage: ' + editingTemplateName"></h2><textarea x-model="editingTemplateContent" class="flex-1 bg-surface-low p-10 rounded-3xl font-mono text-sm border-none shadow-inner no-scrollbar text-on-surface"></textarea><div class="pt-8 flex justify-end gap-6 font-bold font-body"><button @click="templateEditorOpen = false" class="text-xs uppercase opacity-40">Abbrechen</button><button @click="saveTemplateContent()" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Speichern</button></div></div></div>
     
-    <div x-show="newKundeModal" class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" x-cloak><div class="bg-surface-lowest w-full max-w-2xl rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="newKundeModal = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-10 text-primary font-bold">Neuer Kundenkontakt</h2><form @submit.prevent="createNewKunde()" class="space-y-8 font-body"><div class="grid grid-cols-2 gap-8"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Vorname *</label><input x-model="newKundeData.vorname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nachname *</label><input x-model="newKundeData.nachname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div></div><div class="grid grid-cols-3 gap-8 text-on-surface"><div class="col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Straße</label><input x-model="newKundeData.strasse" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nr.</label><input x-model="newKundeData.hausnummer" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><div class="grid grid-cols-3 gap-8 text-on-surface"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">PLZ</label><input x-model="newKundeData.plz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Ort</label><input x-model="newKundeData.ort" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><button type="submit" class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl hover:bg-primary-dim transition-all mt-4 font-bold font-body">Kunden anlegen</button></form></div></div>
+    <div x-show="newKundeModal" class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" x-cloak><div class="bg-surface-lowest w-full max-w-2xl rounded-[48px] p-6 md:p-12 relative shadow-2xl text-on-surface font-body"><button @click="newKundeModal = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-10 text-primary font-bold">Neuer Kundenkontakt</h2><form @submit.prevent="createNewKunde()" class="space-y-8 font-body"><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Vorname *</label><input x-model="newKundeData.vorname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nachname *</label><input x-model="newKundeData.nachname" class="w-full bg-surface-low border-none rounded-xl px-6 py-4" required></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-on-surface"><div class="md:col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Straße</label><input x-model="newKundeData.strasse" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Nr.</label><input x-model="newKundeData.hausnummer" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-on-surface"><div class="space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">PLZ</label><input x-model="newKundeData.plz" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div><div class="md:col-span-2 space-y-2"><label class="text-[9px] font-bold uppercase tracking-widest text-on-surface/40 px-1 font-body">Ort</label><input x-model="newKundeData.ort" class="w-full bg-surface-low border-none rounded-xl px-6 py-4"></div></div><button type="submit" class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl hover:bg-primary-dim transition-all mt-4 font-bold font-body">Kunden anlegen</button></form></div></div>
 
     <div x-show="newAuftragModal" 
          class="fixed inset-0 z-[100] flex items-center justify-center p-8 glass" 
@@ -427,10 +441,10 @@
         </div>
     </div>
     
-    <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
+    <div x-show="showTemplateModal" class="fixed inset-0 z-[110] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-lg rounded-[48px] p-6 md:p-12 relative shadow-2xl text-on-surface font-body"><button @click="showTemplateModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-12 text-primary font-bold text-center">Vorlage nutzen</h2><div class="space-y-4"><template x-for="t in templates" :key="t"><button @click="generateDocFromTemplate(t)" class="w-full p-8 text-left bg-surface-low hover:bg-primary-container rounded-[24px] flex items-center gap-6 transition-all font-bold text-xl"><span class="material-icons-outlined text-primary text-3xl">picture_as_pdf</span><span x-text="t.toUpperCase().replace('.HTML','')"></span></button></template></div></div></div>
 
     <div x-show="deleteModal.show" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
-        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center" @click.away="deleteModal.show = false">
+        <div class="bg-white w-full max-w-md rounded-[48px] p-6 md:p-12 shadow-2xl text-on-surface font-body text-center" @click.away="deleteModal.show = false">
             <div class="w-20 h-20 bg-red-50 text-red-400 rounded-full flex items-center justify-center mx-auto mb-8">
                 <span class="material-icons-outlined text-4xl">delete_forever</span>
             </div>
@@ -445,7 +459,7 @@
 
     <!-- Confirm Invoice Modal -->
     <div x-show="showInvoiceModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
-        <div class="bg-white w-full max-w-md rounded-[48px] p-12 shadow-2xl text-on-surface font-body text-center" @click.away="showInvoiceModal = false">
+        <div class="bg-white w-full max-w-md rounded-[48px] p-6 md:p-12 shadow-2xl text-on-surface font-body text-center" @click.away="showInvoiceModal = false">
             <div class="w-20 h-20 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                 <span class="material-icons-outlined text-4xl">receipt_long</span>
             </div>
@@ -460,7 +474,7 @@
 
     <!-- Add Work Modal (Stunden / KM) -->
     <div x-show="showWorkModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
-        <div class="bg-white w-full max-w-sm rounded-[40px] p-12 relative shadow-2xl text-on-surface font-body text-center" @click.away="showWorkModal = false">
+        <div class="bg-white w-full max-w-sm rounded-[40px] p-6 md:p-12 relative shadow-2xl text-on-surface font-body text-center" @click.away="showWorkModal = false">
             <button @click="showWorkModal = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-primary transition-colors"><span class="material-icons-outlined text-3xl">close</span></button>
             
             <div class="w-20 h-20 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
@@ -495,7 +509,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
+                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
