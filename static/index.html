@@ -304,6 +304,9 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde</p><h1 class="text-3xl font-headline font-bold text-primary" x-text="activeKundeForAuftrag.vorname + ' ' + activeKundeForAuftrag.nachname"></h1></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Kunde-Nr</p><div class="text-xl font-bold" x-text="formatKundeID(activeKundeForAuftrag.id)"></div></div>
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Auftrag-Nr</p><div class="text-xl font-bold text-primary" x-text="formatAuftragID(activeAuftrag.id)"></div></div>
+                        <template x-if="activeAuftrag.created_by">
+                            <div><p class="text-[9px] font-bold uppercase opacity-30">Erstellt von</p><div class="text-xl font-bold capitalize text-primary" x-text="activeAuftrag.created_by"></div></div>
+                        </template>
                     </div>
                     <div class="flex items-center gap-6">
                         <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Projekt löschen?', 'Möchten Sie dieses Projekt wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">

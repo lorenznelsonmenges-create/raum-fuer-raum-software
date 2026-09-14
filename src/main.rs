@@ -297,7 +297,10 @@ async fn list_auftraege(State(pool): State<SqlitePool>) -> Result<Json<Vec<Auftr
     Ok(Json(database::get_all_auftraege(&pool).await?))
 }
 
-async fn add_auftrag(State(pool): State<SqlitePool>, Json(mut auftrag): Json<Auftrag>) -> Result<Json<i64>, AppError> {
+async fn add_auftrag(State(pool): State<SqlitePool>, session: Session, Json(mut auftrag): Json<Auftrag>) -> Result<Json<i64>, AppError> {
+    let user: Option<User> = session.get("user").await.map_err(|e| AppError::Internal(e.to_string()))?;
+    auftrag.created_by = Some(user.map(|u| u.username).unwrap_or_else(|| "Unbekannt".to_string()));
+
     if auftrag.stundensatz == 0.0 || auftrag.kilometer_satz == 0.0 {
         let settings = database::get_settings(&pool).await?;
         if auftrag.stundensatz == 0.0 {

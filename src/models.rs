@@ -43,6 +43,7 @@ pub struct Auftrag {
     pub kilometer_satz: f64,
     #[serde(default)]
     pub notizen: String,
+    pub created_by: Option<String>,
     #[serde(default)]
     pub einsaetze: Vec<Einsatz>,
     #[serde(default)]
@@ -64,6 +65,7 @@ impl Default for Auftrag {
             stundensatz: default_stundensatz(),
             kilometer_satz: default_kilometer_satz(),
             notizen: String::new(),
+            created_by: None,
             einsaetze: Vec::new(),
             dateien: Vec::new(),
             rechnungen: Vec::new(),

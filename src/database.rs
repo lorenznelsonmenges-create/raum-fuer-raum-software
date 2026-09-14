@@ -70,7 +70,7 @@ pub async fn delete_kunde(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error>
 
 // --- Aufträge ---
 pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sqlx::Error> {
-    let row = sqlx::query("SELECT id, kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen FROM auftraege WHERE id = ?").bind(id).fetch_one(pool).await?;
+    let row = sqlx::query("SELECT id, kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen, created_by FROM auftraege WHERE id = ?").bind(id).fetch_one(pool).await?;
     let status_str: String = row.get("status");
     let status = match status_str.as_str() {
         "InBearbeitung" => AuftragStatus::InBearbeitung,
@@ -81,7 +81,7 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
     Ok(Auftrag {
         id: row.get("id"), kunde_id: row.get("kunde_id"), status,
         beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
-        stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
+        stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
         einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
         dateien: get_dateien_for_auftrag(pool, id).await?,
         rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
@@ -90,7 +90,7 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
 }
 
 pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::Error> {
-    let rows = sqlx::query("SELECT id, kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen FROM auftraege").fetch_all(pool).await?;
+    let rows = sqlx::query("SELECT id, kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen, created_by FROM auftraege").fetch_all(pool).await?;
     let mut list = Vec::new();
     for row in rows {
         let id = row.get("id");
@@ -104,7 +104,7 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
         list.push(Auftrag {
             id, kunde_id: row.get("kunde_id"), status,
             beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
-            stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"),
+            stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
             einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
             dateien: get_dateien_for_auftrag(pool, id).await?,
             rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
@@ -116,7 +116,7 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
 
 pub async fn create_auftrag(pool: &SqlitePool, auftrag: Auftrag) -> Result<i64, sqlx::Error> {
     let status_str = format!("{:?}", auftrag.status);
-    let res = sqlx::query("INSERT INTO auftraege (kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    let res = sqlx::query("INSERT INTO auftraege (kunde_id, status, beschreibung, basis_pauschale, stundensatz, kilometer_satz, notizen, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(auftrag.kunde_id)
         .bind(status_str)
         .bind(auftrag.beschreibung)
@@ -124,6 +124,7 @@ pub async fn create_auftrag(pool: &SqlitePool, auftrag: Auftrag) -> Result<i64, 
         .bind(auftrag.stundensatz)
         .bind(auftrag.kilometer_satz)
         .bind(auftrag.notizen)
+        .bind(auftrag.created_by)
         .execute(pool).await?;
     Ok(res.last_insert_rowid())
 }
