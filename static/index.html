@@ -309,8 +309,8 @@
                 </header>
 
                 <div class="grid grid-cols-2 gap-12">
-                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Arbeit</h2><button @click="addWork('ARBEIT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
-                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Fahrten</h2><button @click="addWork('FAHRT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Fahrt</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'FAHRT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.kilometer + 'km'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
+                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Arbeit</h2><button @click="openWorkModal('ARBEIT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
+                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Fahrten</h2><button @click="openWorkModal('FAHRT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Fahrt</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'FAHRT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.kilometer + 'km'"></div><button @click="deleteEinsatz(e.id)" class="p-2 text-red-400 opacity-20 hover:opacity-100 transition-opacity"><span class="material-icons-outlined text-sm">delete</span></button></div></template></div>
                 </div>
 
                 <div class="bg-white p-10 rounded-[40px] border border-surface-low shadow-sm">
@@ -422,6 +422,28 @@
         </div>
     </div>
 
+    <!-- Add Work Modal (Stunden / KM) -->
+    <div x-show="showWorkModal" class="fixed inset-0 z-[500] flex items-center justify-center p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-sm rounded-[40px] p-12 relative shadow-2xl text-on-surface font-body text-center" @click.away="showWorkModal = false">
+            <button @click="showWorkModal = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-primary transition-colors"><span class="material-icons-outlined text-3xl">close</span></button>
+            
+            <div class="w-20 h-20 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <span class="material-icons-outlined text-4xl" x-text="workModalType === 'ARBEIT' ? 'schedule' : 'directions_car'"></span>
+            </div>
+            
+            <h2 class="font-headline text-3xl mb-3 text-primary font-bold" x-text="workModalType === 'ARBEIT' ? 'Arbeitszeit' : 'Fahrtstrecke'"></h2>
+            <p class="text-sm opacity-50 mb-10 leading-relaxed" x-text="workModalType === 'ARBEIT' ? 'Erfassen Sie die geleisteten Stunden.' : 'Erfassen Sie die gefahrenen Kilometer.'"></p>
+            
+            <form @submit.prevent="submitWork()" class="flex flex-col gap-6">
+                <div class="relative">
+                    <input type="number" step="0.5" min="0" x-model.number="workModalValue" class="w-full bg-surface-low p-6 rounded-3xl text-3xl font-headline font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none placeholder-primary/20" :placeholder="workModalType === 'ARBEIT' ? '0.0' : '0'" required x-ref="workInput">
+                    <span class="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-sm uppercase tracking-wider" x-text="workModalType === 'ARBEIT' ? 'Std' : 'km'"></span>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-lg mt-4">Hinzufügen</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Feedback -->
     <div x-show="feedback.show" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
         <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
@@ -507,7 +529,8 @@
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
-                async addWork(t) { const v = prompt(t === 'ARBEIT' ? 'Stunden:' : 'Kilometer:'); if(v) { await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: t==='ARBEIT'?parseFloat(v):0, kilometer: t==='FAHRT'?parseFloat(v):0, typ: t, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
+                openWorkModal(t) { this.workModalType = t; this.workModalValue = ''; this.showWorkModal = true; setTimeout(() => this.$refs.workInput.focus(), 50); },
+                async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: this.workModalType==='ARBEIT'?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='FAHRT'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
                 async deleteEinsatz(id) { if (confirm("Löschen?")) { await fetch(`/api/einsaetze/${id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); } },
                 async deleteDoc(id) { if (confirm("Löschen?")) { await fetch(`/api/dateien/${id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); } },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
