@@ -4,14 +4,12 @@
 
 ---
 
-## Finaler Status der heutigen Änderungen
-- **Suchfelder:** Globale Suche (Dashboard) und spezifische Filter für Kunden/Aufträge implementiert.
-- **Archiv-Header:** Getrennte Ansicht für abgeschlossene/stornierte Aufträge ("Archiv") integriert.
-- **Branding:** UI-Branding ("achtsam entrümpeln") in der Sidebar und im Dashboard-Layout konsolidiert.
-- **Robuste Lösch-Logik:** Kaskadierendes Löschen von Kunden/Aufträgen inklusive physischer Datei-Bereinigung (Signaturen, Uploads).
-- **DB-Indizes:** Performance-Optimierung durch Indizes auf Fremdschlüsselspalten (`20240409000000_add_indices.sql`).
-- **Foreign Key Support:** SQLite erzwingt nun aktiv Fremdschlüssel-Constraints.
+## Aktueller Stand
+- **Login-System:** Aktiviert und durch Session-Management abgesichert.
+- **Bcrypt-Fix:** Hash-Fehler via Migration '20240411000000' behoben (Admin-Account).
+- **Input-Sanitization:** 'login_handler' trimmt Benutzernamen/Passwörter automatisch.
+- **Infrastruktur:** DNS-Probleme (Cache) beim Nutzer lokalisiert; Zugriff via Mobile OK.
 
 ## Nächste Schritte
-- PDF-Rechnungserstellung finalisieren.
-- API-Absicherung (Authentifizierung).
+- **Fokus:** Kunden-Validierung (E-Mail-Format, Pflichtfelder im Backend).
+- PDF-Rechnungserstellung (Layout-Fixes bei langen Notizen).

@@ -13,6 +13,10 @@
             --on-surface: #31332c;
             --outline-variant: rgba(178, 179, 169, 0.15);
         }
+        @page {
+            size: A4;
+            margin: 0;
+        }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
         body {
             background-color: var(--surface);
@@ -24,9 +28,9 @@
         }
         .page {
             width: 210mm;
-            min-height: 297mm;
-            padding: 40mm 30mm;
+            padding: 25mm 30mm;
             background: var(--surface);
+            margin: 0 auto;
             position: relative;
         }
         h1 {
@@ -70,7 +74,7 @@
             border-left: 2px solid var(--primary-container);
         }
         .atemzug {
-            margin: 40mm 0;
+            margin: 30mm 0;
             padding: 40pt;
             background: var(--surface-lowest);
             border-radius: 20pt;
@@ -82,13 +86,14 @@
             box-shadow: 0 20px 40px rgba(49, 51, 44, 0.04);
         }
         .signature-area {
-            margin-top: 50mm;
+            margin-top: 40mm;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 60pt;
+            page-break-inside: avoid;
         }
         .sig-box {
-            border-top: 1px solid var(--on-surface);
+            border-top: 1px solid var(--outline-variant);
             padding-top: 10pt;
         }
     </style>

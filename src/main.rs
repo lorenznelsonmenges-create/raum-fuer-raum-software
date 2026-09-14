@@ -182,6 +182,26 @@ async fn auth_middleware(
 }
 
 // Template Handlers
+
+/// Validates and sanitizes a template filename to prevent path traversal attacks.
+/// Only allows alphanumeric characters, hyphens, underscores, and dots.
+/// The filename must end with ".html".
+fn sanitize_template_path(name: &str) -> Result<String, AppError> {
+    // Reject path traversal attempts
+    if name.contains("..") || name.contains('/') || name.contains('\\') {
+        return Err(AppError::BadRequest("Ungültiger Template-Name: Pfad-Traversierung nicht erlaubt".into()));
+    }
+    // Only allow safe characters: alphanumeric, hyphens, underscores, dots
+    if !name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.') {
+        return Err(AppError::BadRequest("Ungültiger Template-Name: Nur Buchstaben, Zahlen, Bindestriche, Unterstriche und Punkte erlaubt".into()));
+    }
+    // Must end with .html
+    if !name.ends_with(".html") {
+        return Err(AppError::BadRequest("Ungültiger Template-Name: Muss mit .html enden".into()));
+    }
+    Ok(format!("templates/{}", name))
+}
+
 async fn list_templates() -> Result<Json<Vec<String>>, AppError> {
     let mut tpls = Vec::new();
     if let Ok(entries) = std::fs::read_dir("templates") {
@@ -195,23 +215,27 @@ async fn list_templates() -> Result<Json<Vec<String>>, AppError> {
 }
 
 async fn get_template(Path(name): Path<String>) -> Result<String, AppError> {
-    fs::read_to_string(format!("templates/{}", name)).map_err(|e| AppError::Internal(e.to_string()))
+    let path = sanitize_template_path(&name)?;
+    fs::read_to_string(path).map_err(|e| AppError::Internal(e.to_string()))
 }
 
 async fn save_template(Path(name): Path<String>, body: String) -> Result<(), AppError> {
-    fs::write(format!("templates/{}", name), body).map_err(|e| AppError::Internal(e.to_string()))
+    let path = sanitize_template_path(&name)?;
+    fs::write(path, body).map_err(|e| AppError::Internal(e.to_string()))
 }
 
 async fn delete_template(Path(name): Path<String>) -> Result<(), AppError> {
-    fs::remove_file(format!("templates/{}", name)).map_err(|e| AppError::Internal(e.to_string()))
+    let path = sanitize_template_path(&name)?;
+    fs::remove_file(path).map_err(|e| AppError::Internal(e.to_string()))
 }
 
 async fn upload_template(mut multipart: Multipart) -> Result<(), AppError> {
     while let Some(field) = multipart.next_field().await.map_err(|e| AppError::Internal(e.to_string()))? {
         let filename = field.file_name().map(|f| f.to_string());
         if let Some(name) = filename {
+            let path = sanitize_template_path(&name)?;
             let data = field.bytes().await.map_err(|e| AppError::Internal(e.to_string()))?;
-            fs::write(format!("templates/{}", name), data).map_err(|e| AppError::Internal(e.to_string()))?;
+            fs::write(path, data).map_err(|e| AppError::Internal(e.to_string()))?;
         }
     }
     Ok(())
@@ -327,8 +351,8 @@ async fn create_rechnung(State(pool): State<SqlitePool>, Path(id): Path<i64>) ->
     let einsaetze = database::get_einsaetze_for_auftrag(&pool, id).await?;
     let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
     
-    let total_count = database::get_total_rechnung_count(&pool).await?;
-    let re_nr = format!("R{:06}", total_count);
+    let next_number = database::get_next_rechnung_number(&pool).await?;
+    let re_nr = format!("R{:06}", next_number);
     
     // Verzeichnis sicherstellen
     if !std::path::Path::new("uploads/rechnungen").exists() {

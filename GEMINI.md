@@ -163,8 +163,10 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 2. [x] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
 3. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
 4. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
-5. [x] **Login:** Absicherung der API.
-6. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
+- [x] **Login:** Absicherung der API (Bcrypt, Session-Management, Input-Trimming).
+6. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
+7. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
+8. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
 
 ## 6. Betriebliche Hinweise
 

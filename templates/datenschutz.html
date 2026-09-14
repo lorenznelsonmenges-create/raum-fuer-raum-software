@@ -7,8 +7,15 @@
         :root {
             --surface: #fbf9f3;
             --surface-low: #f5f4ec;
+            --surface-lowest: #ffffff;
             --primary: #526447;
+            --primary-container: #d4e9c4;
             --on-surface: #31332c;
+            --outline-variant: rgba(178, 179, 169, 0.15);
+        }
+        @page {
+            size: A4;
+            margin: 0;
         }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
         body {
@@ -21,62 +28,128 @@
         }
         .page {
             width: 210mm;
-            min-height: 297mm;
-            padding: 40mm 30mm;
+            padding: 25mm 30mm;
             background: var(--surface);
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 20mm;
+        }
+        .brand-name {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
         }
         h1 {
             font-family: 'Noto Serif', serif;
             color: var(--primary);
-            font-size: 2.5rem;
+            font-size: 3.5rem;
             margin-bottom: 15mm;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
         }
-        .legal-box {
-            background: #ffffff;
-            padding: 40pt;
-            border-radius: 20pt;
-            box-shadow: 0 10px 30px rgba(49, 51, 44, 0.03);
-            margin-bottom: 20mm;
+        h2 {
+            font-family: 'Noto Serif', serif;
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-top: 30pt;
+            margin-bottom: 15pt;
         }
-        .signature-box {
-            margin-top: 40mm;
+        .label-md {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(49, 51, 44, 0.4);
+            margin-bottom: 10pt;
+            display: block;
+        }
+        .party-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 40pt;
+            margin-bottom: 20mm;
         }
-        .sig-container {
-            border-top: 1px solid var(--on-surface);
+        .party-card {
+            background: var(--surface-low);
+            padding: 30pt;
+            border-radius: 15pt;
+        }
+        .content-section {
+            margin-bottom: 25pt;
+        }
+        p {
+            margin-bottom: 12pt;
+        }
+        .signature-area {
+            margin-top: 30mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60pt;
+            page-break-inside: avoid;
+        }
+        .sig-box {
+            border-top: 1px solid var(--outline-variant);
             padding-top: 10pt;
+            position: relative;
         }
         .sig-placeholder {
-            height: 60pt;
-            margin-bottom: 10pt;
+            height: 50pt;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
         .sig-image {
-            max-height: 60pt;
+            max-height: 50pt;
             max-width: 100%;
         }
     </style>
 </head>
 <body>
     <div class="page">
+        <header>
+            <div class="brand-name">Achtsam Entrümpeln.</div>
+        </header>
+
         <h1>Datenschutz</h1>
-        
-        <div class="legal-box">
-            <p>Ich willige hiermit ein, dass <strong>Achtsam Entrümpeln (Inh. Stefanie Ruf)</strong> meine personenbezogenen Daten (Name, Anschrift, Kontaktdaten) sowie auftragsbezogene Informationen zum Zwecke der Vertragsabwicklung, Rechnungsstellung und Dokumentation verarbeitet.</p>
-            <p>Die Daten werden sicher gespeichert und nicht an unbefugte Dritte weitergegeben. Ich wurde darüber informiert, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen kann.</p>
+
+        <div class="party-grid">
+            <div class="party-card">
+                <span class="label-md">Verantwortliche Stelle</span>
+                <strong>Achtsam Entrümpeln</strong><br>
+                Stefanie Ruf<br>
+                Musterstraße 1<br>
+                12345 Musterstadt
+            </div>
+            <div class="party-card">
+                <span class="label-md">Kunde / Betroffener</span>
+                <strong>{{kunde_name}}</strong><br>
+                {{kunde_strasse}} {{kunde_hausnummer}}<br>
+                {{kunde_plz}} {{kunde_ort}}
+            </div>
         </div>
 
-        <div class="signature-box">
-            <div class="sig-container">
-                <span style="font-size: 8pt; text-transform: uppercase; opacity: 0.4">Datum</span>
+        <div class="content-section">
+            <h2>1. Zweck der Datenverarbeitung</h2>
+            <p>Ich willige hiermit ein, dass <strong>Achtsam Entrümpeln (Inh. Stefanie Ruf)</strong> meine personenbezogenen Daten (Name, Anschrift, Kontaktdaten) sowie auftragsbezogene Informationen zum Zwecke der Vertragsabwicklung, Rechnungsstellung und Dokumentation verarbeitet.</p>
+            
+            <h2>2. Rechtsgrundlage</h2>
+            <p>Die Verarbeitung Ihrer Daten erfolgt auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).</p>
+
+            <h2>3. Speicherdauer</h2>
+            <p>Ihre Daten werden nur so lange gespeichert, wie es für die Erfüllung des Zwecks erforderlich ist oder gesetzliche Aufbewahrungsfristen (z.B. nach HGB oder AO) dies vorschreiben.</p>
+
+            <h2>4. Rechte des Betroffenen & Widerruf</h2>
+            <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung sowie auf Datenübertragbarkeit. Zudem können Sie diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen. Ein Widerruf berührt nicht die Rechtmäßigkeit der bis zum Widerruf erfolgten Verarbeitung.</p>
+        </div>
+
+        <div class="signature-area">
+            <div class="sig-box">
+                <span class="label-md">Datum</span>
                 <div style="font-weight: 600; margin-top: 10pt">{{datum_heute}}</div>
             </div>
-            <div class="sig-container">
-                <span style="font-size: 8pt; text-transform: uppercase; opacity: 0.4">Digitale Unterschrift</span>
+            <div class="sig-box">
+                <span class="label-md">Digitale Unterschrift</span>
                 <div class="sig-placeholder">
                     {{#if signatur_pfad}}
                         <img src="file:///{{signatur_pfad}}" class="sig-image">

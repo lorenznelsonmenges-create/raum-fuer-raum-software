@@ -2,34 +2,42 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #4A7C59;
-            --text-main: #333333;
-            --text-light: #666666;
-            --border-color: #E0E0E0;
+            --surface: #fbf9f3;
+            --surface-low: #f5f4ec;
+            --surface-lowest: #ffffff;
+            --primary: #526447;
+            --primary-container: #d4e9c4;
+            --on-surface: #31332c;
+            --text-light: rgba(49, 51, 44, 0.6);
+            --outline-variant: rgba(178, 179, 169, 0.15);
+        }
+        @page {
+            size: A4;
+            margin: 0;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Montserrat', sans-serif;
-            color: var(--text-main);
-            background-color: #ffffff;
+            font-family: 'Manrope', sans-serif;
+            color: var(--on-surface);
+            background-color: var(--surface);
             width: 210mm;
-            min-height: 297mm;
             margin: 0 auto;
-            padding: 2.5cm;
+            padding: 25mm 30mm;
             -webkit-print-color-adjust: exact !important;
             position: relative;
+            line-height: 1.6;
         }
 
         /* Header mit Logo oben links */
         .header {
             display: flex;
             justify-content: flex-start;
-            margin-bottom: 2cm;
+            margin-bottom: 20mm;
         }
 
         .brand-box { 
@@ -45,13 +53,14 @@
         }
 
         .brand-name {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Noto Serif', serif;
             font-size: 32pt;
-            color: var(--primary-green);
+            color: var(--primary);
             line-height: 1;
+            letter-spacing: -0.02em;
         }
         .brand-sub {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Noto Serif', serif;
             font-style: italic;
             font-size: 11pt;
             color: var(--text-light);
@@ -62,15 +71,15 @@
         .info-section {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 1.5cm;
+            margin-bottom: 15mm;
         }
 
         .sender-line {
             font-size: 8pt;
-            color: var(--primary-green);
+            color: var(--primary);
             margin-bottom: 10px;
             text-decoration: underline;
-            text-decoration-color: var(--border-color);
+            text-decoration-color: var(--outline-variant);
         }
 
         .recipient-address { 
@@ -83,21 +92,20 @@
         .meta-table td:first-child { font-weight: 600; color: var(--text-light); }
 
         /* Artikeltabelle */
-        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 1cm; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
         .invoice-table th {
             text-align: left;
             font-size: 9pt;
             text-transform: uppercase;
-            color: var(--primary-green);
+            color: var(--primary);
             padding: 12px 5px;
-            border-top: 2px solid var(--primary-green);
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--outline-variant);
             font-weight: 600;
         }
         .invoice-table td { 
             padding: 12px 5px; 
             font-size: 10pt; 
-            border-bottom: 1px solid var(--border-color); 
+            border-bottom: 1px solid var(--outline-variant); 
             vertical-align: top;
         }
         .invoice-table .right-align { text-align: right; }
@@ -109,14 +117,14 @@
         }
 
         /* Summen */
-        .totals-wrapper { display: flex; justify-content: flex-end; }
+        .totals-wrapper { display: flex; justify-content: flex-end; page-break-inside: avoid; }
         .totals-table { width: 280px; border-collapse: collapse; }
         .totals-table td { padding: 8px 5px; font-size: 10pt; text-align: right; }
         .grand-total td {
             font-weight: 700;
-            color: var(--primary-green);
-            border-top: 2px solid var(--primary-green);
-            border-bottom: 2px solid var(--primary-green);
+            color: var(--primary);
+            border-top: 2px solid var(--outline-variant);
+            border-bottom: 2px solid var(--outline-variant);
             font-size: 12pt;
             padding-top: 12px;
             padding-bottom: 12px;
@@ -124,14 +132,12 @@
 
         /* Footer */
         .footer {
-            position: absolute;
-            bottom: 2cm;
-            left: 2.5cm;
-            right: 2.5cm;
+            margin-top: 20mm;
+            page-break-inside: avoid;
             text-align: center;
             font-size: 8pt;
             color: var(--text-light);
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid var(--outline-variant);
             padding-top: 15px;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -140,6 +146,12 @@
         .footer-col { text-align: left; line-height: 1.4; }
         .footer-col:nth-child(2) { text-align: center; }
         .footer-col:nth-child(3) { text-align: right; }
+        
+        .notes-section {
+            margin-bottom: 15mm; 
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
@@ -206,8 +218,8 @@
     </table>
 
     {{#if rechnungs_notizen}}
-    <div style="margin-bottom: 1.5cm; font-size: 10pt;">
-        <p style="font-weight: 600; margin-bottom: 5px; color: var(--primary-green);">Hinweise:</p>
+    <div class="notes-section">
+        <p style="font-weight: 600; margin-bottom: 5px; color: var(--primary);">Hinweise:</p>
         {{#each rechnungs_notizen}}
             <p style="margin-bottom: 4px;">- {{text}}</p>
         {{/each}}

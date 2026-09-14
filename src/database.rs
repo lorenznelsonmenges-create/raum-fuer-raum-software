@@ -250,10 +250,10 @@ pub async fn get_rechnungs_notizen_for_auftrag(pool: &SqlitePool, auftrag_id: i6
     }).collect())
 }
 
-pub async fn get_total_rechnung_count(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
-    let row = sqlx::query("SELECT COUNT(*) as count FROM rechnungen").fetch_one(pool).await?;
-    let count: i64 = row.get("count");
-    Ok(count)
+pub async fn get_next_rechnung_number(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
+    let row = sqlx::query("SELECT COALESCE(MAX(CAST(SUBSTR(rechnungs_nummer, 2) AS INTEGER)), 0) + 1 as next_nr FROM rechnungen").fetch_one(pool).await?;
+    let next_nr: i64 = row.get("next_nr");
+    Ok(next_nr)
 }
 
 pub async fn get_dashboard_stats(pool: &SqlitePool) -> Result<DashboardStats, sqlx::Error> {

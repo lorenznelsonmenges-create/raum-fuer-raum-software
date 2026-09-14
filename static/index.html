@@ -454,6 +454,18 @@
                         this.error = "Daten konnten nicht vollständig geladen werden.";
                         console.error(e);
                     }
+                    // Auto-refresh: Daten aktualisieren wenn View wechselt
+                    this.$watch('view', async (newView) => {
+                        try {
+                            if (newView === 'dashboard') {
+                                await Promise.all([this.fetchStats(), this.fetchAuftraege(), this.fetchKunden()]);
+                            } else if (newView === 'auftraege' || newView === 'archiviert') {
+                                await this.fetchAuftraege();
+                            } else if (newView === 'kunden') {
+                                await this.fetchKunden();
+                            }
+                        } catch (e) { console.error('Auto-refresh error:', e); }
+                    });
                 },
                 async fetchStats() { const r = await fetch('/api/stats'); if (!r.ok) throw new Error(); this.stats = await r.json(); },
                 async fetchSettings() { const r = await fetch('/api/settings'); if (!r.ok) throw new Error(); this.settings = await r.json(); },
