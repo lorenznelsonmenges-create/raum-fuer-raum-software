@@ -5,7 +5,7 @@ use achtsam_entruempeln_software::error::AppError;
 use axum::{
     routing::{get, post},
     extract::{State, Path, Multipart, FromRequestParts, Request},
-    http::{request::Parts, StatusCode},
+    http::request::Parts,
     middleware::{self, Next},
     response::{Html, IntoResponse, Redirect},
     Json,
