@@ -253,8 +253,8 @@
                     <div class="mt-12 pt-12 border-t border-surface-low grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
                         <div class="space-y-8">
                             <div class="flex justify-between items-center">
-                                <h3 class="font-headline text-2xl text-primary font-bold">Projekte (Aktuell & Archiv)</h3>
-                                <button @click="openAuftragErstellung(activeKunde.id)" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary-dim transition-all shadow-sm">+ Neues Projekt</button>
+                                <h3 class="font-headline text-2xl text-primary font-bold">Aufträge (Aktuell & Archiv)</h3>
+                                <button @click="openAuftragErstellung(activeKunde.id)" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary-dim transition-all shadow-sm">+ Neuer Auftrag</button>
                             </div>
                             <div class="grid grid-cols-1 gap-3">
                                 <template x-for="a in uniqueAuftraegeForKunde" :key="a.id">
@@ -267,7 +267,7 @@
                                     </div>
                                 </template>
                                 <template x-if="uniqueAuftraegeForKunde.length === 0">
-                                    <p class="text-sm italic opacity-30 py-4 text-center">Bisher keine Projekte.</p>
+                                    <p class="text-sm italic opacity-30 py-4 text-center">Bisher keine Aufträge.</p>
                                 </template>
                             </div>
                         </div>
@@ -285,12 +285,12 @@
             <div>
                 <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16 gap-8">
                     <div class="flex items-end gap-6 md:p-12">
-                        <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Projekte</h1>
+                        <h1 class="font-headline text-4xl text-primary font-bold">Aktuelle Aufträge</h1>
                         <div class="relative w-72">
                             <input x-model="auftragSearchQuery" placeholder="Kunde oder ID..." class="w-full bg-surface-low border-none rounded-2xl p-4 shadow-inner focus:ring-1 ring-primary/10 transition-all font-body text-sm">
                         </div>
                     </div>
-                    <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neues Projekt</button>
+                    <button @click="openAuftragErstellung()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg">Neuer Auftrag</button>
                 </div>
                 <div class="bg-white rounded-3xl overflow-x-auto shadow-sm">
                     <table class="w-full text-left font-body">
@@ -321,7 +321,7 @@
                         <div><p class="text-[9px] font-bold uppercase opacity-30">Erstellt von</p><div class="text-xl font-bold capitalize text-primary" x-text="activeAuftrag.created_by || (currentUser ? currentUser.username : 'Unbekannt')"></div></div>
                     </div>
                     <div class="flex items-center gap-6">
-                        <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Projekt löschen?', 'Möchten Sie dieses Projekt wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
+                        <button @click="openDeleteModal('auftrag', activeAuftrag.id, 'Auftrag löschen?', 'Möchten Sie diesen Auftrag wirklich unwiderruflich löschen?')" class="text-red-400 p-2 hover:bg-red-50 rounded-xl transition-all" title="Auftrag löschen">
                             <span class="material-icons-outlined">delete</span>
                         </button>
                         <div class="relative" x-data="{ open: false }">
@@ -375,7 +375,7 @@
         <template x-if="view === 'archiviert'">
             <div>
                 <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16">
-                    <h1 class="font-headline text-4xl text-primary font-bold">Abgeschlossene Projekte</h1>
+                    <h1 class="font-headline text-4xl text-primary font-bold">Abgeschlossene Aufträge</h1>
                 </div>
                 <div class="bg-white rounded-3xl overflow-x-auto shadow-sm font-body">
                     <table class="w-full text-left font-body">
@@ -409,7 +409,7 @@
             <button @click="newAuftragModal = false" class="absolute top-10 right-10 text-on-surface/20 font-body hover:text-primary transition-colors">
                 <span class="material-icons-outlined text-4xl">close</span>
             </button>
-            <h2 class="font-headline text-4xl mb-12 text-primary font-bold">Neues Projekt starten</h2>
+            <h2 class="font-headline text-4xl mb-12 text-primary font-bold">Neuen Auftrag starten</h2>
             
             <div class="relative mb-12">
                 <input type="text" 
@@ -436,7 +436,7 @@
                     :disabled="!newAuftragKundeID"
                     :class="!newAuftragKundeID ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dim'"
                     class="w-full bg-primary text-white py-6 rounded-3xl font-bold text-xl shadow-xl transition-all">
-                Projekt anlegen
+                Auftrag anlegen
             </button>
         </div>
     </div>
@@ -574,15 +574,15 @@
                 isArchiv(a) { return a.status === 'Abgeschlossen' || a.status === 'Storniert'; },
                 getStatusBadgeClass(s) { const b = "px-6 py-2 text-[10px] font-bold uppercase tracking-wide rounded-full font-body whitespace-nowrap "; if (s === 'AnfrageLaeuft') return b + "bg-gray-100 text-gray-600"; if (s === 'InBearbeitung') return b + "bg-amber-100 text-amber-700"; if (s === 'Abgeschlossen') return b + "bg-green-100 text-green-700"; if (s === 'Storniert') return b + "bg-red-100 text-red-700"; return b + "bg-surface-low text-on-surface/40"; },
                 formatStatusLabel(s) { if (s === 'AnfrageLaeuft') return "Anfrage läuft"; if (s === 'InBearbeitung') return "In Bearbeitung"; return s; },
-                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) { r.push({ type: 'kunde', title: k.vorname+' '+k.nachname, subtitle: 'Kunde (' + this.formatKundeID(k.id) + ')', data: k }); } }); this.auftraege.forEach(a => { const kname = this.getKundeName(a.kunde_id).toLowerCase(); if (this.formatAuftragID(a.id).toLowerCase().includes(q) || kname.includes(q)) { r.push({ type: 'auftrag', title: 'Projekt: ' + this.getKundeName(a.kunde_id), subtitle: 'Auftrag ' + this.formatAuftragID(a.id) + ' • ' + this.formatStatusLabel(a.status), data: a }); } }); return r.slice(0, 6); },
+                get searchSuggestions() { if (!this.searchQuery) return []; const q = this.searchQuery.toLowerCase(); const r = []; this.kunden.forEach(k => { if (k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q) || this.formatKundeID(k.id).toLowerCase().includes(q)) { r.push({ type: 'kunde', title: k.vorname+' '+k.nachname, subtitle: 'Kunde (' + this.formatKundeID(k.id) + ')', data: k }); } }); this.auftraege.forEach(a => { const kname = this.getKundeName(a.kunde_id).toLowerCase(); if (this.formatAuftragID(a.id).toLowerCase().includes(q) || kname.includes(q)) { r.push({ type: 'auftrag', title: 'Auftrag: ' + this.getKundeName(a.kunde_id), subtitle: 'Auftrag ' + this.formatAuftragID(a.id) + ' • ' + this.formatStatusLabel(a.status), data: a }); } }); return r.slice(0, 6); },
                 handleSearchResult(res) { this.searchOpen = false; this.searchQuery = ''; if (res.type === 'kunde') { this.openKundeDetail(res.data); } else if (res.type === 'auftrag') { this.openAuftragDetail(res.data); } },
                 get filteredKunden() { const q = this.kundeSearchQuery.toLowerCase(); return this.kunden.filter(k => k.vorname.toLowerCase().includes(q) || k.nachname.toLowerCase().includes(q)); },
                 get uniqueFilteredAuftraege() { const q = this.auftragSearchQuery.toLowerCase(); return this.auftraege.filter(a => this.getKundeName(a.kunde_id).toLowerCase().includes(q)); },
                 get uniqueAuftraegeForKunde() { return this.auftraege.filter(a => a.kunde_id === this.activeKunde.id); },
                 formatKundeID(id) { return 'K' + String(id).padStart(6, '0'); },
                 formatAuftragID(id) { return 'A' + String(id).padStart(6, '0'); },
-                deleteKunde(id) { this.openDeleteModal('kunde', id, 'Kunde löschen?', 'Möchten Sie diesen Kunden wirklich löschen? Alle zugehörigen Projekte werden ebenfalls entfernt.'); },
-                deleteAuftrag(id) { this.openDeleteModal('auftrag', id, 'Projekt löschen?', 'Möchten Sie dieses Projekt unwiderruflich löschen?'); },
+                deleteKunde(id) { this.openDeleteModal('kunde', id, 'Kunde löschen?', 'Möchten Sie diesen Kunden wirklich löschen? Alle zugehörigen Aufträge werden ebenfalls entfernt.'); },
+                deleteAuftrag(id) { this.openDeleteModal('auftrag', id, 'Auftrag löschen?', 'Möchten Sie diesen Auftrag unwiderruflich löschen?'); },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
                 formatDate(d) { return new Date(d).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}); },
                 totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
