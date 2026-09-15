@@ -485,9 +485,14 @@
             <p class="text-sm opacity-50 mb-10 leading-relaxed" x-text="workModalType === 'ARBEIT' ? 'Erfassen Sie die geleisteten Stunden.' : 'Erfassen Sie die gefahrenen Kilometer.'"></p>
             
             <form @submit.prevent="submitWork()" class="flex flex-col gap-6">
+                <div>
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-2 text-left">Datum</label>
+                    <input type="date" x-model="workModalDate" class="w-full bg-surface-low p-4 rounded-2xl text-lg font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none" required>
+                </div>
                 <div class="relative">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-2 text-left" x-text="workModalType === 'ARBEIT' ? 'Dauer' : 'Distanz'"></label>
                     <input type="number" step="0.5" min="0" x-model.number="workModalValue" class="w-full bg-surface-low p-6 rounded-3xl text-3xl font-headline font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none placeholder-primary/20" :placeholder="workModalType === 'ARBEIT' ? '0.0' : '0'" required x-ref="workInput">
-                    <span class="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-sm uppercase tracking-wider" x-text="workModalType === 'ARBEIT' ? 'Std' : 'km'"></span>
+                    <span class="absolute right-6 top-[65%] -translate-y-1/2 text-primary font-bold opacity-40 text-sm uppercase tracking-wider" x-text="workModalType === 'ARBEIT' ? 'Std' : 'km'"></span>
                 </div>
                 <button type="submit" class="w-full bg-primary text-white py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-lg mt-4">Hinzufügen</button>
             </form>
@@ -509,7 +514,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
+                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', workModalDate: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
@@ -592,8 +597,8 @@
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
-                openWorkModal(t) { this.workModalType = t; this.workModalValue = ''; this.showWorkModal = true; setTimeout(() => this.$refs.workInput.focus(), 50); },
-                async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: new Date().toISOString().split('T')[0], stunden: this.workModalType==='ARBEIT'?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='FAHRT'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
+                openWorkModal(t) { this.workModalType = t; this.workModalValue = ''; this.workModalDate = new Date().toISOString().split('T')[0]; this.showWorkModal = true; setTimeout(() => this.$refs.workInput.focus(), 50); },
+                async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: this.workModalDate || new Date().toISOString().split('T')[0], stunden: this.workModalType==='ARBEIT'?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='FAHRT'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
                 deleteEinsatz(id) { this.openDeleteModal('einsatz', id, 'Eintrag löschen?', 'Möchten Sie diesen Eintrag wirklich löschen?'); },
                 deleteDoc(id) { this.openDeleteModal('doc', id, 'Dokument löschen?', 'Möchten Sie dieses Dokument wirklich löschen?'); },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
