@@ -86,7 +86,7 @@ pub struct Einsatz {
     pub kilometer: f64,
     pub stunden: f64,
     pub notiz: String,
-    pub typ: String, // ARBEIT oder FAHRT
+    pub typ: String, // ARBEIT_VOR_ORT, ARBEIT_VORBEREITUNG oder KILOMETER
     pub signatur_pfad: Option<String>,
 }
 

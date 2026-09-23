@@ -59,25 +59,44 @@ pub fn generate_dynamic_pdf(
     let mut einsaetze_data = Vec::new();
     
     if let Some(ee) = einsaetze {
-        let mut sum_stunden = 0.0;
+        let mut sum_stunden_vor_ort = 0.0;
+        let mut sum_stunden_vorbereitung = 0.0;
         let mut sum_kilometer = 0.0;
 
         for e in ee {
             let typ_upper = e.typ.to_uppercase();
-            if typ_upper == "ARBEIT" {
-                sum_stunden += e.stunden;
-            } else {
-                sum_kilometer += e.kilometer;
+            match typ_upper.as_str() {
+                "ARBEIT_VOR_ORT" => sum_stunden_vor_ort += e.stunden,
+                "ARBEIT_VORBEREITUNG" => sum_stunden_vorbereitung += e.stunden,
+                "KILOMETER" => sum_kilometer += e.kilometer,
+                // Fallback für alte Daten
+                "ARBEIT" => sum_stunden_vor_ort += e.stunden,
+                "FAHRT" => sum_kilometer += e.kilometer,
+                _ => {}
             }
         }
 
-        if sum_stunden > 0.0 {
-            let summe = sum_stunden * auftrag.stundensatz;
+        if sum_stunden_vor_ort > 0.0 {
+            let summe = sum_stunden_vor_ort * auftrag.stundensatz;
             gesamt_netto_einsaetze += summe;
             einsaetze_data.push(json!({
                 "datum": "",
-                "typ": "ARBEIT",
-                "stunden": sum_stunden,
+                "typ": "ARBEIT_VOR_ORT",
+                "stunden": sum_stunden_vor_ort,
+                "kilometer": 0.0,
+                "notiz": "",
+                "einzelpreis": format!("{:.2}", auftrag.stundensatz),
+                "zeilen_summe": format!("{:.2}", summe)
+            }));
+        }
+
+        if sum_stunden_vorbereitung > 0.0 {
+            let summe = sum_stunden_vorbereitung * auftrag.stundensatz;
+            gesamt_netto_einsaetze += summe;
+            einsaetze_data.push(json!({
+                "datum": "",
+                "typ": "ARBEIT_VORBEREITUNG",
+                "stunden": sum_stunden_vorbereitung,
                 "kilometer": 0.0,
                 "notiz": "",
                 "einzelpreis": format!("{:.2}", auftrag.stundensatz),
@@ -90,7 +109,7 @@ pub fn generate_dynamic_pdf(
             gesamt_netto_einsaetze += summe;
             einsaetze_data.push(json!({
                 "datum": "",
-                "typ": "FAHRT",
+                "typ": "KILOMETER",
                 "stunden": 0.0,
                 "kilometer": sum_kilometer,
                 "notiz": "",

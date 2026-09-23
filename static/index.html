@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Achtsam Admin</title>
+    <title>Wendepunkt Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -32,7 +32,7 @@
     <div class="md:hidden flex items-center justify-between bg-surface-lowest px-6 py-4 border-b border-surface-low z-40" style="padding-top: max(1rem, env(safe-area-inset-top));">
         <div class="flex items-center gap-4 cursor-pointer" @click="view = 'dashboard'">
             <span class="font-headline text-2xl font-bold text-primary">A</span>
-            <span class="font-headline text-lg font-bold text-primary">achtsam entrümpeln</span>
+            <span class="font-headline text-lg font-bold text-primary">Wendepunkt</span>
         </div>
         <button @click.stop="mobileMenuOpen = !mobileMenuOpen" class="text-primary focus:outline-none">
             <span class="material-icons-outlined" x-text="mobileMenuOpen ? 'close' : 'menu'"></span>
@@ -44,8 +44,8 @@
 
     <aside :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-50 w-80 h-full bg-surface-lowest border-r border-surface-low flex flex-col py-4 md:py-8 md:py-12 px-6 font-body transition-transform duration-300 md:translate-x-0">
         <div class="hidden md:flex items-center gap-4 mb-12 md:mb-24 px-4 cursor-pointer" @click="view = 'dashboard'">
-            <span class="font-headline text-3xl font-bold text-primary">A</span>
-            <span class="font-headline text-xl font-bold text-primary">achtsam entrümpeln</span>
+            <span class="font-headline text-3xl font-bold text-primary">W</span>
+            <span class="font-headline text-xl font-bold text-primary">Wendepunkt</span>
         </div>
         <nav class="flex-1 space-y-2">
             <button @click="view = 'dashboard'; mobileMenuOpen = false" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
@@ -244,8 +244,8 @@
                     </header>
                     <form @submit.prevent="saveKundeDetail()" class="space-y-8 pb-12 border-b border-surface-low">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8"><input x-model="activeKunde.vorname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Vorname"><input x-model="activeKunde.nachname" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nachname"></div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8"><input x-model="activeKunde.strasse" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Straße"><input x-model="activeKunde.hausnummer" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nr."></div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8"><input x-model="activeKunde.plz" class="bg-surface-low p-4 rounded-xl border-none" placeholder="PLZ"><input x-model="activeKunde.ort" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Ort"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8"><input x-model="activeKunde.strasse" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Straße"><input x-model="activeKunde.hausnummer" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Nr."></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8"><input x-model="activeKunde.plz" class="bg-surface-low p-4 rounded-xl border-none" placeholder="PLZ"><input x-model="activeKunde.ort" class="md:col-span-2 bg-surface-low p-4 rounded-xl border-none" placeholder="Ort"></div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8"><input x-model="activeKunde.email" class="bg-surface-low p-4 rounded-xl border-none" placeholder="E-Mail"><input x-model="activeKunde.telefon" class="bg-surface-low p-4 rounded-xl border-none" placeholder="Telefon"></div>
                         <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Stammdaten speichern</button></div>
                     </form>
@@ -342,9 +342,9 @@
                     </div>
                 </header>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Arbeit</h2><button @click="openWorkModal('ARBEIT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><span class="material-icons-outlined text-xl">delete</span></button></div></template></div>
-                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Fahrten</h2><button @click="openWorkModal('FAHRT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Fahrt</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'FAHRT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.kilometer + 'km'"></div><button @click="deleteEinsatz(e.id)" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><span class="material-icons-outlined text-xl">delete</span></button></div></template></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Vor Ort</h2><button @click="openWorkModal('ARBEIT_VOR_ORT')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT_VOR_ORT' || e.typ === 'ARBEIT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><span class="material-icons-outlined text-xl">delete</span></button></div></template></div><div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Vorbereitung</h2><button @click="openWorkModal('ARBEIT_VORBEREITUNG')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ Std.</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'ARBEIT_VORBEREITUNG')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.stunden + 'h'"></div><button @click="deleteEinsatz(e.id)" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><span class="material-icons-outlined text-xl">delete</span></button></div></template></div>
+                    <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Kilometer</h2><button @click="openWorkModal('KILOMETER')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">+ km</button></div><template x-for="e in activeEinsaetze.filter(e => e.typ === 'KILOMETER' || e.typ === 'FAHRT')"><div class="p-4 border-b last:border-0 flex justify-between items-center text-on-surface"><div><div class="font-bold" x-text="formatDate(e.datum)"></div><div class="text-xs opacity-40" x-text="e.notiz"></div></div><div class="font-headline text-xl text-primary font-bold" x-text="e.kilometer + 'km'"></div><button @click="deleteEinsatz(e.id)" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><span class="material-icons-outlined text-xl">delete</span></button></div></template></div>
                     <div class="bg-white p-8 rounded-3xl border border-surface-low shadow-sm"><div class="flex justify-between border-b pb-4 mb-4"><h2 class="font-headline text-2xl text-primary font-bold">Pauschale</h2></div><div class="mt-8 flex flex-col justify-center items-center pb-4"><label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Betrag in Euro</label><div class="relative w-full"><input x-model.number="activeAuftrag.basis_pauschale" @blur="updateAuftragSync()" class="w-full bg-surface-low p-6 rounded-3xl text-4xl font-headline font-bold text-primary text-center shadow-inner border-none focus:ring-1 ring-primary/20 transition-all" type="number" step="10" min="0"><span class="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-xl">€</span></div></div></div>
                 </div>
 
@@ -478,11 +478,11 @@
             <button @click="showWorkModal = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-primary transition-colors"><span class="material-icons-outlined text-3xl">close</span></button>
             
             <div class="w-20 h-20 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-                <span class="material-icons-outlined text-4xl" x-text="workModalType === 'ARBEIT' ? 'schedule' : 'directions_car'"></span>
+                <span class="material-icons-outlined text-4xl" x-text="workModalType === 'KILOMETER' ? 'directions_car' : 'schedule'"></span>
             </div>
             
-            <h2 class="font-headline text-3xl mb-3 text-primary font-bold" x-text="workModalType === 'ARBEIT' ? 'Arbeitszeit' : 'Fahrtstrecke'"></h2>
-            <p class="text-sm opacity-50 mb-10 leading-relaxed" x-text="workModalType === 'ARBEIT' ? 'Erfassen Sie die geleisteten Stunden.' : 'Erfassen Sie die gefahrenen Kilometer.'"></p>
+            <h2 class="font-headline text-3xl mb-3 text-primary font-bold" x-text="workModalType === 'ARBEIT_VOR_ORT' ? 'Arbeit vor Ort' : workModalType === 'ARBEIT_VORBEREITUNG' ? 'Vor- & Nachbereitung' : 'Kilometer erfassen'"></h2>
+            <p class="text-sm opacity-50 mb-10 leading-relaxed" x-text="workModalType === 'KILOMETER' ? 'Erfassen Sie die gefahrenen Kilometer.' : 'Erfassen Sie die geleisteten Stunden.'"></p>
             
             <form @submit.prevent="submitWork()" class="flex flex-col gap-6">
                 <div>
@@ -490,9 +490,9 @@
                     <input type="date" x-model="workModalDate" class="w-full bg-surface-low p-4 rounded-2xl text-lg font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none" required>
                 </div>
                 <div class="relative">
-                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-2 text-left" x-text="workModalType === 'ARBEIT' ? 'Dauer' : 'Distanz'"></label>
-                    <input type="number" step="0.5" min="0" x-model.number="workModalValue" class="w-full bg-surface-low p-6 rounded-3xl text-3xl font-headline font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none placeholder-primary/20" :placeholder="workModalType === 'ARBEIT' ? '0.0' : '0'" required x-ref="workInput">
-                    <span class="absolute right-6 top-[65%] -translate-y-1/2 text-primary font-bold opacity-40 text-sm uppercase tracking-wider" x-text="workModalType === 'ARBEIT' ? 'Std' : 'km'"></span>
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-2 text-left" x-text="workModalType === 'KILOMETER' ? 'Distanz' : 'Dauer'"></label>
+                    <input type="number" step="0.5" min="0" x-model.number="workModalValue" class="w-full bg-surface-low p-6 rounded-3xl text-3xl font-headline font-bold text-primary text-center shadow-inner focus:ring-1 ring-primary/20 transition-all border-none placeholder-primary/20" :placeholder="workModalType === 'KILOMETER' ? '0' : '0.0'" required x-ref="workInput">
+                    <span class="absolute right-6 top-[65%] -translate-y-1/2 text-primary font-bold opacity-40 text-sm uppercase tracking-wider" x-text="workModalType === 'KILOMETER' ? 'km' : 'Std'"></span>
                 </div>
                 <button type="submit" class="w-full bg-primary text-white py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-lg mt-4">Hinzufügen</button>
             </form>
@@ -514,7 +514,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT', workModalValue: '', workModalDate: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
+                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'ARBEIT_VOR_ORT', workModalValue: '', workModalDate: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
@@ -585,8 +585,8 @@
                 deleteAuftrag(id) { this.openDeleteModal('auftrag', id, 'Auftrag löschen?', 'Möchten Sie diesen Auftrag unwiderruflich löschen?'); },
                 getKundeName(id) { const k = this.kunden.find(k => k.id === id); return k ? k.vorname + ' ' + k.nachname : 'Unbekannt'; },
                 formatDate(d) { return new Date(d).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}); },
-                totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
-                totalKM() { return this.activeEinsaetze.filter(e=>e.typ==='FAHRT').reduce((s, e) => s + e.kilometer, 0); },
+                totalStunden() { return this.activeEinsaetze.filter(e=>e.typ==='ARBEIT_VOR_ORT'||e.typ==='ARBEIT_VORBEREITUNG'||e.typ==='ARBEIT').reduce((s, e) => s + e.stunden, 0); },
+                totalKM() { return this.activeEinsaetze.filter(e=>e.typ==='KILOMETER'||e.typ==='FAHRT').reduce((s, e) => s + e.kilometer, 0); },
                 openNewKunde() { this.newKundeModal = true; },
                 async createNewKunde() { const res = await fetch('/api/kunden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.newKundeData) }); if (res.ok) { this.newKundeModal = false; await this.fetchKunden(); } },
                 openKundeDetail(k) { this.activeKunde = JSON.parse(JSON.stringify(k)); this.view = 'kunde_detail'; },
@@ -598,7 +598,7 @@
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
                 openWorkModal(t) { this.workModalType = t; this.workModalValue = ''; this.workModalDate = new Date().toISOString().split('T')[0]; this.showWorkModal = true; setTimeout(() => this.$refs.workInput.focus(), 50); },
-                async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: this.workModalDate || new Date().toISOString().split('T')[0], stunden: this.workModalType==='ARBEIT'?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='FAHRT'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
+                async submitWork() { if(!this.workModalValue || this.workModalValue <= 0) return; this.isProcessing = true; this.showWorkModal = false; await fetch('/api/einsaetze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, auftrag_id: this.activeAuftrag.id, datum: this.workModalDate || new Date().toISOString().split('T')[0], stunden: ['ARBEIT_VOR_ORT','ARBEIT_VORBEREITUNG'].includes(this.workModalType)?parseFloat(this.workModalValue):0, kilometer: this.workModalType==='KILOMETER'?parseFloat(this.workModalValue):0, typ: this.workModalType, notiz: '' }) }); await this.fetchEinsaetze(this.activeAuftrag.id); this.isProcessing = false; },
                 deleteEinsatz(id) { this.openDeleteModal('einsatz', id, 'Eintrag löschen?', 'Möchten Sie diesen Eintrag wirklich löschen?'); },
                 deleteDoc(id) { this.openDeleteModal('doc', id, 'Dokument löschen?', 'Möchten Sie dieses Dokument wirklich löschen?'); },
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },

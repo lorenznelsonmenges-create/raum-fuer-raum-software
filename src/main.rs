@@ -1,6 +1,6 @@
-use achtsam_entruempeln_software::{models, database, pdf, files};
-use achtsam_entruempeln_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
-use achtsam_entruempeln_software::error::AppError;
+use wendepunkt_software::{models, database, pdf, files};
+use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
+use wendepunkt_software::error::AppError;
 
 use axum::{
     routing::{get, post},
@@ -67,13 +67,19 @@ async fn main() {
         .route("/dateien/:id/delete", post(delete_datei_handler))
         .route_layer(middleware::from_fn(auth_middleware));
 
+    // Upload-Route: Authentifizierung erforderlich (Datenschutz!)
+    let upload_route = Router::new()
+        .route("/uploads/*path", get(serve_upload_file))
+        .route_layer(middleware::from_fn(auth_middleware));
+
     let app = Router::new()
         .nest("/api", public_routes.merge(protected_routes))
-        .nest_service("/uploads", ServeDir::new("./uploads"))
+        .merge(upload_route)
         .nest_service("/static", ServeDir::new("./static"))
         .fallback(get(serve_index))
         .layer(session_layer)
         .with_state(pool);
+
 
     let port = std::env::var("PORT")
         .ok()
@@ -450,4 +456,37 @@ async fn send_stundennachweis(State(pool): State<SqlitePool>, Path(id): Path<i64
     let kunde = database::get_kunde_by_id(&pool, auftrag.kunde_id).await?;
     println!("Simulierter Versand: Stundennachweis für Auftrag {} an {} gesendet.", auftrag.id, kunde.email.unwrap_or_default());
     Ok(())
+}
+
+/// Geschützer Datei-Handler: Nur für eingeloggte Nutzer zugänglich.
+/// Verhindert Path-Traversal-Angriffe und prüft Authentifizierung via AuthUser.
+async fn serve_upload_file(
+    _auth: AuthUser,
+    Path(path): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    // Sicherheitscheck: Keine ".." Komponenten erlaubt (Path Traversal)
+    if path.contains("..") || path.contains("//") {
+        return Err(AppError::BadRequest("Ungültiger Dateipfad".into()));
+    }
+
+    let file_path = format!("./uploads/{}", path);
+    let content = tokio::fs::read(&file_path)
+        .await
+        .map_err(|_| AppError::NotFound)?;
+
+    let content_type = match path.rsplit('.').next().unwrap_or("").to_lowercase().as_str() {
+        "pdf"  => "application/pdf",
+        "jpg" | "jpeg" => "image/jpeg",
+        "png"  => "image/png",
+        "gif"  => "image/gif",
+        _      => "application/octet-stream",
+    };
+
+    Ok((
+        [
+            (axum::http::header::CONTENT_TYPE, content_type),
+            (axum::http::header::CONTENT_DISPOSITION, "inline"),
+        ],
+        content,
+    ))
 }

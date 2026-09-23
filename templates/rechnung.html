@@ -163,13 +163,13 @@
                 <path d="M12 22C12 22 5 20 3 13C2 11 3 8 6 7C8 9 9 11 9 13C9 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
                 <circle cx="12" cy="5" r="2" fill="#526447"/>
             </svg>
-            <div class="brand-name">Achtsam Entrümpeln</div>
+            <div class="brand-name">Wendepunkt</div>
         </div>
     </div>
 
     <div class="info-section">
         <div>
-            <div class="sender-line">Achtsam Entrümpeln | Stefanie Ruf | hallo@achtsam-entruempeln.de</div>
+            <div class="sender-line">Wendepunkt | Stefanie Ruf | info@wendepunkt-ruf.de</div>
             <div class="recipient-address">
                 {{kunde_name}}<br>
                 {{kunde_strasse}} {{kunde_hausnummer}}<br>
@@ -207,9 +207,15 @@
             {{#each einsaetze}}
             <tr>
                 <td>
-                    <strong>{{#eq typ "ARBEIT"}}Arbeitszeit{{else}}Fahrtkosten{{/eq}}</strong>
+                    <strong>
+                        {{#eq typ "ARBEIT_VOR_ORT"}}Arbeitszeit vor Ort
+                        {{else}}{{#eq typ "ARBEIT_VORBEREITUNG"}}Vor- &amp; Nachbereitung
+                        {{else}}Gefahrene Kilometer{{/eq}}{{/eq}}
+                    </strong>
                 </td>
-                <td class="right-align">{{#eq typ "ARBEIT"}}{{stunden}} Std.{{else}}{{kilometer}} km{{/eq}}</td>
+                <td class="right-align">
+                    {{#eq typ "KILOMETER"}}{{kilometer}} km{{else}}{{stunden}} Std.{{/eq}}
+                </td>
                 <td class="right-align">{{einzelpreis}} €</td>
                 <td class="right-align">{{zeilen_summe}} €</td>
             </tr>
@@ -247,8 +253,8 @@
         <div class="footer-col">
             <strong>Kontakt</strong><br>
             Stefanie Ruf<br>
-            hallo@achtsam-entruempeln.de<br>
-            achtsam-entruempeln.de
+            info@wendepunkt-ruf.de<br>
+            wendepunkt-ruf.de
         </div>
         <div class="footer-col">
             <strong>Zahlungsinformationen</strong><br>
@@ -257,7 +263,7 @@
             BIC: ABCDEFGHXXX
         </div>
         <div class="footer-col">
-            <strong>Achtsam Entrümpeln</strong><br>
+            <strong>Wendepunkt</strong><br>
             Vielen Dank für Ihren Auftrag!
         </div>
     </div>
