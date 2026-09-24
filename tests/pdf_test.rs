@@ -1,5 +1,5 @@
-use achtsam_entruempeln_software::pdf::generate_dynamic_pdf;
-use achtsam_entruempeln_software::models::{Auftrag, Kunde, AuftragStatus};
+use wendepunkt_software::pdf::generate_dynamic_pdf;
+use wendepunkt_software::models::{Auftrag, Kunde, AuftragStatus};
 
 #[tokio::test]
 async fn test_rechnung_pdf_generation() {
@@ -12,6 +12,7 @@ async fn test_rechnung_pdf_generation() {
         stundensatz: 45.0,
         kilometer_satz: 0.5,
         notizen: "".to_string(),
+        ..Default::default()
     };
     let kunde = Kunde {
         id: 1,
@@ -34,6 +35,7 @@ async fn test_rechnung_pdf_generation() {
         None,
         Some("RE-2024-001"),
         None,
+        Some("Stefanie Ruf"),
     );
 
     match result {

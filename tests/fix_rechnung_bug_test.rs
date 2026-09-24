@@ -1,5 +1,5 @@
-use achtsam_entruempeln_software::database;
-use achtsam_entruempeln_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
+use wendepunkt_software::database;
+use wendepunkt_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
 use sqlx::SqlitePool;
 use chrono::Local;
 

@@ -1,7 +1,6 @@
-use achtsam_entruempeln_software::{database, models};
-use achtsam_entruempeln_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
+use wendepunkt_software::database;
+use wendepunkt_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
 use sqlx::SqlitePool;
-use std::fs;
 
 async fn setup_db() -> SqlitePool {
     let db_url = "sqlite::memory:";
