@@ -49,6 +49,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `stundensatz` | `f64` | Stundensatz (Default: 0.00) |
 | `kilometer_satz` | `f64` | Kilometersatz (Default: 0.00) |
 | `notizen` | `String` | Interne Auftragsnotizen |
+| `created_by` | `Option<String>` | Ersteller des Auftrags (Benutzername) |
 
 ### Einsatz (Arbeitszeit & Fahrtkosten)
 | Feld | Typ | Beschreibung |
@@ -59,7 +60,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `kilometer` | `f64` | Gefahrene Kilometer |
 | `stunden` | `f64` | Gearbeitete Stunden |
 | `notiz` | `String` | Notiz zum Einsatz |
-| `typ` | `String` | ARBEIT oder FAHRT |
+| `typ` | `String` | ARBEIT_VOR_ORT, ARBEIT_VORBEREITUNG oder KILOMETER |
 | `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild (digital vor Ort) |
 
 ### Datei (Uploads)
@@ -143,17 +144,22 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20240409000001_add_status_index.sql` | Index auf `auftraege.status` für Performance |
 | `20240409000002_add_settings.sql` | Tabelle `einstellungen` |
 | `20240410000000_add_users.sql` | Tabelle `users` |
+| `20240411000000_fix_admin_hash.sql` | Valider Bcrypt-Hash für `admin` |
+| `20260914000000_add_created_by_to_auftraege.sql` | Spalte `created_by` in `auftraege` |
+| `20260922000000_update_einsatz_typen.sql` | Migration auf 3 Einsatz-Typen (`ARBEIT_VOR_ORT`, `ARBEIT_VORBEREITUNG`, `KILOMETER`) |
+| `20260924000001_ensure_users.sql` | Tabelle `users` & sichere Bcrypt-Hashes für `admin` und `stefanie` |
 
 ### Wichtige Spalten-Hinweise
 - `kunden.ort` (nicht `stadt` – wurde umbenannt)
 - `auftraege.kilometer_satz` (nicht `km_satz` – wurde umbenannt)
+- `auftraege.created_by` (Ersteller des Auftrags)
 - `auftraege.preis_manuell` existiert noch in der DB aber nicht mehr im Rust-Code
 
 ## 4. Status der API-Endpunkte
 
 - [x] **Kunden:** CRUD-Operationen (Erstellen, Lesen, Liste, Update, Löschen).
 - [x] **Aufträge:** Erstellung, Status-Management und Update.
-- [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur.
+- [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
 
@@ -161,22 +167,25 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 
 1. [x] **Dashboard-Chart:** Statistische Auswertung der Auftragszahlen.
 2. [x] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
-3. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
-4. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
-- [x] **Login:** Absicherung der API (Bcrypt, Session-Management, Input-Trimming).
-6. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
-7. [ ] **Testing:** Einführung automatisierter Tests (cargo test).
-8. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
+3. [x] **Login:** Rein datenbankbasierte Absicherung via Bcrypt (`logins.json` entfernt).
+4. [x] **Testing:** Automatisierte Integrationstests (`cargo test`).
+5. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
+6. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
+7. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
 
 ## 6. Betriebliche Hinweise
 
-- **Hosting:** Aktiv auf Hetzner-Server (`ubuntu-4gb-hel1-1`) unter `https://achtsam.codeboarden.de`.
-- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy auf Port 3001.
-- **SSL:** Let's Encrypt via Certbot (Auto-Renewal aktiv).
-- **Prozess-Management:** Systemd-Service `achtsam.service` (Restart=always, Port=3001 via ENV).
-- **Dateipfade:** App liegt in `/var/www/achtsam-backend/`, Uploads in `uploads/`, DB ist `achtsam.db`.
-- **Email:** Finalisierung der Adressen (Platzhalter: hallo@achtsam-entruempeln.de).
-- **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` (Snap) auf dem Server.
+- **Projekt-Name:** Wendepunkt — Raum für Neues (vormals Achtsam Entrümpeln).
+- **Hosting:** Hetzner Cloud VPS (`ubuntu-4gb-hel1-1`, IP: `46.62.148.232`).
+- **Domains:**
+  - Haupt-Website: `https://wendepunkt-ruf.de`
+  - Interne Auftragsverwaltung: `https://app.wendepunkt-ruf.de`
+- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy auf Port 3000.
+- **SSL:** Let's Encrypt via Certbot.
+- **Prozess-Management:** Systemd-Service `wendepunkt.service` (Restart=always).
+- **Dateipfade:** App liegt auf dem Server unter `/var/www/`, Uploads in `uploads/`, DB ist `achtsam.db`.
+- **Email:** `info@wendepunkt-ruf.de` (Postfach in konsoleH, DNS bei Hetzner konfiguriert).
+- **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` auf dem Server.
 - **Sicherheit/Sessions:** Da die App hinter einem Nginx-Reverse-Proxy mit HTTPS läuft, MUSS `tower_sessions` in `src/main.rs` zwingend mit `.with_secure(true)` konfiguriert sein, andernfalls verweigern Browser (wie Firefox/Chrome) das Speichern des Login-Cookies.
 
 ## 7. Quality & Validation (Globale Checkliste)

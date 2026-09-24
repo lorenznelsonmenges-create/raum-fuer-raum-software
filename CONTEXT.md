@@ -4,14 +4,14 @@
 
 ---
 
-## Aktueller Stand (23.09.2026)
+## Aktueller Stand (24.09.2026)
 - **Rebranding:** "Wendepunkt", Mail `info@wendepunkt-ruf.de`, Domain `wendepunkt-ruf.de`.
-- **E-Mail & DNS:** Mailbox in konsoleH aktiv, DNS (MX, SPF, DKIM) bei Hetzner gesetzt, DENIC-Update läuft.
-- **Backend:** Crate umbenannt (`wendepunkt-software`), 3 Einsatz-Typen (`ARBEIT_VOR_ORT`, `ARBEIT_VORBEREITUNG`, `KILOMETER`) inkl. Migration & PDF.
-- **Templates:** Rechnung, Vertrag, Datenschutz auf Wendepunkt & `info@wendepunkt-ruf.de` umgestellt.
-- **Reset:** `reset_db.sh` erstellt für vollständigen Daten-Reset.
+- **Sicherheit & Auth:** `logins.json` entfernt. Migration `20260924000001_ensure_users.sql` für `admin` & `stefanie` via Bcrypt.
+- **Backend & Tests:** Alle Tests (`cargo test`) grün (Auth, PDF, DB-Stats, Rechnungen).
+- **Hosting & Server:** Hetzner Cloud VPS (`46.62.148.232`), `app.wendepunkt-ruf.de` & `wendepunkt-ruf.de`.
+- **Doku:** `Architektur.md`, `GEMINI.md` und Datenschutz-Hoster auf Hetzner aktualisiert.
+- **Ordner:** Umbenannt von `Achtsam_entruempeln` nach `Wendepunkt`.
 
-## Nächste Schritte (Morgen)
-1. **Website:** Branding & Mail in `Website/` anpassen ("Wendepunkt", `info@wendepunkt-ruf.de`).
-2. **Server (Hetzner VPS):** Nginx Vhosts für Website (`wendepunkt-ruf.de`) & App (`app.wendepunkt-ruf.de`).
-3. **SSL & Deploy:** Certbot für alle Domains, DB Reset auf Server ausführen, App starten.
+## Nächste Schritte
+1. Auf Server (`46.62.148.232`): `git pull` & `cargo build --release` & `systemctl restart wendepunkt`.
+2. Status & Login (`stefanie` / `admin`) im Web testen.
