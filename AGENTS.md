@@ -1,204 +1,262 @@
-# Agenten-Team: Achtsam Entrümpeln
+# Software-Projekt: Achtsam Entrümpeln (Backend)
 
-Dieses Projekt arbeitet mit spezialisierten Agenten-Rollen. Jeder Agent hat klare Zuständigkeiten und Regeln.
+**GESCHÜTZTE DATEI:** Diese Datei darf ausschließlich geändert werden,
+> wenn der Nutzer dies in der aktuellen Konversation explizit erlaubt hat.
+> Kein Agent darf diese Datei eigenständig bearbeiten.
 
-## Gemeinsame Standards
+Dieses Dokument dient als zentrale Wissensbasis ("Source of Truth") für die Architektur, das Datenmodell und den Entwicklungsfortschritt der Software.
 
-- Alle Agenten unterliegen der **"Globalen Checkliste"** in der `GEMINI.md`.
-- **Zero-Ping-Pong**: Kein Feedback ohne vorherigen `cargo check` oder `cargo build`.
-- **SSOT (Single Source of Truth)**: Alle DB-Zugriffe über `src/database.rs`. Alle Fehler über `AppError` in `src/error.rs`.
+## 1. Architektur & Design-Entscheidungen
 
----
+- **Backend:** Rust mit dem **Axum** Web-Framework (Port 3000).
+- **Datenbank:** **SQLite** (`achtsam.db`), asynchron angebunden via `sqlx`.
+- **Migrationen:** Automatische Migrationen beim Start der Anwendung (Ordner `migrations/`).
+- **Error-Handling:** Zentralisiertes System in `src/error.rs` für konsistente HTTP-Statuscodes.
+- **Datei-Management:** Uploads landen im Ordner `uploads/` auf der Festplatte; Pfade werden in der DB gespeichert.
+- **Frontend-Anbindung:** Aktuell als reine REST-API konzipiert (bereit für Nginx/HTTPS-Reverse-Proxy).
+- **Templating:** Handlebars 6.x (nicht Tera – trotz anderslautender älterer Notizen).
+- **PDF-Generierung:** `headless_chrome` 1.x via HTML → PDF.
 
-## 1. Orchestrator (Haupt-Agent)
+## 2. Datenmodell (Source of Truth)
 
-- **Rolle**: Projektmanager & Schnittstelle zum Nutzer.
-- **Prinzip**: Koordination – implementiert **niemals** selbst Code.
+⚠️ **SYNCHRONISIERUNGS-PFLICHT:** Dieses Datenmodell MUSS mit `src/models.rs`
+übereinstimmen. Wenn ein Agent `src/models.rs` ändert (Felder hinzufügt,
+entfernt oder umbenennt), MUSS er danach mit expliziter Nutzer-Erlaubnis
+diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 
-### Regeln
+### Kunde
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel (Auto-Increment) |
+| `vorname` | `String` | Vorname (Pflichtfeld) |
+| `nachname` | `String` | Nachname (Pflichtfeld) |
+| `strasse` | `Option<String>` | Straße |
+| `hausnummer` | `Option<String>` | Hausnummer |
+| `plz` | `Option<String>` | Postleitzahl |
+| `ort` | `Option<String>` | Stadt/Ort |
+| `email` | `Option<String>` | E-Mail Adresse |
+| `telefon` | `Option<String>` | Telefonnummer |
+| `notizen` | `Option<String>` | Interne Kundennotizen |
 
-Für jede Aufgabe:
-1. Lies `GEMINI.md` und `BUGS.md`, um den aktuellen Stand und offene Fehler zu verstehen.
-2. Entscheide, welcher spezialisierte Agent am besten geeignet ist.
-3. Delegiere die Aufgabe explizit an den Spezialisten.
+### Auftrag
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `kunde_id` | `i64` | Fremdschlüssel auf `kunden` |
+| `status` | `Enum` | AnfrageLaeuft, InBearbeitung, Abgeschlossen, Storniert |
+| `beschreibung` | `String` | Kurzbeschreibung des Auftrags |
+| `basis_pauschale` | `Option<f64>` | Optionale Fixkosten-Pauschale |
+| `stundensatz` | `f64` | Stundensatz (Default: 0.00) |
+| `kilometer_satz` | `f64` | Kilometersatz (Default: 0.00) |
+| `notizen` | `String` | Interne Auftragsnotizen |
+| `created_by` | `Option<String>` | Ersteller des Auftrags (Benutzername) |
 
-Niemals selbst implementieren – immer delegieren. Deine Aufgabe ist die strategische Planung und Zuweisung.
+### Einsatz (Arbeitszeit & Fahrtkosten)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `datum` | `String` | Datum des Einsatzes |
+| `kilometer` | `f64` | Gefahrene Kilometer |
+| `stunden` | `f64` | Gearbeitete Stunden |
+| `notiz` | `String` | Notiz zum Einsatz |
+| `typ` | `String` | ARBEIT_VOR_ORT, ARBEIT_VORBEREITUNG oder KILOMETER |
+| `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild (digital vor Ort) |
 
----
+### Datei (Uploads)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `dateiname` | `String` | Originaler Name der Datei |
+| `dateipfad` | `String` | Relativer Pfad im `uploads/` Ordner |
+| `dateityp` | `String` | MIME-Type oder Endung |
+| `hochgeladen_am` | `String` | Zeitstempel des Uploads |
+| `kategorie` | `String` | DATENSCHUTZ, VERTRAG, SONSTIGES, SIGNATUR, RECHNUNG |
 
-## 2. Rust Backend Expert (Entwickler)
+### Rechnung
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `rechnungs_nummer` | `String` | Rechnungsnummer (fortlaufend) |
+| `datum` | `String` | Ausstellungsdatum |
+| `gesamt_netto` | `f64` | Gesamtsumme (Netto) |
+| `gesamt_brutto` | `f64` | Gesamtsumme (Brutto) |
+| `status` | `String` | z.B. ENTWURF, GESENDET, BEZAHLT |
+| `pdf_pfad` | `String` | Relativer Pfad zur PDF-Datei |
 
-- **Rolle**: Experte für Rust, Axum & SQLx. **Einzige autorisierte Instanz** für Schreibvorgänge im Rust-Backend.
-- **Zuständig für**: ALLE Implementierungen, Modifikationen und Änderungen an Rust-Code.
+### RechnungsNotiz
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
+| `text` | `String` | Inhalt der Notiz |
+| `auf_rechnung` | `bool` | Haken: Erscheint diese Notiz auf der finalen PDF-Rechnung? |
 
-### Technologie-Stack (nicht verhandelbar)
+### Settings (Einstellungen) 
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel (immer 1) |
+| `stundensatz` | `f64` | Standard-Stundensatz (45.00) |
+| `kilometer_satz` | `f64` | Standard-Kilometersatz (0.50) |
 
-- Web-Framework: Axum 0.7
-- Datenbank: SQLx 0.7 + SQLite
-- Templating: Handlebars 6.x
-- PDF-Generierung: headless_chrome 1.x
-- PDF-Workflow ist fix: Handlebars → HTML-String → headless_chrome → PDF-Bytes
-- Kein anderer Workflow. Keine anderen Crates.
+### User
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `username` | `String` | Benutzername |
+| `password_hash` | `String` | Gehashtes Passwort |
+| `role` | `String` | Benutzerrolle (z.B. ADMIN) |
 
-### Kern-Regeln
+### LoginRequest (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `username` | `String` | Benutzername |
+| `password` | `String` | Passwort (Klartext für Login-Prozess) |
 
-1. **DRY**: Suche ZUERST in `src/models.rs`, `src/error.rs`, `src/database.rs` nach bestehenden Mustern. Nie das Rad neu erfinden.
-2. **SSOT**: Alle DB-Zugriffe über `src/database.rs`. Alle Fehler über `AppError`.
-3. **Cargo.toml zuerst**: Jede Antwort mit Code beginnt mit dem vollständigen `[dependencies]`-Block. Kein Code ohne passende Dependencies.
-4. **Keine Erfindungen**: Bei unbekannter API: `// TODO: API prüfen` statt halluzinieren.
+### DashboardStats (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `anfrage_laeuft` | `i64` | Anzahl Aufträge mit Status 'AnfrageLaeuft' |
+| `in_bearbeitung` | `i64` | Anzahl Aufträge mit Status 'InBearbeitung' |
+| `abgeschlossen` | `i64` | Anzahl Aufträge mit Status 'Abgeschlossen' |
+| `storniert` | `i64` | Anzahl Aufträge mit Status 'Storniert' |
+| `aktuelle_auftraege` | `i64` | Summe aller nicht-stornierten & nicht-abgeschlossenen Aufträge |
+
+## 3. Datenbankschema – Migrations-Übersicht
+
+Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`).
+⚠️ Neue Migrationen NIE rückgängig machen – immer neue Migrations-Datei erstellen.
+
+| Datei | Inhalt |
+| :--- | :--- |
+| `20240405120000_init.sql` | Tabellen `kunden`, `auftraege`, `rechnungs_notizen` |
+| `20240405130000_add_einsaetze.sql` | Tabelle `einsaetze` (Stunden, Kilometer) |
+| `20240405140000_add_dateien.sql` | Tabelle `dateien` (Datei-Uploads) |
+| `20240406100000_rename_stadt_to_ort.sql` | `stadt` → `ort` in `kunden` |
+| `20240407100000_extend_models.sql` | `kategorie` zu `dateien`, `typ` zu `einsaetze` |
+| `20240407110000_add_rechnungen.sql` | Tabelle `rechnungen` |
+| `20240408120000_add_signature_to_einsaetze.sql` | `signatur_pfad` zu `einsaetze` |
+| `20240408150000_add_prices_to_auftraege.sql` | `stundensatz`, `kilometer_satz` zu `auftraege` |
+| `20240408160000_fix_km_satz_naming.sql` | `km_satz` → `kilometer_satz` (Namenskorrektur) |
+| `20240409000000_add_indices.sql` | Performance-Indizes für Fremdschlüssel (Kunde/Auftrag) |
+| `20240409000001_add_status_index.sql` | Index auf `auftraege.status` für Performance |
+| `20240409000002_add_settings.sql` | Tabelle `einstellungen` |
+| `20240410000000_add_users.sql` | Tabelle `users` |
+| `20240411000000_fix_admin_hash.sql` | Valider Bcrypt-Hash für `admin` |
+| `20260914000000_add_created_by_to_auftraege.sql` | Spalte `created_by` in `auftraege` |
+| `20260922000000_update_einsatz_typen.sql` | Migration auf 3 Einsatz-Typen (`ARBEIT_VOR_ORT`, `ARBEIT_VORBEREITUNG`, `KILOMETER`) |
+| `20260924000001_ensure_users.sql` | Tabelle `users` & sichere Bcrypt-Hashes für `admin` und `stefanie` |
+
+### Wichtige Spalten-Hinweise
+- `kunden.ort` (nicht `stadt` – wurde umbenannt)
+- `auftraege.kilometer_satz` (nicht `km_satz` – wurde umbenannt)
+- `auftraege.created_by` (Ersteller des Auftrags)
+- `auftraege.preis_manuell` existiert noch in der DB aber nicht mehr im Rust-Code
+
+## 4. Status der API-Endpunkte
+
+- [x] **Kunden:** CRUD-Operationen (Erstellen, Lesen, Liste, Update, Löschen).
+- [x] **Aufträge:** Erstellung, Status-Management und Update.
+- [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
+- [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
+- [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
+
+## 5. Nächste Schritte
+
+1. [x] **Dashboard-Chart:** Statistische Auswertung der Auftragszahlen.
+2. [x] **PDF-Rechnungserstellung:** Finalisierung des Designs und Einbindung der Vorlagen.
+3. [x] **Login:** Rein datenbankbasierte Absicherung via Bcrypt (`logins.json` entfernt).
+4. [x] **Testing:** Automatisierte Integrationstests (`cargo test`).
+5. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
+6. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
+7. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
+
+## 6. Betriebliche Hinweise
+
+- **Projekt-Name:** Wendepunkt — Raum für Neues (vormals Achtsam Entrümpeln).
+- **Hosting:** Hetzner Cloud VPS (`ubuntu-4gb-hel1-1`, IP: `46.62.148.232`).
+- **Domains:**
+  - Haupt-Website: `https://wendepunkt-ruf.de`
+  - Interne Auftragsverwaltung: `https://app.wendepunkt-ruf.de`
+- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy auf Port 3000.
+- **SSL:** Let's Encrypt via Certbot.
+- **Prozess-Management:** Systemd-Service `wendepunkt.service` (Restart=always).
+- **Dateipfade:** App liegt auf dem Server unter `/var/www/`, Uploads in `uploads/`, DB ist `achtsam.db`.
+- **Email:** `info@wendepunkt-ruf.de` (Postfach in konsoleH, DNS bei Hetzner konfiguriert).
+- **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` auf dem Server.
+- **Sicherheit/Sessions:** Da die App hinter einem Nginx-Reverse-Proxy mit HTTPS läuft, MUSS `tower_sessions` in `src/main.rs` zwingend mit `.with_secure(true)` konfiguriert sein, andernfalls verweigern Browser (wie Firefox/Chrome) das Speichern des Login-Cookies.
+
+## 7. Quality & Validation (Globale Checkliste)
+
+Dieser Abschnitt gilt als **Gesetz** für den Haupt-Agenten und alle Sub-Agenten:
+
+### Zero-Ping-Pong & Architektur-Disziplin
+1. **DRY (Don't Repeat Yourself)**: Bevor du neuen Code schreibst, MUSS eine Suche im bestehenden Verzeichnis erfolgen.
+2. **SSOT (Single Source of Truth)**: Nutze die dafür vorgesehenen zentralen Dateien exklusiv.
+3. **Zero-Ping-Pong**: Führe vor dem Abschluss JEDER Aufgabe `cargo check` oder `cargo build` aus.
+4. **Design-Disziplin**: Jede neue Seite, jedes Feature und jede UI-Anpassung MUSS sich strikt am Design Guide in `DESIGN.md` orientieren (Farben, Abstände, Typografie).
+5. **`BUGS.md` zuerst lesen**: Bevor du Code schreibst oder änderst, lies `BUGS.md`. Stelle sicher dass du keinen behobenen Bug wieder einführst und trage neue Bugs sofort ein.
+
+### Git-Disziplin (gilt für alle Agenten)
+- Nach jeder abgeschlossenen Aufgabe MUSS der Orchestrator einen Commit vorschlagen.
+- Commit nur wenn `cargo check` oder `cargo build` erfolgreich war.
+- Commit-Message beschreibt was geändert wurde, nicht was der Prompt war.
+- Der Nutzer bestätigt den Commit explizit – kein Agent pusht eigenständig.
+- Bei größeren Features: `git checkout -b feature/<n>` vor dem Start.
+  Merge zurück auf `main` erst nach erfolgreichem `cargo build`.
+
+## 8. Sub-Agenten Team (Strikte Delegation)
+
+**AUTOMATIONS-REGEL:** Jede Benutzeranfrage, die nicht explizit an einen Agenten gerichtet ist (z.B. durch @name), wird ZWINGEND zuerst intern an den **@orchestrator** delegiert. Der Haupt-Agent darf keine eigenständigen Code-Änderungen vornehmen.
+
+### Eiserne Regeln für den @orchestrator (Verhinderung von Role-Drift)
+
+1. **Eiserne Regel:** Jeder Aufruf von schreibenden Tools (`replace`, `write_file`, etc.) durch den Haupt-Agenten OHNE Delegation an einen Sub-Agenten gilt als schwerer Protokollbruch.
+2. **Stopp-Signal:** Bevor der Agent ein schreibendes Tool nutzt, MUSS er innerlich prüfen: *"Bin ich der @rust-backend-expert?"*. Wenn nein -> Delegation ist Pflicht.
+3. **Delegations-Primat:** Der @orchestrator ist verpflichtet, jede Aufgabe IMMER erst im Kopf zu delegieren, bevor ein Implementierungs-Gedanke entsteht.
+
+### Rollen & Zuweisung
+
+| Agent | Zuständigkeit |
+| :--- | :--- |
+| **@orchestrator** | **Zentrale Einstiegsinstanz.** Analysiert Prompts, liest BUGS.md/GEMINI.md und delegiert an Spezialisten. Schreibt niemals Code. |
+| **@rust-backend-expert** | Implementierung, Code-Änderungen, neue Features, Bug-Fixes im Rust-Code. |
+| **@code-reviewer** | Analysen, Reviews, Struktur-Prüfung, Sicherheits-Audits. |
+| **@tester** | Reproduktion von Fehlern, Schreiben und Ausführen von Tests (`cargo test`). |
+| **@workspace-janitor** | Kontext-Hygiene, Aufräumen, Aktualisierung der `CONTEXT.md` oder `GEMINI.md`. |
+
+### Zusätzliche Referenzdateien
+- **`BUGS.md`**: Liste aller bekannten Fehler – vor jeder Arbeit lesen.
+- **`CONTEXT.md`**: Sitzungsbezogene Notizen (max. 20 Zeilen, wird vom Janitor bereinigt).
+
+### Halluzinations-Prävention (@rust-backend-expert)
+- **Cargo.toml zuerst**: Jede Antwort mit Code beginnt mit dem vollständigen
+  `[dependencies]`-Block. Kein Code ohne passende Dependencies.
+- **Keine Crate-Erfindungen**: Externe Crates NUR nutzen, wenn Cargo.toml-Eintrag
+  + konkrete Version angegeben wird. Bei unbekannter API: `// TODO: API prüfen`
+  statt Halluzination.
+- **PDF-Workflow ist fix**: Ausschließlich Handlebars → HTML-String →
+  headless_chrome → PDF-Bytes. Kein anderer Weg ist akzeptabel.
+- **Chromium-Abhängigkeit**: `headless_chrome` benötigt eine installierte
+  Chrome/Chromium-Binary auf dem Server (relevant für Hetzner-Deployment).
 
 ### Datenmodell-Pflicht
+Wenn du `src/models.rs` änderst, weise den Nutzer am Ende explizit darauf hin:
+"⚠️ Das Datenmodell wurde geändert – bitte erlaube mir, Abschnitt 2 der
+GEMINI.md zu synchronisieren."
+Tue dies NIEMALS eigenständig – nur mit expliziter Erlaubnis.
 
-Wenn `src/models.rs` geändert wird, explizit darauf hinweisen:
-> ⚠️ Das Datenmodell wurde geändert – bitte erlaube mir, Abschnitt 2 der GEMINI.md zu synchronisieren.
+### Beispiel-Delegation
+- Neue Feature-Anfrage → @rust-backend-expert implementiert, @code-reviewer prüft
+- Bug-Report → @tester reproduziert zuerst, dann @rust-backend-expert fixt
+- Aufräumen / Kontext zu groß → @workspace-janitor
 
-Dies NIEMALS eigenständig tun – nur mit expliziter Erlaubnis.
-
-### Abschluss-Checkliste
-
-1. Habe ich die eigentliche Absicht des Nutzers erfüllt?
-2. Führe IMMER `cargo check` aus. Behebe alle Fehler selbstständig.
-3. Lege alle Annahmen offen.
-
----
-
-## 3. Code Reviewer (Kritiker)
-
-- **Rolle**: Findet Fehler, bevor sie zum Problem werden. **Einzige Autorität** für das Lesen und Erklären von Code-Zusammenhängen.
-- **Zuständig für**: ALLE Analysen, Erklärungen und Reviews von Code.
-
-### Prüfkriterien
-
-1. **Best Practices**: Wird idiomatisches Rust geschrieben? (Pattern Matching statt unwrap, asynchroner Code korrekt genutzt?)
-2. **Security**: Gibt es potenzielle SQL-Injektionen oder unsicheres Error-Handling?
-3. **Logikfehler**: Werden Randfälle (Edge Cases) übersehen?
-4. **Effizienz**: Gibt es unnötige Klon-Operationen oder ineffiziente Datenbank-Queries?
-
-**Wichtig**: Schreibt keinen neuen Code, sondern gibt strukturiertes, kritisches Feedback. Bei Fehlern: Zeilennummer und Grund nennen. Code-Änderungen als Diff oder Kommentar, niemals direkt.
-
-### Abschluss-Checkliste
-
-1. Habe ich die *Absicht* des Nutzers beantwortet, nicht nur seine wörtlichen Worte?
-2. Habe ich mich auf das *Warum* konzentriert, nicht nur auf das *Was*?
-3. Habe ich Annahmen explizit genannt?
-
----
-
-## 4. Tester (QA-Agent)
-
-- **Rolle**: Sichert Qualität durch automatisierte Tests. **Einzige Instanz**, die `cargo test` zur Verifizierung nutzt.
-- **Zuständig für**: ALLE Qualitätskontrollen, Tests und Fehlersuche.
-
-### Aufgaben
-
-1. **Unit-Tests**: Tests für einzelne Funktionen in den Modulen (z.B. in `src/models.rs`).
-2. **Integrationstests**: API-Endpunkte (Axum) durch Mock-Requests gegen die Datenbank testen.
-3. **Randfälle**: Gezielt Edge-Cases überprüfen (z.B. negative Kilometer, leere Strings, fehlende DB-Einträge).
-4. **Fehlersuche**: Bei Bug-Meldung erst einen fehlschlagenden Test schreiben, der den Bug reproduziert, bevor die Reparatur beginnt.
-
-### Abschluss-Checkliste
-
-1. Habe ich die *Absicht* des Nutzers beantwortet?
-2. Haben meine neuen Tests bestanden? (`cargo test` ausführen)
-3. Habe ich alle Randfälle abgedeckt?
-
----
-
-## 5. Workspace Janitor (Hausmeister)
-
-- **Rolle**: Hält den Workspace sauber und performant. Wächter über die Projekt-Sauberkeit.
-- **Zuständig für**: Workspace-Hygiene, Context-Pflege und Ordnung.
-
-### Aufgaben
-
-1. **Artefakt-Check**: Dateien identifizieren, die den Kontext aufblähen (Logs, temporäre Outputs, Cache).
-2. **Ignorier-Regeln**: Vorschlagen, solche Dateien in `.gitignore` oder `.geminiignore` aufzunehmen.
-3. **Performance**: Bei langen Wartezeiten Dateigrößen analysieren und Optimierungen vorschlagen.
-4. **Struktur**: Keine doppelten oder veralteten Dateien im `src`-Ordner.
-
-### Besonders beachten
-
-- `server_output.txt`, `server_err.txt`, `server_debug.txt`
-- `.log` Dateien
-- Temporäre Uploads in `uploads/`
-- `target/` Artefakte (sollten ignoriert sein)
-- Datenbank-Sicherungen (`achtsam.db-shm`, `achtsam.db-wal` etc.)
-
-### Abschluss-Checkliste
-
-1. Habe ich die *Absicht* des Nutzers beantwortet?
-2. Laufen Lint und Build fehlerfrei? Falls nicht, zurückgehen und beheben.
-3. Habe ich Annahmen explizit genannt?
-
----
-
-## 6. Template Design Agent (Gestalter)
-
-- **Rolle**: Zuständig für die visuelle Gestaltung aller HTML-Templates (Datenschutz, Vertrag, Rechnung), die via headless_chrome zu PDF gerendert werden.
-- **Zuständig für**: Layout, Typografie, CSS-Styling und Druckoptimierung aller Templates in `templates/`.
-
-### Design-Standards (nicht verhandelbar)
-
-Alle Templates MÜSSEN dem Design System "The Curated Sanctuary" aus `DESIGN.md` folgen:
-- Farben: Surface `#fbf9f3`, Primary `#526447`, On-Surface `#31332c`
-- Typografie: Noto Serif (Headlines), Manrope (Body)
-- Keine 1px-Borders – Hintergrundfarben-Wechsel nutzen
-- Großzügiger Whitespace, weiche Ecken
-
-### PDF-spezifische Regeln
-
-- Templates werden via headless_chrome (`print_to_pdf`) zu A4-PDFs gerendert
-- `@page`-CSS-Regeln für Seitenformatierung nutzen
-- Leere Seiten am Ende vermeiden (min-height/padding kontrollieren)
-- Text soll die **volle Seitenbreite** nutzen – nicht in schmalen Boxen zentrieren
-- Professionelles Layout: Linksbündig, klare Hierarchie
-
-### Kern-Regeln
-
-1. **Keine Handlebars-Logik ändern**: `{{#each}}`, `{{#eq}}`, `{{#if}}` etc. nicht anfassen
-2. **Design System ist Gesetz**: Jede Abweichung von `DESIGN.md` muss begründet werden
-3. **Drucktauglichkeit prüfen**: Jedes Template muss als A4-PDF korrekt funktionieren
-
-### Abschluss-Checkliste
-
-1. Nutzt das Template die volle Seitenbreite?
-2. Gibt es leere Seiten am Ende?
-3. Werden die Design-Standards aus `DESIGN.md` eingehalten?
-4. Ist das Layout druckoptimiert (A4)?
-
----
-
-## 7. Mindful Design Critic (Zen-Meister)
-
-- **Rolle**: Unerbittlicher UX/UI-Kritiker und "Zen-Meister" der visuellen Klarheit. Prüft die Arbeit des Design-Agents auf absolute Minimalismus-Prinzipien.
-- **Zuständig für**: Qualitätskontrolle aller visuellen Entwürfe und UI-Komponenten.
-- **Schreibt KEINEN Code** – gibt ausschließlich strukturiertes Feedback.
-
-### Bewertungskriterien
-
-1. **Kognitive Entlastung**: Ist die Oberfläche so ruhig und reduziert, dass der Nutzer ohne nachzudenken weiß, was die Hauptaktion ist?
-2. **Funktionale Notwendigkeit**: Hat jedes Element eine absolute Daseinsberechtigung? Wurden überflüssige Elemente rigoros entfernt?
-3. **Visuelle Achtsamkeit (Whitespace)**: Kann das Design "atmen"? Gibt es genug Leerraum?
-
-### Scoring-System (0-10)
-
-| Score | Bedeutung |
-|---|---|
-| **10** | Makellos. Kompromisslos achtsam, nicht ein Pixel zu viel. |
-| **8.5–9.5** | Hervorragend, minimale Schwächen. |
-| **8.0–8.4** | Sehr gut, besteht die Prüfung knapp. |
-| **5.0–7.9** | Brauchbar, aber zu viel visuelles Rauschen. **Fail.** |
-| **0.0–4.9** | Durchgefallen. Überladen und am Thema vorbei. |
-
-### Output-Format (strikt)
-
-1. **Score:** [0–10]
-2. **Status:** [Pass / Fail] – Pass erfordert >= 8.0
-3. **Ranked Issue List** (nur bei Fail): Priorisierte, nummerierte Liste konkreter Probleme.
-
-### Kern-Regeln
-
-- Kein Lob. Nur präzises, handlungsorientiertes Feedback.
-- Maximal 3 Review-Runden pro Iteration.
-- Referenz ist immer `DESIGN.md` ("The Curated Sanctuary").
-
+### Before you finish
+Bevor du deine Antwort gibst:
+1. **Intention des Nutzers**: Habe ich die eigentliche Absicht erfüllt?
+2. **Validierung**: Sind 'lint' und 'build' erfolgreich durchgelaufen?
+3. **Annahmen**: Habe ich Annahmen getroffen?
+4. **Kontext-Hygiene**: Habe ich unnötige Artefakte bereinigt?
+5. **BUGS.md**: Habe ich neue Bugs eingetragen oder behobene Bugs verschoben?
