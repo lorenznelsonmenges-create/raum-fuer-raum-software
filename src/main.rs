@@ -1,4 +1,5 @@
 use wendepunkt_software::{models, database, pdf, files};
+use wendepunkt_software::domain::{Euro, RechnungsNummer};
 use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
 use wendepunkt_software::error::AppError;
 
@@ -294,12 +295,12 @@ async fn add_auftrag(State(pool): State<SqlitePool>, session: Session, Json(mut 
     let user: Option<User> = session.get("user").await.map_err(|e| AppError::Internal(e.to_string()))?;
     auftrag.created_by = Some(user.map(|u| u.username).unwrap_or_else(|| "Unbekannt".to_string()));
 
-    if auftrag.stundensatz == 0.0 || auftrag.kilometer_satz == 0.0 {
+    if auftrag.stundensatz.as_cents() == 0 || auftrag.kilometer_satz.as_cents() == 0 {
         let settings = database::get_settings(&pool).await?;
-        if auftrag.stundensatz == 0.0 {
+        if auftrag.stundensatz.as_cents() == 0 {
             auftrag.stundensatz = settings.stundensatz;
         }
-        if auftrag.kilometer_satz == 0.0 {
+        if auftrag.kilometer_satz.as_cents() == 0 {
             auftrag.kilometer_satz = settings.kilometer_satz;
         }
     }
@@ -366,15 +367,16 @@ async fn create_rechnung(State(pool): State<SqlitePool>, session: Session, Path(
     let notizen = database::get_rechnungs_notizen_for_auftrag(&pool, id).await?;
     
     let next_number = database::get_next_rechnung_number(&pool).await?;
-    let re_nr = format!("R{:06}", next_number);
+    let re_nr_str = format!("R{:06}", next_number);
+    let re_nr = RechnungsNummer::try_new(re_nr_str.clone()).unwrap();
     
     // Verzeichnis sicherstellen
     if !std::path::Path::new("uploads/rechnungen").exists() {
         fs::create_dir_all("uploads/rechnungen").map_err(|e| AppError::Internal(e.to_string()))?;
     }
 
-    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(&re_nr), None, Some(&created_by))?;
-    let filename = format!("Rechnung_{}_{}.pdf", re_nr, Local::now().format("%Y%m%d"));
+    let (pdf_content, netto, brutto) = pdf::generate_dynamic_pdf("templates/rechnung.html", &auftrag, &kunde, Some(&einsaetze), Some(&notizen), Some(re_nr.value()), None, Some(&created_by))?;
+    let filename = format!("Rechnung_{}_{}.pdf", re_nr.value(), Local::now().format("%Y%m%d"));
     let filepath = format!("uploads/rechnungen/{}", filename);
     fs::write(&filepath, pdf_content).map_err(|e| AppError::Internal(e.to_string()))?;
     

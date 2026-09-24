@@ -1,4 +1,5 @@
 use wendepunkt_software::pdf::generate_dynamic_pdf;
+use wendepunkt_software::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use wendepunkt_software::models::{Auftrag, Kunde, AuftragStatus};
 
 #[tokio::test]
@@ -8,9 +9,9 @@ async fn test_rechnung_pdf_generation() {
         kunde_id: 1,
         status: AuftragStatus::AnfrageLaeuft,
         beschreibung: "Test Auftrag".to_string(),
-        basis_pauschale: Some(100.0),
-        stundensatz: 45.0,
-        kilometer_satz: 0.5,
+        basis_pauschale: Some(Euro::from_euro_f64(100.0).unwrap()),
+        stundensatz: Euro::from_euro_f64(45.0).unwrap(),
+        kilometer_satz: Euro::from_euro_f64(0.5).unwrap(),
         notizen: "".to_string(),
         ..Default::default()
     };
@@ -40,7 +41,7 @@ async fn test_rechnung_pdf_generation() {
 
     match result {
         Ok((pdf, netto, brutto)) => {
-            println!("PDF generated: {} bytes, netto: {}, brutto: {}", pdf.len(), netto, brutto);
+            println!("PDF generated: {} bytes, netto: {:?}, brutto: {:?}", pdf.len(), netto, brutto);
             assert!(pdf.len() > 0);
         },
         Err(e) => panic!("PDF generation failed: {:?}", e),

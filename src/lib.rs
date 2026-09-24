@@ -1,3 +1,4 @@
+pub mod domain;
 pub mod models;
 pub mod database;
 pub mod error;

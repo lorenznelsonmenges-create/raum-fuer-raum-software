@@ -1,4 +1,5 @@
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool, Row};
+use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings, User};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
@@ -80,8 +81,8 @@ pub async fn get_auftrag_by_id(pool: &SqlitePool, id: i64) -> Result<Auftrag, sq
     };
     Ok(Auftrag {
         id: row.get("id"), kunde_id: row.get("kunde_id"), status,
-        beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
-        stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
+        beschreibung: row.get("beschreibung"), basis_pauschale: row.try_get::<f64, _>("basis_pauschale").ok().map(|v| Euro::from_euro_f64(v).unwrap()),
+        stundensatz: Euro::from_euro_f64(row.get("stundensatz")).unwrap(), kilometer_satz: Euro::from_euro_f64(row.get("kilometer_satz")).unwrap(), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
         einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
         dateien: get_dateien_for_auftrag(pool, id).await?,
         rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
@@ -103,8 +104,8 @@ pub async fn get_all_auftraege(pool: &SqlitePool) -> Result<Vec<Auftrag>, sqlx::
         };
         list.push(Auftrag {
             id, kunde_id: row.get("kunde_id"), status,
-            beschreibung: row.get("beschreibung"), basis_pauschale: row.get("basis_pauschale"),
-            stundensatz: row.get("stundensatz"), kilometer_satz: row.get("kilometer_satz"), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
+            beschreibung: row.get("beschreibung"), basis_pauschale: row.try_get::<f64, _>("basis_pauschale").ok().map(|v| Euro::from_euro_f64(v).unwrap()),
+            stundensatz: Euro::from_euro_f64(row.get("stundensatz")).unwrap(), kilometer_satz: Euro::from_euro_f64(row.get("kilometer_satz")).unwrap(), notizen: row.get("notizen"), created_by: row.try_get("created_by").unwrap_or(None),
             einsaetze: get_einsaetze_for_auftrag(pool, id).await?,
             dateien: get_dateien_for_auftrag(pool, id).await?,
             rechnungen: get_rechnungen_for_auftrag(pool, id).await?,
@@ -120,9 +121,9 @@ pub async fn create_auftrag(pool: &SqlitePool, auftrag: Auftrag) -> Result<i64, 
         .bind(auftrag.kunde_id)
         .bind(status_str)
         .bind(auftrag.beschreibung)
-        .bind(auftrag.basis_pauschale)
-        .bind(auftrag.stundensatz)
-        .bind(auftrag.kilometer_satz)
+        .bind(auftrag.basis_pauschale.map(|e| e.as_f64_for_display()))
+        .bind(auftrag.stundensatz.as_f64_for_display())
+        .bind(auftrag.kilometer_satz.as_f64_for_display())
         .bind(auftrag.notizen)
         .bind(auftrag.created_by)
         .execute(pool).await?;
@@ -131,7 +132,7 @@ pub async fn create_auftrag(pool: &SqlitePool, auftrag: Auftrag) -> Result<i64, 
 
 pub async fn update_auftrag(pool: &SqlitePool, id: i64, auftrag: Auftrag) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE auftraege SET status = ?, beschreibung = ?, basis_pauschale = ?, stundensatz = ?, kilometer_satz = ?, notizen = ? WHERE id = ?")
-        .bind(format!("{:?}", auftrag.status)).bind(auftrag.beschreibung).bind(auftrag.basis_pauschale).bind(auftrag.stundensatz).bind(auftrag.kilometer_satz).bind(auftrag.notizen).bind(id)
+        .bind(format!("{:?}", auftrag.status)).bind(auftrag.beschreibung).bind(auftrag.basis_pauschale.map(|e| e.as_f64_for_display())).bind(auftrag.stundensatz.as_f64_for_display()).bind(auftrag.kilometer_satz.as_f64_for_display()).bind(auftrag.notizen).bind(id)
         .execute(pool).await?;
     Ok(())
 }
@@ -183,13 +184,13 @@ pub async fn delete_auftrag(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Erro
 // --- Einsätze ---
 pub async fn create_einsatz(pool: &SqlitePool, e: Einsatz) -> Result<i64, sqlx::Error> {
     let res = sqlx::query("INSERT INTO einsaetze (auftrag_id, datum, kilometer, stunden, notiz, typ, signatur_pfad) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(e.auftrag_id).bind(e.datum).bind(e.kilometer).bind(e.stunden).bind(e.notiz).bind(e.typ).bind(e.signatur_pfad).execute(pool).await?;
+        .bind(e.auftrag_id).bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.signatur_pfad).execute(pool).await?;
     Ok(res.last_insert_rowid())
 }
 
 pub async fn update_einsatz(pool: &SqlitePool, id: i64, e: Einsatz) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ?, signatur_pfad = ? WHERE id = ?")
-        .bind(e.datum).bind(e.kilometer).bind(e.stunden).bind(e.notiz).bind(e.typ).bind(e.signatur_pfad).bind(id).execute(pool).await?;
+        .bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.signatur_pfad).bind(id).execute(pool).await?;
     Ok(())
 }
 
@@ -202,8 +203,8 @@ pub async fn get_einsaetze_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Re
     let rows = sqlx::query("SELECT id, auftrag_id, datum, kilometer, stunden, notiz, typ, signatur_pfad FROM einsaetze WHERE auftrag_id = ?").bind(auftrag_id).fetch_all(pool).await?;
     Ok(rows.into_iter().map(|row| Einsatz {
         id: row.get("id"), auftrag_id: row.get("auftrag_id"), datum: row.get("datum"),
-        kilometer: row.get("kilometer"), stunden: row.get("stunden"), notiz: row.get("notiz"),
-        typ: row.get("typ"), signatur_pfad: row.get("signatur_pfad")
+        kilometer: Kilometer::try_new(row.get("kilometer")).unwrap(), stunden: Stunden::try_new(row.get("stunden")).unwrap(), notiz: row.get("notiz"),
+        typ: EinsatzTyp::from_str(&row.get::<String, _>("typ")).unwrap(), signatur_pfad: row.get("signatur_pfad")
     }).collect())
 }
 
@@ -231,15 +232,15 @@ pub async fn delete_datei(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error>
 // --- Rechnungen ---
 pub async fn create_rechnung(pool: &SqlitePool, r: Rechnung) -> Result<i64, sqlx::Error> {
     let res = sqlx::query("INSERT INTO rechnungen (auftrag_id, rechnungs_nummer, datum, gesamt_netto, gesamt_brutto, pdf_pfad, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(r.auftrag_id).bind(r.rechnungs_nummer).bind(r.datum).bind(r.gesamt_netto).bind(r.gesamt_brutto).bind(r.pdf_pfad).bind(r.status).execute(pool).await?;
+        .bind(r.auftrag_id).bind(r.rechnungs_nummer.value()).bind(r.datum).bind(r.gesamt_netto.as_f64_for_display()).bind(r.gesamt_brutto.as_f64_for_display()).bind(r.pdf_pfad).bind(r.status).execute(pool).await?;
     Ok(res.last_insert_rowid())
 }
 
 pub async fn get_rechnungen_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Result<Vec<Rechnung>, sqlx::Error> {
     let rows = sqlx::query("SELECT id, auftrag_id, rechnungs_nummer, datum, gesamt_netto, gesamt_brutto, pdf_pfad, status FROM rechnungen WHERE auftrag_id = ?").bind(auftrag_id).fetch_all(pool).await?;
     Ok(rows.into_iter().map(|row| Rechnung {
-        id: row.get("id"), auftrag_id: row.get("auftrag_id"), rechnungs_nummer: row.get("rechnungs_nummer"),
-        datum: row.get("datum"), gesamt_netto: row.get("gesamt_netto"), gesamt_brutto: row.get("gesamt_brutto"),
+        id: row.get("id"), auftrag_id: row.get("auftrag_id"), rechnungs_nummer: RechnungsNummer::try_new(row.get("rechnungs_nummer")).unwrap(),
+        datum: row.get("datum"), gesamt_netto: Euro::from_euro_f64(row.get("gesamt_netto")).unwrap(), gesamt_brutto: Euro::from_euro_f64(row.get("gesamt_brutto")).unwrap(),
         pdf_pfad: row.get("pdf_pfad"), status: row.get("status")
     }).collect())
 }
@@ -287,15 +288,15 @@ pub async fn get_settings(pool: &SqlitePool) -> Result<Settings, sqlx::Error> {
     let row = sqlx::query("SELECT id, stundensatz, kilometer_satz FROM einstellungen WHERE id = 1").fetch_one(pool).await?;
     Ok(Settings {
         id: row.get("id"),
-        stundensatz: row.get("stundensatz"),
-        kilometer_satz: row.get("kilometer_satz"),
+        stundensatz: Euro::from_euro_f64(row.get("stundensatz")).unwrap(),
+        kilometer_satz: Euro::from_euro_f64(row.get("kilometer_satz")).unwrap(),
     })
 }
 
 pub async fn update_settings(pool: &SqlitePool, settings: Settings) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE einstellungen SET stundensatz = ?, kilometer_satz = ? WHERE id = 1")
-        .bind(settings.stundensatz)
-        .bind(settings.kilometer_satz)
+        .bind(settings.stundensatz.as_f64_for_display())
+        .bind(settings.kilometer_satz.as_f64_for_display())
         .execute(pool).await?;
     Ok(())
 }

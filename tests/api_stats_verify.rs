@@ -1,4 +1,5 @@
 use wendepunkt_software::database;
+use wendepunkt_software::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use wendepunkt_software::models::{Kunde, Auftrag, AuftragStatus};
 use sqlx::SqlitePool;
 

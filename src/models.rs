@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-
+use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum AuftragStatus {
     #[default]
@@ -36,11 +36,11 @@ pub struct Auftrag {
     #[serde(default)]
     pub beschreibung: String,
     #[serde(default)]
-    pub basis_pauschale: Option<f64>,
-    #[serde(default = "default_stundensatz")]
-    pub stundensatz: f64,
-    #[serde(default = "default_kilometer_satz")]
-    pub kilometer_satz: f64,
+    pub basis_pauschale: Option<Euro>,
+    #[serde(default)]
+    pub stundensatz: Euro,
+    #[serde(default)]
+    pub kilometer_satz: Euro,
     #[serde(default)]
     pub notizen: String,
     pub created_by: Option<String>,
@@ -62,8 +62,8 @@ impl Default for Auftrag {
             status: AuftragStatus::default(),
             beschreibung: String::new(),
             basis_pauschale: None,
-            stundensatz: default_stundensatz(),
-            kilometer_satz: default_kilometer_satz(),
+            stundensatz: Euro::default(),
+            kilometer_satz: Euro::default(),
             notizen: String::new(),
             created_by: None,
             einsaetze: Vec::new(),
@@ -74,19 +74,16 @@ impl Default for Auftrag {
     }
 }
 
-fn default_stundensatz() -> f64 { 0.0 }
-fn default_kilometer_satz() -> f64 { 0.0 }
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Einsatz {
     #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
     pub datum: String,
-    pub kilometer: f64,
-    pub stunden: f64,
+    pub kilometer: Kilometer,
+    pub stunden: Stunden,
     pub notiz: String,
-    pub typ: String, // ARBEIT_VOR_ORT, ARBEIT_VORBEREITUNG oder KILOMETER
+    pub typ: EinsatzTyp,
     pub signatur_pfad: Option<String>,
 }
 
@@ -107,10 +104,10 @@ pub struct Rechnung {
     #[serde(default)]
     pub id: i64,
     pub auftrag_id: i64,
-    pub rechnungs_nummer: String,
+    pub rechnungs_nummer: RechnungsNummer,
     pub datum: String,
-    pub gesamt_netto: f64,
-    pub gesamt_brutto: f64,
+    pub gesamt_netto: Euro,
+    pub gesamt_brutto: Euro,
     pub status: String,
     pub pdf_pfad: String,
 }
@@ -137,16 +134,16 @@ pub struct DashboardStats {
 pub struct Settings {
     #[serde(default)]
     pub id: i64,
-    pub stundensatz: f64,
-    pub kilometer_satz: f64,
+    pub stundensatz: Euro,
+    pub kilometer_satz: Euro,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             id: 1,
-            stundensatz: 45.0,
-            kilometer_satz: 0.5,
+            stundensatz: Euro::from_cents(4500).unwrap(),
+            kilometer_satz: Euro::from_cents(50).unwrap(),
         }
     }
 }

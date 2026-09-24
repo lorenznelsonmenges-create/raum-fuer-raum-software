@@ -1,4 +1,5 @@
 use wendepunkt_software::database;
+use wendepunkt_software::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use wendepunkt_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
 use sqlx::SqlitePool;
 
@@ -29,21 +30,21 @@ async fn test_duplicate_rechnung_number_fails() {
         kunde_id,
         status: AuftragStatus::AnfrageLaeuft,
         beschreibung: "Test Auftrag".into(),
-        stundensatz: 45.0,
-        kilometer_satz: 0.5,
+        stundensatz: Euro::from_euro_f64(45.0).unwrap(),
+        kilometer_satz: Euro::from_euro_f64(0.5).unwrap(),
         ..Default::default()
     }).await.unwrap();
     
-    let re_nr = format!("RE-2024-{}", auftrag_id);
+    let re_nr = format!("R123456");
     
     // 3. Erste Rechnung erstellen
     let res1 = database::create_rechnung(&pool, Rechnung {
         id: 0,
         auftrag_id,
-        rechnungs_nummer: re_nr.clone(),
+        rechnungs_nummer: RechnungsNummer::try_new(re_nr.clone()).unwrap(),
         datum: "2024-04-10".into(),
-        gesamt_netto: 100.0,
-        gesamt_brutto: 119.0,
+        gesamt_netto: Euro::from_euro_f64(100.0).unwrap(),
+        gesamt_brutto: Euro::from_euro_f64(119.0).unwrap(),
         pdf_pfad: "path1.pdf".into(),
         status: "Offen".into(),
     }).await;
@@ -54,10 +55,10 @@ async fn test_duplicate_rechnung_number_fails() {
     let res2 = database::create_rechnung(&pool, Rechnung {
         id: 0,
         auftrag_id,
-        rechnungs_nummer: re_nr.clone(), // Gleiche Nummer!
+        rechnungs_nummer: RechnungsNummer::try_new(re_nr.clone()).unwrap(), // Gleiche Nummer!
         datum: "2024-04-10".into(),
-        gesamt_netto: 200.0,
-        gesamt_brutto: 238.0,
+        gesamt_netto: Euro::from_euro_f64(200.0).unwrap(),
+        gesamt_brutto: Euro::from_euro_f64(238.0).unwrap(),
         pdf_pfad: "path2.pdf".into(),
         status: "Offen".into(),
     }).await;

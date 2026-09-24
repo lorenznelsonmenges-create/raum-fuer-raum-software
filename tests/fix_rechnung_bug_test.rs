@@ -1,4 +1,5 @@
 use wendepunkt_software::database;
+use wendepunkt_software::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use wendepunkt_software::models::{Kunde, Auftrag, AuftragStatus, Rechnung};
 use sqlx::SqlitePool;
 use chrono::Local;
@@ -27,17 +28,17 @@ async fn test_multiple_rechnungen_for_one_auftrag_now_works() {
         kunde_id,
         status: AuftragStatus::AnfrageLaeuft,
         beschreibung: "Test Auftrag".into(),
-        stundensatz: 45.0,
-        kilometer_satz: 0.5,
+        stundensatz: Euro::from_euro_f64(45.0).unwrap(),
+        kilometer_satz: Euro::from_euro_f64(0.5).unwrap(),
         ..Default::default()
     }).await.unwrap();
     
     // Simulations-Logik für RE-Nummer aus main.rs
     let get_re_nr = |existing_count: usize, auftrag_id: i64| {
         if existing_count == 0 {
-            format!("RE-{}-{}", Local::now().format("%Y"), auftrag_id)
+            format!("R123{:03}", existing_count + 1)
         } else {
-            format!("RE-{}-{}-{}", Local::now().format("%Y"), auftrag_id, existing_count + 1)
+            format!("R123{:03}", existing_count + 1)
         }
     };
 
@@ -46,10 +47,10 @@ async fn test_multiple_rechnungen_for_one_auftrag_now_works() {
     database::create_rechnung(&pool, Rechnung {
         id: 0,
         auftrag_id,
-        rechnungs_nummer: re_nr1.clone(),
+        rechnungs_nummer: RechnungsNummer::try_new(re_nr1.clone()).unwrap(),
         datum: "2024-04-10".into(),
-        gesamt_netto: 100.0,
-        gesamt_brutto: 119.0,
+        gesamt_netto: Euro::from_euro_f64(100.0).unwrap(),
+        gesamt_brutto: Euro::from_euro_f64(119.0).unwrap(),
         pdf_pfad: "path1.pdf".into(),
         status: "Offen".into(),
     }).await.expect("Erste Rechnung sollte funktionieren");
@@ -59,15 +60,15 @@ async fn test_multiple_rechnungen_for_one_auftrag_now_works() {
     let re_nr2 = get_re_nr(existing.len(), auftrag_id);
     
     assert_ne!(re_nr1, re_nr2, "Rechnungsnummern MÜSSEN unterschiedlich sein");
-    assert!(re_nr2.ends_with("-2"), "Zweite Rechnungsnummer sollte auf -2 enden");
+    assert!(re_nr2.ends_with("002"), "Zweite Rechnungsnummer sollte auf -2 enden");
 
     let res2 = database::create_rechnung(&pool, Rechnung {
         id: 0,
         auftrag_id,
-        rechnungs_nummer: re_nr2,
+        rechnungs_nummer: RechnungsNummer::try_new(re_nr2).unwrap(),
         datum: "2024-04-10".into(),
-        gesamt_netto: 200.0,
-        gesamt_brutto: 238.0,
+        gesamt_netto: Euro::from_euro_f64(200.0).unwrap(),
+        gesamt_brutto: Euro::from_euro_f64(238.0).unwrap(),
         pdf_pfad: "path2.pdf".into(),
         status: "Offen".into(),
     }).await;

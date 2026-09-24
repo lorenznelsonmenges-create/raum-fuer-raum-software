@@ -3,6 +3,7 @@ use serde_json::json;
 use headless_chrome::{Browser, LaunchOptions};
 use crate::models::{Auftrag, Kunde, Einsatz, RechnungNotiz};
 use crate::error::AppError;
+use crate::domain::{Euro, EinsatzTyp};
 use chrono::Local;
 use std::fs;
 
@@ -17,7 +18,7 @@ pub fn generate_dynamic_pdf(
     rechnungs_nummer: Option<&str>,
     signature_path: Option<&str>,
     created_by: Option<&str>,
-) -> Result<(Vec<u8>, f64, f64), AppError> {
+) -> Result<(Vec<u8>, Euro, Euro), AppError> {
     let mut hb = Handlebars::new();
     
     // Helper für Preisberechnung oder Bedingungen
@@ -55,7 +56,7 @@ pub fn generate_dynamic_pdf(
         .map_err(|e| AppError::Internal(format!("Konnte Vorlage '{}' nicht lesen: {}", template_path, e)))?;
 
     // Berechnungen für Rechnung (falls vorhanden)
-    let mut gesamt_netto_einsaetze = 0.0;
+    let mut gesamt_netto_einsaetze = Euro::default();
     let mut einsaetze_data = Vec::new();
     
     if let Some(ee) = einsaetze {
@@ -64,57 +65,52 @@ pub fn generate_dynamic_pdf(
         let mut sum_kilometer = 0.0;
 
         for e in ee {
-            let typ_upper = e.typ.to_uppercase();
-            match typ_upper.as_str() {
-                "ARBEIT_VOR_ORT" => sum_stunden_vor_ort += e.stunden,
-                "ARBEIT_VORBEREITUNG" => sum_stunden_vorbereitung += e.stunden,
-                "KILOMETER" => sum_kilometer += e.kilometer,
-                // Fallback für alte Daten
-                "ARBEIT" => sum_stunden_vor_ort += e.stunden,
-                "FAHRT" => sum_kilometer += e.kilometer,
-                _ => {}
+            match e.typ {
+                EinsatzTyp::ArbeitVorOrt => sum_stunden_vor_ort += e.stunden.value(),
+                EinsatzTyp::ArbeitVorbereitung => sum_stunden_vorbereitung += e.stunden.value(),
+                EinsatzTyp::KilometerFahrt => sum_kilometer += e.kilometer.value(),
             }
         }
 
         if sum_stunden_vor_ort > 0.0 {
-            let summe = sum_stunden_vor_ort * auftrag.stundensatz;
-            gesamt_netto_einsaetze += summe;
+            let summe = auftrag.stundensatz.mul_rate(sum_stunden_vor_ort);
+            gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
                 "typ": "ARBEIT_VOR_ORT",
                 "stunden": sum_stunden_vor_ort,
                 "kilometer": 0.0,
                 "notiz": "",
-                "einzelpreis": format!("{:.2}", auftrag.stundensatz),
-                "zeilen_summe": format!("{:.2}", summe)
+                "einzelpreis": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),
+                "zeilen_summe": format!("{:.2}", summe.as_f64_for_display())
             }));
         }
 
         if sum_stunden_vorbereitung > 0.0 {
-            let summe = sum_stunden_vorbereitung * auftrag.stundensatz;
-            gesamt_netto_einsaetze += summe;
+            let summe = auftrag.stundensatz.mul_rate(sum_stunden_vorbereitung);
+            gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
                 "typ": "ARBEIT_VORBEREITUNG",
                 "stunden": sum_stunden_vorbereitung,
                 "kilometer": 0.0,
                 "notiz": "",
-                "einzelpreis": format!("{:.2}", auftrag.stundensatz),
-                "zeilen_summe": format!("{:.2}", summe)
+                "einzelpreis": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),
+                "zeilen_summe": format!("{:.2}", summe.as_f64_for_display())
             }));
         }
 
         if sum_kilometer > 0.0 {
-            let summe = sum_kilometer * auftrag.kilometer_satz;
-            gesamt_netto_einsaetze += summe;
+            let summe = auftrag.kilometer_satz.mul_rate(sum_kilometer);
+            gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
                 "typ": "KILOMETER",
                 "stunden": 0.0,
                 "kilometer": sum_kilometer,
                 "notiz": "",
-                "einzelpreis": format!("{:.2}", auftrag.kilometer_satz),
-                "zeilen_summe": format!("{:.2}", summe)
+                "einzelpreis": format!("{:.2}", auftrag.kilometer_satz.as_f64_for_display()),
+                "zeilen_summe": format!("{:.2}", summe.as_f64_for_display())
             }));
         }
     }
@@ -130,10 +126,10 @@ pub fn generate_dynamic_pdf(
         }
     }
     
-    let basis = auftrag.basis_pauschale.unwrap_or(0.0);
-    let netto_total = gesamt_netto_einsaetze + basis;
-    let mwst = netto_total * 0.19;
-    let brutto_total = netto_total + mwst;
+    let basis = auftrag.basis_pauschale.unwrap_or(Euro::default());
+    let netto_total = gesamt_netto_einsaetze.add(&basis);
+    let mwst = netto_total.vat_19_percent();
+    let brutto_total = netto_total.add(&mwst);
 
     let data = json!({
         "kunde_name": format!("{} {}", kunde.vorname, kunde.nachname),
@@ -147,13 +143,13 @@ pub fn generate_dynamic_pdf(
         "auftrag_id": format!("A{:06}", auftrag.id),
         "auftrag_beschreibung": auftrag.beschreibung,
         "datum_heute": Local::now().format("%d.%m.%Y").to_string(),
-        "basis_pauschale": format!("{:.2}", basis),
+        "basis_pauschale": format!("{:.2}", basis.as_f64_for_display()),
         "rechnungs_nummer": rechnungs_nummer.unwrap_or(""),
         "einsaetze": einsaetze_data,
         "rechnungs_notizen": notizen_data,
-        "gesamt_netto": format!("{:.2}", netto_total),
-        "mwst": format!("{:.2}", mwst),
-        "gesamt_brutto": format!("{:.2}", brutto_total),
+        "gesamt_netto": format!("{:.2}", netto_total.as_f64_for_display()),
+        "mwst": format!("{:.2}", mwst.as_f64_for_display()),
+        "gesamt_brutto": format!("{:.2}", brutto_total.as_f64_for_display()),
         "signatur_pfad": signature_path.unwrap_or(""),
         "created_by": created_by.unwrap_or("Unbekannt")
     });
