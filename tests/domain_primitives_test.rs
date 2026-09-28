@@ -30,10 +30,21 @@ fn test_kilometer_invariants() {
 
 #[test]
 fn test_einsatz_typ_parsing() {
+    assert_eq!(EinsatzTyp::from_str("DIENSTLEISTUNG").unwrap(), EinsatzTyp::Dienstleistung);
     assert_eq!(EinsatzTyp::from_str("ARBEIT_VOR_ORT").unwrap(), EinsatzTyp::ArbeitVorOrt);
     assert_eq!(EinsatzTyp::from_str("ARBEIT").unwrap(), EinsatzTyp::ArbeitVorOrt);
+    assert_eq!(EinsatzTyp::from_str("NACHBEREITUNG").unwrap(), EinsatzTyp::Nachbereitung);
+    assert_eq!(EinsatzTyp::from_str("ARBEIT_VORBEREITUNG").unwrap(), EinsatzTyp::Nachbereitung);
     assert_eq!(EinsatzTyp::from_str("KILOMETER").unwrap(), EinsatzTyp::KilometerFahrt);
     assert!(EinsatzTyp::from_str("INVALID").is_err());
+
+    // Test Serde JSON serialization
+    let json = serde_json::to_string(&EinsatzTyp::Dienstleistung).unwrap();
+    assert_eq!(json, "\"DIENSTLEISTUNG\"");
+    let deserialized: EinsatzTyp = serde_json::from_str("\"DIENSTLEISTUNG\"").unwrap();
+    assert_eq!(deserialized, EinsatzTyp::Dienstleistung);
+    let deserialized_old: EinsatzTyp = serde_json::from_str("\"ARBEIT_VOR_ORT\"").unwrap();
+    assert_eq!(deserialized_old, EinsatzTyp::Dienstleistung);
 }
 
 #[test]

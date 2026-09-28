@@ -60,25 +60,25 @@ pub fn generate_dynamic_pdf(
     let mut einsaetze_data = Vec::new();
     
     if let Some(ee) = einsaetze {
-        let mut sum_stunden_vor_ort = 0.0;
-        let mut sum_stunden_vorbereitung = 0.0;
+        let mut sum_stunden_dienstleistung = 0.0;
+        let mut sum_stunden_nachbereitung = 0.0;
         let mut sum_kilometer = 0.0;
 
         for e in ee {
             match e.typ {
-                EinsatzTyp::ArbeitVorOrt => sum_stunden_vor_ort += e.stunden.value(),
-                EinsatzTyp::ArbeitVorbereitung => sum_stunden_vorbereitung += e.stunden.value(),
+                EinsatzTyp::Dienstleistung => sum_stunden_dienstleistung += e.stunden.value(),
+                EinsatzTyp::Nachbereitung => sum_stunden_nachbereitung += e.stunden.value(),
                 EinsatzTyp::KilometerFahrt => sum_kilometer += e.kilometer.value(),
             }
         }
 
-        if sum_stunden_vor_ort > 0.0 {
-            let summe = auftrag.stundensatz.mul_rate(sum_stunden_vor_ort);
+        if sum_stunden_dienstleistung > 0.0 {
+            let summe = auftrag.stundensatz.mul_rate(sum_stunden_dienstleistung);
             gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
-                "typ": "ARBEIT_VOR_ORT",
-                "stunden": sum_stunden_vor_ort,
+                "typ": "DIENSTLEISTUNG",
+                "stunden": (sum_stunden_dienstleistung * 100.0).round() / 100.0,
                 "kilometer": 0.0,
                 "notiz": "",
                 "einzelpreis": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),
@@ -86,13 +86,13 @@ pub fn generate_dynamic_pdf(
             }));
         }
 
-        if sum_stunden_vorbereitung > 0.0 {
-            let summe = auftrag.stundensatz.mul_rate(sum_stunden_vorbereitung);
+        if sum_stunden_nachbereitung > 0.0 {
+            let summe = auftrag.stundensatz.mul_rate(sum_stunden_nachbereitung);
             gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
-                "typ": "ARBEIT_VORBEREITUNG",
-                "stunden": sum_stunden_vorbereitung,
+                "typ": "NACHBEREITUNG",
+                "stunden": (sum_stunden_nachbereitung * 100.0).round() / 100.0,
                 "kilometer": 0.0,
                 "notiz": "",
                 "einzelpreis": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),

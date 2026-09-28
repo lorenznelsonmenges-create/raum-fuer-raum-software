@@ -208,9 +208,11 @@
             <tr>
                 <td>
                     <strong>
-                        {{#eq typ "ARBEIT_VOR_ORT"}}Arbeitszeit vor Ort
-                        {{else}}{{#eq typ "ARBEIT_VORBEREITUNG"}}Vor- &amp; Nachbereitung
-                        {{else}}Gefahrene Kilometer{{/eq}}{{/eq}}
+                        {{#eq typ "DIENSTLEISTUNG"}}Dienstleistung
+                        {{else}}{{#eq typ "ARBEIT_VOR_ORT"}}Dienstleistung
+                        {{else}}{{#eq typ "NACHBEREITUNG"}}Nachbereitung
+                        {{else}}{{#eq typ "ARBEIT_VORBEREITUNG"}}Nachbereitung
+                        {{else}}Gefahrene Kilometer{{/eq}}{{/eq}}{{/eq}}{{/eq}}
                     </strong>
                 </td>
                 <td class="right-align">

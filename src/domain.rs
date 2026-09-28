@@ -1,5 +1,4 @@
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Euro(i64);
@@ -153,24 +152,30 @@ impl<'de> Deserialize<'de> for Kilometer {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EinsatzTyp {
-    ArbeitVorOrt,
-    ArbeitVorbereitung,
+    Dienstleistung,
+    Nachbereitung,
     KilometerFahrt,
+}
+
+#[allow(non_upper_case_globals)]
+impl EinsatzTyp {
+    pub const ArbeitVorOrt: Self = Self::Dienstleistung;
+    pub const ArbeitVorbereitung: Self = Self::Nachbereitung;
 }
 
 impl Default for EinsatzTyp {
     fn default() -> Self {
-        Self::ArbeitVorOrt
+        Self::Dienstleistung
     }
 }
 
 impl ToString for EinsatzTyp {
     fn to_string(&self) -> String {
         match self {
-            Self::ArbeitVorOrt => "ARBEIT_VOR_ORT".to_string(),
-            Self::ArbeitVorbereitung => "ARBEIT_VORBEREITUNG".to_string(),
+            Self::Dienstleistung => "DIENSTLEISTUNG".to_string(),
+            Self::Nachbereitung => "NACHBEREITUNG".to_string(),
             Self::KilometerFahrt => "KILOMETER".to_string(),
         }
     }
@@ -179,11 +184,26 @@ impl ToString for EinsatzTyp {
 impl EinsatzTyp {
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s.to_uppercase().as_str() {
-            "ARBEIT_VOR_ORT" | "ARBEIT" => Ok(Self::ArbeitVorOrt),
-            "ARBEIT_VORBEREITUNG" => Ok(Self::ArbeitVorbereitung),
-            "KILOMETER" | "FAHRT" => Ok(Self::KilometerFahrt),
+            "DIENSTLEISTUNG" | "ARBEIT_VOR_ORT" | "ARBEIT" => Ok(Self::Dienstleistung),
+            "NACHBEREITUNG" | "ARBEIT_VORBEREITUNG" | "VORBEREITUNG" => Ok(Self::Nachbereitung),
+            "KILOMETER" | "FAHRT" | "KILOMETERFAHRT" => Ok(Self::KilometerFahrt),
             _ => Err("Ungültiger EinsatzTyp".into()),
         }
+    }
+}
+
+impl Serialize for EinsatzTyp {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for EinsatzTyp {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: Deserializer<'de> {
+        let s = String::deserialize(deserializer)?;
+        EinsatzTyp::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 

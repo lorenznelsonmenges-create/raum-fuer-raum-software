@@ -183,14 +183,14 @@ pub async fn delete_auftrag(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Erro
 
 // --- Einsätze ---
 pub async fn create_einsatz(pool: &SqlitePool, e: Einsatz) -> Result<i64, sqlx::Error> {
-    let res = sqlx::query("INSERT INTO einsaetze (auftrag_id, datum, kilometer, stunden, notiz, typ, signatur_pfad) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(e.auftrag_id).bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.signatur_pfad).execute(pool).await?;
+    let res = sqlx::query("INSERT INTO einsaetze (auftrag_id, datum, kilometer, stunden, notiz, typ, unterkategorie, signatur_pfad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(e.auftrag_id).bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.unterkategorie).bind(e.signatur_pfad).execute(pool).await?;
     Ok(res.last_insert_rowid())
 }
 
 pub async fn update_einsatz(pool: &SqlitePool, id: i64, e: Einsatz) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ?, signatur_pfad = ? WHERE id = ?")
-        .bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.signatur_pfad).bind(id).execute(pool).await?;
+    sqlx::query("UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ?, unterkategorie = ?, signatur_pfad = ? WHERE id = ?")
+        .bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.unterkategorie).bind(e.signatur_pfad).bind(id).execute(pool).await?;
     Ok(())
 }
 
@@ -200,11 +200,14 @@ pub async fn delete_einsatz(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Erro
 }
 
 pub async fn get_einsaetze_for_auftrag(pool: &SqlitePool, auftrag_id: i64) -> Result<Vec<Einsatz>, sqlx::Error> {
-    let rows = sqlx::query("SELECT id, auftrag_id, datum, kilometer, stunden, notiz, typ, signatur_pfad FROM einsaetze WHERE auftrag_id = ?").bind(auftrag_id).fetch_all(pool).await?;
+    let rows = sqlx::query("SELECT id, auftrag_id, datum, kilometer, stunden, notiz, typ, unterkategorie, signatur_pfad FROM einsaetze WHERE auftrag_id = ?").bind(auftrag_id).fetch_all(pool).await?;
     Ok(rows.into_iter().map(|row| Einsatz {
         id: row.get("id"), auftrag_id: row.get("auftrag_id"), datum: row.get("datum"),
-        kilometer: Kilometer::try_new(row.get("kilometer")).unwrap(), stunden: Stunden::try_new(row.get("stunden")).unwrap(), notiz: row.get("notiz"),
-        typ: EinsatzTyp::from_str(&row.get::<String, _>("typ")).unwrap(), signatur_pfad: row.get("signatur_pfad")
+        kilometer: Kilometer::try_new(row.get("kilometer")).unwrap(), stunden: Stunden::try_new(row.get("stunden")).unwrap(),
+        notiz: row.get::<Option<String>, _>("notiz").unwrap_or_default(),
+        typ: EinsatzTyp::from_str(&row.get::<String, _>("typ")).unwrap(),
+        unterkategorie: row.get("unterkategorie"),
+        signatur_pfad: row.get("signatur_pfad")
     }).collect())
 }
 

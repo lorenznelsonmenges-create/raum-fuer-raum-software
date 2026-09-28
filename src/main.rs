@@ -1,5 +1,5 @@
 use wendepunkt_software::{models, database, pdf, files};
-use wendepunkt_software::domain::{Euro, RechnungsNummer};
+use wendepunkt_software::domain::RechnungsNummer;
 use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
 use wendepunkt_software::error::AppError;
 

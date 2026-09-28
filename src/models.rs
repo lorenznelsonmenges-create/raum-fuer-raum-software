@@ -84,6 +84,8 @@ pub struct Einsatz {
     pub stunden: Stunden,
     pub notiz: String,
     pub typ: EinsatzTyp,
+    #[serde(default)]
+    pub unterkategorie: Option<String>,
     pub signatur_pfad: Option<String>,
 }
 
