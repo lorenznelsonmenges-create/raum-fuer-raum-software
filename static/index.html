@@ -346,10 +346,7 @@
                     <!-- Dienstleistung -->
                     <div class="bg-white p-6 md:p-8 rounded-3xl border border-surface-low shadow-sm">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
-                            <div>
-                                <h2 class="font-headline text-2xl text-primary font-bold">Dienstleistung</h2>
-                                <p class="text-xs opacity-50 mt-0.5">Praktische Unterstützung, Beratung, Mediation</p>
-                            </div>
+                            <h2 class="font-headline text-2xl text-primary font-bold">Dienstleistung</h2>
                             <button @click="openWorkModal('DIENSTLEISTUNG')" class="bg-primary hover:bg-primary-dim text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5">
                                 <span class="material-icons-outlined text-sm">add</span> Std.
                             </button>
@@ -364,8 +361,11 @@
                                         </div>
                                         <div class="text-xs opacity-60 italic" x-show="e.notiz" x-text="e.notiz"></div>
                                     </div>
-                                    <div class="flex items-center gap-4">
-                                        <div class="font-headline text-xl text-primary font-bold" x-text="formatStunden(e.stunden) + ' h'"></div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="font-headline text-xl text-primary font-bold mr-2" x-text="formatStunden(e.stunden) + ' h'"></div>
+                                        <button @click="editEinsatz(e)" class="p-2.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" title="Bearbeiten">
+                                            <span class="material-icons-outlined text-lg">edit</span>
+                                        </button>
                                         <button @click="deleteEinsatz(e.id)" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Löschen">
                                             <span class="material-icons-outlined text-lg">delete</span>
                                         </button>
@@ -381,10 +381,7 @@
                     <!-- Nachbereitung -->
                     <div class="bg-white p-6 md:p-8 rounded-3xl border border-surface-low shadow-sm">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
-                            <div>
-                                <h2 class="font-headline text-2xl text-primary font-bold">Nachbereitung</h2>
-                                <p class="text-xs opacity-50 mt-0.5">Auswertung, Verteilung</p>
-                            </div>
+                            <h2 class="font-headline text-2xl text-primary font-bold">Nachbereitung</h2>
                             <button @click="openWorkModal('NACHBEREITUNG')" class="bg-primary hover:bg-primary-dim text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5">
                                 <span class="material-icons-outlined text-sm">add</span> Std.
                             </button>
@@ -399,8 +396,11 @@
                                         </div>
                                         <div class="text-xs opacity-60 italic" x-show="e.notiz" x-text="e.notiz"></div>
                                     </div>
-                                    <div class="flex items-center gap-4">
-                                        <div class="font-headline text-xl text-primary font-bold" x-text="formatStunden(e.stunden) + ' h'"></div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="font-headline text-xl text-primary font-bold mr-2" x-text="formatStunden(e.stunden) + ' h'"></div>
+                                        <button @click="editEinsatz(e)" class="p-2.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" title="Bearbeiten">
+                                            <span class="material-icons-outlined text-lg">edit</span>
+                                        </button>
                                         <button @click="deleteEinsatz(e.id)" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Löschen">
                                             <span class="material-icons-outlined text-lg">delete</span>
                                         </button>
@@ -416,10 +416,7 @@
                     <!-- Kilometer -->
                     <div class="bg-white p-6 md:p-8 rounded-3xl border border-surface-low shadow-sm">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
-                            <div>
-                                <h2 class="font-headline text-2xl text-primary font-bold">Kilometer</h2>
-                                <p class="text-xs opacity-50 mt-0.5">Fahrtstrecken</p>
-                            </div>
+                            <h2 class="font-headline text-2xl text-primary font-bold">Kilometer</h2>
                             <button @click="openWorkModal('KILOMETER')" class="bg-primary hover:bg-primary-dim text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5">
                                 <span class="material-icons-outlined text-sm">add</span> km
                             </button>
@@ -431,8 +428,11 @@
                                         <div class="font-bold text-sm" x-text="formatDate(e.datum)"></div>
                                         <div class="text-xs opacity-60 italic" x-show="e.notiz" x-text="e.notiz"></div>
                                     </div>
-                                    <div class="flex items-center gap-4">
-                                        <div class="font-headline text-xl text-primary font-bold" x-text="formatStunden(e.kilometer) + ' km'"></div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="font-headline text-xl text-primary font-bold mr-2" x-text="formatStunden(e.kilometer) + ' km'"></div>
+                                        <button @click="editEinsatz(e)" class="p-2.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" title="Bearbeiten">
+                                            <span class="material-icons-outlined text-lg">edit</span>
+                                        </button>
                                         <button @click="deleteEinsatz(e.id)" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Löschen">
                                             <span class="material-icons-outlined text-lg">delete</span>
                                         </button>
@@ -448,10 +448,7 @@
                     <!-- Pauschale -->
                     <div class="bg-white p-6 md:p-8 rounded-3xl border border-surface-low shadow-sm">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
-                            <div>
-                                <h2 class="font-headline text-2xl text-primary font-bold">Pauschale</h2>
-                                <p class="text-xs opacity-50 mt-0.5">Feste Auftragspauschale</p>
-                            </div>
+                            <h2 class="font-headline text-2xl text-primary font-bold">Pauschale</h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div>
@@ -602,10 +599,20 @@
                 <span class="material-icons-outlined text-3xl" x-text="workModalType === 'KILOMETER' ? 'directions_car' : 'schedule'"></span>
             </div>
             
-            <h2 class="font-headline text-2xl md:text-3xl mb-2 text-primary font-bold" x-text="['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT'].includes(workModalType) ? 'Dienstleistung' : ['NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(workModalType) ? 'Nachbereitung' : 'Kilometer erfassen'"></h2>
+            <h2 class="font-headline text-2xl md:text-3xl mb-2 text-primary font-bold" x-text="workModalEinsatzId ? 'Eintrag bearbeiten' : (['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT'].includes(workModalType) ? 'Dienstleistung' : ['NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(workModalType) ? 'Nachbereitung' : 'Kilometer erfassen')"></h2>
             <p class="text-xs opacity-50 mb-6 leading-relaxed" x-text="workModalType === 'KILOMETER' ? 'Erfassen Sie die gefahrenen Kilometer.' : 'Erfassen Sie die geleisteten Stunden.'"></p>
             
             <form @submit.prevent="submitWork()" class="flex flex-col gap-4 text-left">
+                <!-- Kategorie Auswahl bei Bearbeiten -->
+                <div x-show="workModalEinsatzId">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Kategorie</label>
+                    <select x-model="workModalType" @change="onWorkModalTypeChange()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary shadow-inner focus:ring-1 ring-primary/20 transition-all border-none">
+                        <option value="DIENSTLEISTUNG">Dienstleistung</option>
+                        <option value="NACHBEREITUNG">Nachbereitung</option>
+                        <option value="KILOMETER">Kilometer</option>
+                    </select>
+                </div>
+
                 <!-- Dropdown Klassifizierung bei Dienstleistung -->
                 <div x-show="['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT'].includes(workModalType)">
                     <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Klassifizierung</label>
@@ -641,7 +648,7 @@
                     <input type="text" x-model="workModalNotiz" placeholder="Optionale Notiz..." class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-medium text-on-surface shadow-inner focus:ring-1 ring-primary/20 transition-all border-none">
                 </div>
 
-                <button type="submit" class="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-base mt-2">Hinzufügen</button>
+                <button type="submit" class="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-base mt-2" x-text="workModalEinsatzId ? 'Änderungen speichern' : 'Hinzufügen'"></button>
             </form>
         </div>
     </div>
@@ -661,7 +668,7 @@
     <script>
         function app() {
             return {
-                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalType: 'DIENSTLEISTUNG', workModalValue: '', workModalDate: '', workModalUnterkategorie: 'Praktische Unterstützung', workModalNotiz: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
+                view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalEinsatzId: null, workModalSignaturPfad: null, workModalType: 'DIENSTLEISTUNG', workModalValue: '', workModalDate: '', workModalUnterkategorie: 'Praktische Unterstützung', workModalNotiz: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
@@ -746,6 +753,8 @@
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },
                 async handleFileUpload(e) { if (e.target.files[0]) { const fd = new FormData(); fd.append('file', e.target.files[0]); fd.append('kategorie', 'SONSTIGES'); await fetch(`/api/auftraege/${this.activeAuftrag.id}/upload`, { method: 'POST', body: fd }); await this.fetchDateien(this.activeAuftrag.id); } },
                 openWorkModal(t) {
+                    this.workModalEinsatzId = null;
+                    this.workModalSignaturPfad = null;
                     this.workModalType = t;
                     this.workModalValue = '';
                     this.workModalDate = new Date().toISOString().split('T')[0];
@@ -760,24 +769,68 @@
                     this.showWorkModal = true;
                     setTimeout(() => this.$refs.workInput && this.$refs.workInput.focus(), 50);
                 },
+                editEinsatz(e) {
+                    this.workModalEinsatzId = e.id;
+                    this.workModalSignaturPfad = e.signatur_pfad || null;
+                    if (['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT', 'ARBEIT'].includes(e.typ)) {
+                        this.workModalType = 'DIENSTLEISTUNG';
+                        this.workModalUnterkategorie = e.unterkategorie || 'Praktische Unterstützung';
+                    } else if (['NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(e.typ)) {
+                        this.workModalType = 'NACHBEREITUNG';
+                        this.workModalUnterkategorie = e.unterkategorie || 'Auswertung';
+                    } else {
+                        this.workModalType = 'KILOMETER';
+                        this.workModalUnterkategorie = '';
+                    }
+                    this.workModalValue = ['KILOMETER', 'FAHRT'].includes(e.typ) ? e.kilometer : e.stunden;
+                    this.workModalDate = e.datum;
+                    this.workModalNotiz = e.notiz || '';
+                    this.showWorkModal = true;
+                    setTimeout(() => this.$refs.workInput && this.$refs.workInput.focus(), 50);
+                },
+                onWorkModalTypeChange() {
+                    if (['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT'].includes(this.workModalType)) {
+                        if (!['Praktische Unterstützung', 'Beratung', 'Mediation'].includes(this.workModalUnterkategorie)) {
+                            this.workModalUnterkategorie = 'Praktische Unterstützung';
+                        }
+                    } else if (['NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(this.workModalType)) {
+                        if (!['Auswertung', 'Verteilung'].includes(this.workModalUnterkategorie)) {
+                            this.workModalUnterkategorie = 'Auswertung';
+                        }
+                    } else {
+                        this.workModalUnterkategorie = '';
+                    }
+                },
                 async submitWork() {
                     if(!this.workModalValue || this.workModalValue <= 0) return;
                     this.isProcessing = true;
                     this.showWorkModal = false;
-                    await fetch('/api/einsaetze', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: 0,
-                            auftrag_id: this.activeAuftrag.id,
-                            datum: this.workModalDate || new Date().toISOString().split('T')[0],
-                            stunden: ['DIENSTLEISTUNG','NACHBEREITUNG','ARBEIT_VOR_ORT','ARBEIT_VORBEREITUNG'].includes(this.workModalType) ? parseFloat(this.workModalValue) : 0,
-                            kilometer: ['KILOMETER','FAHRT'].includes(this.workModalType) ? parseFloat(this.workModalValue) : 0,
-                            typ: this.workModalType,
-                            unterkategorie: (['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT', 'NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(this.workModalType) && this.workModalUnterkategorie) ? this.workModalUnterkategorie : null,
-                            notiz: this.workModalNotiz || ''
-                        })
-                    });
+                    const payload = {
+                        id: this.workModalEinsatzId || 0,
+                        auftrag_id: this.activeAuftrag.id,
+                        datum: this.workModalDate || new Date().toISOString().split('T')[0],
+                        stunden: ['DIENSTLEISTUNG','NACHBEREITUNG','ARBEIT_VOR_ORT','ARBEIT_VORBEREITUNG'].includes(this.workModalType) ? parseFloat(this.workModalValue) : 0,
+                        kilometer: ['KILOMETER','FAHRT'].includes(this.workModalType) ? parseFloat(this.workModalValue) : 0,
+                        typ: this.workModalType,
+                        unterkategorie: (['DIENSTLEISTUNG', 'ARBEIT_VOR_ORT', 'NACHBEREITUNG', 'ARBEIT_VORBEREITUNG'].includes(this.workModalType) && this.workModalUnterkategorie) ? this.workModalUnterkategorie : null,
+                        notiz: this.workModalNotiz || '',
+                        signatur_pfad: this.workModalSignaturPfad || null
+                    };
+                    if (this.workModalEinsatzId) {
+                        await fetch(`/api/einsaetze/${this.workModalEinsatzId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        this.showFeedback("Eintrag aktualisiert.");
+                    } else {
+                        await fetch('/api/einsaetze', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        this.showFeedback("Eintrag hinzugefügt.");
+                    }
                     await this.fetchEinsaetze(this.activeAuftrag.id);
                     this.isProcessing = false;
                 },

@@ -189,7 +189,7 @@ pub async fn create_einsatz(pool: &SqlitePool, e: Einsatz) -> Result<i64, sqlx::
 }
 
 pub async fn update_einsatz(pool: &SqlitePool, id: i64, e: Einsatz) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ?, unterkategorie = ?, signatur_pfad = ? WHERE id = ?")
+    sqlx::query("UPDATE einsaetze SET datum = ?, kilometer = ?, stunden = ?, notiz = ?, typ = ?, unterkategorie = ?, signatur_pfad = COALESCE(?, signatur_pfad) WHERE id = ?")
         .bind(e.datum).bind(e.kilometer.value()).bind(e.stunden.value()).bind(e.notiz).bind(e.typ.to_string()).bind(e.unterkategorie).bind(e.signatur_pfad).bind(id).execute(pool).await?;
     Ok(())
 }
