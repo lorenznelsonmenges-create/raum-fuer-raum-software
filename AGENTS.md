@@ -16,7 +16,8 @@ Dieses Dokument dient als zentrale Wissensbasis ("Source of Truth") für die Arc
 - **Frontend-Anbindung:** Aktuell als reine REST-API konzipiert (bereit für Nginx/HTTPS-Reverse-Proxy).
 - **Templating:** Handlebars 6.x (nicht Tera – trotz anderslautender älterer Notizen).
 - **PDF-Generierung:** `headless_chrome` 1.x via HTML → PDF.
-- **Domain Primitives (Secure by Design):** `src/domain.rs` – selbstvalidierende, unveränderliche Typen (`Euro` in Cent als `i64`, `Stunden`, `Kilometer`, `EinsatzTyp`, `RechnungsNummer` sowie für die Buchhaltung `BuchungsTyp`, `BuchungsBetrag`, `Kategorie`, `Beschreibung`, `BelegReferenz`, `BuchungsDatum`). **Niemals `f64` für Geldbeträge.**
+- **Domain Primitives (Secure by Design):** `src/domain.rs` – selbstvalidierende, unveränderliche Typen (`Euro` in Cent als `i64`, `Stunden`, `Kilometer`, `EinsatzTyp`, `RechnungsNummer` sowie für die Buchhaltung `BuchungsTyp`, `BuchungsBetrag`, `Kategorie`, `Beschreibung`, `BelegReferenz`, `BuchungsDatum`, Belege: `BelegFormat`, `BelegDatei`, `BelegDateiname`, `BelegPfad`, sowie `Geschaeftsjahr`). **Niemals `f64` für Geldbeträge.**
+- **Geschäftsjahr / EÜR:** Der Betrieb macht eine Einnahmen-Überschuss-Rechnung (keine Bilanz → im UI „Einnahmen & Ausgaben“, nie „Bilanz“). Geschäftsjahr = Kalenderjahr (§ 4a EStG). Diese Regel steht **ausschließlich** in `Geschaeftsjahr` (`aus_datum`, `zeitraum`); das Jahr wird nie gespeichert, sondern aus `datum` (= Zahlungsdatum, Zuflussprinzip) abgeleitet. Auch das Frontend rechnet keine Jahresgrenzen selbst, sondern nutzt `von`/`bis` aus `GET /api/buchungen/jahre`.
 - **Code-Struktur:** Monolithisch – Handler + Router in `main.rs`, Modelle in `models.rs`, DB-Funktionen in `database.rs`, Domain Primitives in `domain.rs`. Neue Module folgen diesem Muster.
 - **Autorisierung:** Session-basiert (`auth_middleware` + `AuthUser`-Extractor). Keine Rollen – jeder eingeloggte User hat vollen Zugriff auf alle Module.
 
@@ -166,8 +167,16 @@ Wird als Multipart-Feld `daten` (JSON) gesendet, zusammen mit dem Datei-Feld `be
 | `einnahmen_gesamt` | `Euro` | Summe der Einnahmen (JSON: Euro) |
 | `ausgaben_gesamt` | `Euro` | Summe der Ausgaben (JSON: Euro) |
 | `saldo` | `i64` | Einnahmen − Ausgaben in **Cent** (kann negativ sein) |
+| `anzahl_ohne_beleg` | `i64` | Buchungen im Zeitraum ohne Beleg-Datei (`beleg_pfad IS NULL`) |
 
-Filter-DTOs: `BuchungsFilterParameter` (`von`, `bis`, `typ`, `kategorie`) → `BuchungsFilter`; `ZeitraumParameter` (`von`, `bis`) → `Zeitraum` (prüft `von` ≤ `bis`).
+Filter-DTOs: `BuchungsFilterParameter` (`von`, `bis`, `jahr`, `typ`, `kategorie`) → `BuchungsFilter`; `ZeitraumParameter` (`von`, `bis`, `jahr`) → `Zeitraum` (prüft `von` ≤ `bis`; `jahr` wird über `Geschaeftsjahr::zeitraum()` übersetzt, `jahr` + `von`/`bis` → 400).
+
+### GeschaeftsjahrInfo (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `jahr` | `Geschaeftsjahr` | JSON: Zahl, z.B. `2026` |
+| `von` | `String` | Erster Tag (`YYYY-01-01`) aus `Geschaeftsjahr::zeitraum()` |
+| `bis` | `String` | Letzter Tag (`YYYY-12-31`) aus `Geschaeftsjahr::zeitraum()` |
 
 ## 3. Datenbankschema – Migrations-Übersicht
 
@@ -213,7 +222,8 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
-- [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Anlegen/Ändern als Multipart (`daten` + `beleg`), **Belegpflicht** (PDF/JPG/PNG, max. 10 MB, gespeichert unter `uploads/belege/<uuid>`, Abruf nur eingeloggt über `/uploads/…`). Audit-Log (`[AUDIT]`) für jede Mutation.
+- [x] **Dashboard:** Zweispaltig – links Auftrags-Statistik (`/api/stats`), rechts „Einnahmen & Ausgaben“ je Geschäftsjahr mit Vorjahresvergleich und Hinweis auf Buchungen ohne Beleg.
+- [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis` **oder** `jahr`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis` **oder** `jahr`; inkl. `anzahl_ohne_beleg`), `GET /api/buchungen/jahre` (Jahre mit Buchungen + laufendes Jahr, absteigend, je mit `von`/`bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Anlegen/Ändern als Multipart (`daten` + `beleg`), **Belegpflicht** (PDF/JPG/PNG, max. 10 MB, gespeichert unter `uploads/belege/<uuid>`, Abruf nur eingeloggt über `/uploads/…`). Audit-Log (`[AUDIT]`) für jede Mutation.
 
 ## 5. Nächste Schritte
 
@@ -225,7 +235,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 6. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
 7. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
 8. [x] **Buchhaltung:** Einnahmen/Ausgaben mit Übersicht (Einnahmen, Ausgaben, Saldo).
-9. [ ] **Buchhaltung GoBD:** Storno-Buchungen statt Löschen.
+9. [ ] **Buchhaltung GoBD:** Storno-Buchungen statt Löschen, Jahresabschluss, Aufbewahrung, USt-Ausweis – Details in `BUGS.md` (Abschnitt „Buchhaltung – fachlich offen“).
 10. [ ] **Sicherheit:** Offene Punkte siehe `BUGS.md` (Abschnitt „Sicherheit“).
 
 ## 6. Betriebliche Hinweise

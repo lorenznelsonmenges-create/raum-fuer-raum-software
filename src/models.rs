@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum, parse_iso_datum};
-use crate::domain::{BelegFormat, BelegDateiname, BelegPfad};
+use crate::domain::{BelegFormat, BelegDateiname, BelegPfad, Geschaeftsjahr};
 use crate::error::AppError;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum AuftragStatus {
@@ -310,6 +310,8 @@ pub struct BuchungsDaten {
 pub struct BuchungsFilterParameter {
     pub von: Option<String>,
     pub bis: Option<String>,
+    /// Geschäftsjahr (JJJJ) – Alternative zu `von`/`bis`, nicht kombinierbar
+    pub jahr: Option<String>,
     pub typ: Option<String>,
     pub kategorie: Option<String>,
 }
@@ -337,6 +339,26 @@ impl Zeitraum {
         }
         Ok(zeitraum)
     }
+
+    /// Zeitraum aus den Query-Parametern: entweder `jahr` ODER `von`/`bis`.
+    /// Beides zusammen ist widersprüchlich und wird abgelehnt (400), statt still
+    /// eine der Angaben zu ignorieren.
+    pub fn aus_parametern(von: Option<&str>, bis: Option<&str>, jahr: Option<&str>) -> Result<Self, AppError> {
+        let gesetzt = |v: Option<&str>| v.map(str::trim).is_some_and(|s| !s.is_empty());
+        if !gesetzt(jahr) {
+            return Self::new(von, bis);
+        }
+        if gesetzt(von) || gesetzt(bis) {
+            return Err(AppError::BadRequest("'jahr' kann nicht zusammen mit 'von'/'bis' verwendet werden".into()));
+        }
+        Ok(Self::aus_geschaeftsjahr(Geschaeftsjahr::parse(jahr.unwrap_or_default())?))
+    }
+
+    /// Die Jahresgrenzen kommen ausschließlich aus `Geschaeftsjahr::zeitraum()`.
+    pub fn aus_geschaeftsjahr(jahr: Geschaeftsjahr) -> Self {
+        let (von, bis) = jahr.zeitraum();
+        Self { von: Some(von), bis: Some(bis) }
+    }
 }
 
 /// Validierter Filter für die Buchungsliste.
@@ -349,7 +371,7 @@ pub struct BuchungsFilter {
 
 impl BuchungsFilterParameter {
     pub fn validieren(&self) -> Result<BuchungsFilter, AppError> {
-        let zeitraum = Zeitraum::new(self.von.as_deref(), self.bis.as_deref())?;
+        let zeitraum = Zeitraum::aus_parametern(self.von.as_deref(), self.bis.as_deref(), self.jahr.as_deref())?;
         let typ = match self.typ.as_deref().map(str::trim) {
             None | Some("") => None,
             Some(t) => Some(BuchungsTyp::parse(t)?),
@@ -368,6 +390,30 @@ impl BuchungsFilterParameter {
 pub struct ZeitraumParameter {
     pub von: Option<String>,
     pub bis: Option<String>,
+    /// Geschäftsjahr (JJJJ) – Alternative zu `von`/`bis`, nicht kombinierbar
+    pub jahr: Option<String>,
+}
+
+impl ZeitraumParameter {
+    pub fn validieren(&self) -> Result<Zeitraum, AppError> {
+        Zeitraum::aus_parametern(self.von.as_deref(), self.bis.as_deref(), self.jahr.as_deref())
+    }
+}
+
+/// Eintrag für die Jahresauswahl (`GET /api/buchungen/jahre`). Liefert die Grenzen
+/// mit, damit das Frontend die Kalenderjahr-Regel nicht selbst nachbauen muss.
+#[derive(Debug, Clone, Serialize)]
+pub struct GeschaeftsjahrInfo {
+    pub jahr: Geschaeftsjahr,
+    pub von: String,
+    pub bis: String,
+}
+
+impl From<Geschaeftsjahr> for GeschaeftsjahrInfo {
+    fn from(jahr: Geschaeftsjahr) -> Self {
+        let (von, bis) = jahr.zeitraum();
+        Self { jahr, von: von.format("%Y-%m-%d").to_string(), bis: bis.format("%Y-%m-%d").to_string() }
+    }
 }
 
 /// Übersicht für das Buchhaltungs-Dashboard.
@@ -379,4 +425,6 @@ pub struct BuchungsUebersicht {
     pub ausgaben_gesamt: Euro,
     /// Einnahmen - Ausgaben in **Cent** (kann negativ sein, daher kein `Euro`)
     pub saldo: i64,
+    /// Buchungen im Zeitraum ohne Beleg-Datei (Altbuchungen vor der Belegpflicht)
+    pub anzahl_ohne_beleg: i64,
 }

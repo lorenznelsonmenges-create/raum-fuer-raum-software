@@ -95,6 +95,9 @@
                     </div>
                 </template>
 
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+                    <!-- Links: Auftrags-Statistik (unverändert, ohne Zeitfilter) -->
+                    <div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:p-12 text-center">
                     <div @click="view = 'kunden'" class="bg-white p-6 md:p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
                         <div class="text-4xl md:text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div>
@@ -150,6 +153,47 @@
                                 <div class="bg-red-300 h-full rounded-full transition-all duration-1000" :style="'width: ' + (stats.storniert / Math.max(stats.anfrage_laeuft, stats.in_bearbeitung, stats.abgeschlossen, stats.storniert, 1) * 100) + '%'"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                    </div>
+
+                    <!-- Rechts: Finanzen (Einnahmen & Ausgaben, EÜR – keine Bilanz) -->
+                    <div class="bg-white p-6 md:p-10 rounded-3xl shadow-sm font-body space-y-8">
+                        <div class="flex flex-wrap items-center justify-between gap-4">
+                            <h3 class="font-headline text-2xl text-primary font-bold">Einnahmen &amp; Ausgaben</h3>
+                            <select x-model.number="dashboardJahr" @change="ladeDashboardFinanzen()" class="bg-surface-low p-3 pr-8 rounded-2xl text-sm font-bold text-primary border-none shadow-inner" title="Geschäftsjahr">
+                                <template x-for="j in buchungsJahre" :key="j.jahr">
+                                    <option :value="j.jahr" x-text="'Geschäftsjahr ' + j.jahr" :selected="j.jahr === dashboardJahr"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div class="bg-surface-low/50 p-5 rounded-2xl">
+                                <div class="text-2xl font-headline font-bold text-green-700" x-text="formatEuro(dashboardFinanzen.aktuell.einnahmen_gesamt)"></div>
+                                <p class="text-[10px] uppercase font-bold opacity-40 mt-1">Einnahmen</p>
+                                <p class="text-xs opacity-50 mt-3" x-text="'Vorjahr: ' + (dashboardFinanzen.vorjahr ? formatEuro(dashboardFinanzen.vorjahr.einnahmen_gesamt) : '–')"></p>
+                            </div>
+                            <div class="bg-surface-low/50 p-5 rounded-2xl">
+                                <div class="text-2xl font-headline font-bold text-red-600" x-text="formatEuro(dashboardFinanzen.aktuell.ausgaben_gesamt)"></div>
+                                <p class="text-[10px] uppercase font-bold opacity-40 mt-1">Ausgaben</p>
+                                <p class="text-xs opacity-50 mt-3" x-text="'Vorjahr: ' + (dashboardFinanzen.vorjahr ? formatEuro(dashboardFinanzen.vorjahr.ausgaben_gesamt) : '–')"></p>
+                            </div>
+                            <div class="bg-surface-low/50 p-5 rounded-2xl">
+                                <!-- saldo kommt vom Server in Cent -->
+                                <div class="text-2xl font-headline font-bold" :class="saldoFarbe(dashboardFinanzen.aktuell.saldo)" x-text="formatEuro(dashboardFinanzen.aktuell.saldo / 100)"></div>
+                                <p class="text-[10px] uppercase font-bold opacity-40 mt-1">Überschuss</p>
+                                <p class="text-xs opacity-50 mt-3" x-text="'Vorjahr: ' + (dashboardFinanzen.vorjahr ? formatEuro(dashboardFinanzen.vorjahr.saldo / 100) : '–')"></p>
+                            </div>
+                        </div>
+
+                        <button x-show="dashboardFinanzen.aktuell.anzahl_ohne_beleg > 0" @click="zeigeBuchhaltungFuerJahr(dashboardJahr)" class="w-full flex items-center gap-3 text-left text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-2xl px-5 py-3 transition-colors">
+                            <span class="material-icons-outlined text-lg">report_problem</span>
+                            <span x-text="dashboardFinanzen.aktuell.anzahl_ohne_beleg === 1 ? '1 Buchung ohne Beleg' : dashboardFinanzen.aktuell.anzahl_ohne_beleg + ' Buchungen ohne Beleg'"></span>
+                            <span class="material-icons-outlined text-lg ml-auto">east</span>
+                        </button>
+
+                        <div class="secondary-button text-sm font-bold" @click="zeigeBuchhaltungFuerJahr(dashboardJahr)"><span>Zur Buchhaltung</span><span class="material-icons-outlined text-lg">east</span></div>
                     </div>
                 </div>
             </div>
@@ -594,7 +638,7 @@
                         </div>
                         <div class="bg-white p-6 md:p-10 rounded-3xl shadow-sm">
                             <!-- saldo kommt vom Server in Cent (kann negativ sein) -->
-                            <div class="text-3xl md:text-4xl font-headline font-bold" :class="buchungsUebersicht.saldo > 0 ? 'text-green-700' : (buchungsUebersicht.saldo < 0 ? 'text-red-600' : 'text-primary')" x-text="formatEuro(buchungsUebersicht.saldo / 100)"></div>
+                            <div class="text-3xl md:text-4xl font-headline font-bold" :class="saldoFarbe(buchungsUebersicht.saldo)" x-text="formatEuro(buchungsUebersicht.saldo / 100)"></div>
                             <p class="text-[10px] uppercase font-bold opacity-40 mt-2">Saldo</p>
                         </div>
                     </div>
@@ -602,14 +646,23 @@
                 </div>
 
                 <!-- Filter -->
-                <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Geschäftsjahr</label>
+                        <select x-model="buchungsJahrAuswahl" @change="waehleBuchungsJahr()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                            <option value="">Alle / frei</option>
+                            <template x-for="j in buchungsJahre" :key="j.jahr">
+                                <option :value="String(j.jahr)" x-text="j.jahr" :selected="String(j.jahr) === buchungsJahrAuswahl"></option>
+                            </template>
+                        </select>
+                    </div>
                     <div>
                         <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Von</label>
-                        <input type="date" x-model="buchungsFilter.von" @change="ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                        <input type="date" x-model="buchungsFilter.von" @change="buchungsJahrAuswahl = ''; ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
                     </div>
                     <div>
                         <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Bis</label>
-                        <input type="date" x-model="buchungsFilter.bis" @change="ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                        <input type="date" x-model="buchungsFilter.bis" @change="buchungsJahrAuswahl = ''; ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
                     </div>
                     <div>
                         <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Typ</label>
@@ -910,6 +963,8 @@
                 buchungsUebersicht: { einnahmen_gesamt: 0, ausgaben_gesamt: 0, saldo: 0 },
                 buchungsFilter: { von: '', bis: '', typ: '', kategorie: '' },
                 buchungModal: false, buchungEditId: null, buchungFormFehler: '', buchungBelegDatei: null, buchungBelegAktuell: null,
+                buchungsJahre: [], buchungsJahrAuswahl: '', dashboardJahr: new Date().getFullYear(),
+                dashboardFinanzen: { aktuell: { einnahmen_gesamt: 0, ausgaben_gesamt: 0, saldo: 0, anzahl_ohne_beleg: 0 }, vorjahr: null },
                 buchungForm: { buchungs_typ: 'einnahme', betrag: '', datum: '', kategorie: '', beschreibung: '', beleg_referenz: '', auftrag_id: '' },
                 
                 async init() { 
@@ -922,6 +977,8 @@
                         }
                         this.currentUser = await checkAuth.json();
                         await Promise.all([this.fetchKunden(), this.fetchAuftraege(), this.fetchTemplates(), this.fetchStats(), this.fetchSettings()]);
+                        // Finanzen sind optional fürs Dashboard – ein Fehler hier blockiert die Auftrags-Statistik nicht
+                        this.ladeBuchungsJahre().then(() => this.ladeDashboardFinanzen()).catch(e => console.error('Finanzen:', e));
                     } catch (e) {
                         this.error = "Daten konnten nicht vollständig geladen werden.";
                         console.error(e);
@@ -931,12 +988,13 @@
                         try {
                             if (newView === 'dashboard') {
                                 await Promise.all([this.fetchStats(), this.fetchAuftraege(), this.fetchKunden()]);
+                                this.ladeBuchungsJahre().then(() => this.ladeDashboardFinanzen()).catch(e => console.error('Finanzen:', e));
                             } else if (newView === 'auftraege' || newView === 'archiviert') {
                                 await this.fetchAuftraege();
                             } else if (newView === 'kunden') {
                                 await this.fetchKunden();
                             } else if (newView === 'buchhaltung') {
-                                await Promise.all([this.ladeBuchhaltung(), this.fetchAuftraege(), this.fetchKunden()]);
+                                await Promise.all([this.ladeBuchhaltung(), this.fetchAuftraege(), this.fetchKunden(), this.ladeBuchungsJahre()]);
                             }
                         } catch (e) { console.error('Auto-refresh error:', e); }
                     });
@@ -1111,7 +1169,40 @@
                     this.buchungen = await rl.json();
                     this.buchungsUebersicht = await ru.json();
                 },
-                resetBuchungsFilter() { this.buchungsFilter = { von: '', bis: '', typ: '', kategorie: '' }; this.ladeBuchhaltung(); },
+                resetBuchungsFilter() { this.buchungsFilter = { von: '', bis: '', typ: '', kategorie: '' }; this.buchungsJahrAuswahl = ''; this.ladeBuchhaltung(); },
+                saldoFarbe(saldo) { return saldo > 0 ? 'text-green-700' : (saldo < 0 ? 'text-red-600' : 'text-primary'); },
+                // Jahre inkl. von/bis kommen vom Server (Geschaeftsjahr::zeitraum) – die
+                // Kalenderjahr-Regel wird im Frontend bewusst nicht nachgebaut.
+                async ladeBuchungsJahre() {
+                    const r = await fetch('/api/buchungen/jahre');
+                    if (!r.ok) throw new Error(await this.apiFehler(r));
+                    this.buchungsJahre = await r.json();
+                    if (!this.buchungsJahre.some(j => j.jahr === this.dashboardJahr) && this.buchungsJahre.length) this.dashboardJahr = this.buchungsJahre[0].jahr;
+                },
+                async ladeUebersichtFuerJahr(jahr) {
+                    const r = await fetch('/api/buchungen/uebersicht?jahr=' + encodeURIComponent(jahr));
+                    return r.ok ? await r.json() : null;
+                },
+                async ladeDashboardFinanzen() {
+                    const jahr = Number(this.dashboardJahr);
+                    const [aktuell, vorjahr] = await Promise.all([
+                        this.ladeUebersichtFuerJahr(jahr),
+                        jahr > 2000 ? this.ladeUebersichtFuerJahr(jahr - 1) : Promise.resolve(null)
+                    ]);
+                    if (aktuell) this.dashboardFinanzen = { aktuell, vorjahr };
+                },
+                waehleBuchungsJahr() {
+                    const j = this.buchungsJahre.find(j => String(j.jahr) === this.buchungsJahrAuswahl);
+                    if (j) { this.buchungsFilter.von = j.von; this.buchungsFilter.bis = j.bis; }
+                    else { this.buchungsFilter.von = ''; this.buchungsFilter.bis = ''; }
+                    this.ladeBuchhaltung();
+                },
+                zeigeBuchhaltungFuerJahr(jahr) {
+                    const j = this.buchungsJahre.find(j => j.jahr === Number(jahr));
+                    this.buchungsFilter = { von: j ? j.von : '', bis: j ? j.bis : '', typ: '', kategorie: '' };
+                    this.buchungsJahrAuswahl = j ? String(j.jahr) : '';
+                    this.view = 'buchhaltung';
+                },
                 openBuchungModal(b = null) {
                     this.buchungFormFehler = '';
                     this.buchungBelegDatei = null;

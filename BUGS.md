@@ -11,6 +11,11 @@ Hier werden bekannte Fehler gesammelt, damit der **Tester** eine klare Arbeitsli
 - [ ] **Klartext-Passwörter im Repo**: `migrations/20260924000001_ensure_users.sql` enthält die Passwörter von `admin` und `stefanie` als Kommentar. Kommentare entfernen (neue Migration ändert nichts an der Git-Historie → Passwörter ändern).
 - [ ] **DB-Fehlerdetails an Client**: `AppError::Sqlx` gibt `e.to_string()` an den Browser zurück (Kunden, Aufträge …). Buchhaltung loggt stattdessen und meldet generisch – Muster übernehmen.
 
+## Buchhaltung – fachlich offen (bewusst noch nicht umgesetzt)
+- [ ] **Jahresabschluss / Festschreibung**: Tabelle `geschaeftsjahre(jahr, abgeschlossen_am, abgeschlossen_von)`. Abschluss nur, wenn im Jahr keine Buchung ohne Beleg existiert (`anzahl_ohne_beleg = 0`). Danach Anlegen/Ändern/Löschen **und** Beleg-Ersetzen für Buchungen dieses Jahres sperren; Korrekturen per Gegenbuchung im offenen Jahr.
+- [ ] **Aufbewahrungspflicht (§ 147 AO)**: Beim Ersetzen eines Belegs und beim Löschen einer Buchung wird die Beleg-Datei heute physisch gelöscht (`entferne_beleg` in `main.rs`). Fachlich klären: Storno statt Löschen, alte Belege archivieren statt löschen.
+- [ ] **USt-Ausweis**: Buchungen speichern nur einen Bruttobetrag. Für EÜR/UStVA netto und USt getrennt erfassen (inkl. Steuersatz).
+
 ## Kritisch (Behoben)
 - [x] **Path Traversal in Template-Handlern**: Behoben durch `sanitize_template_path()` in `main.rs` – Whitelist-Ansatz mit Zeichenprüfung und `.html`-Pflicht.
 - [x] **Race Condition bei Rechnungsnummern**: Behoben durch `get_next_rechnung_number()` in `database.rs` – nutzt `MAX()` statt `COUNT(*)`.

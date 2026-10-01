@@ -677,3 +677,89 @@ impl BelegDatei {
         &self.inhalt
     }
 }
+
+
+// =====================================================================
+// Buchhaltung – Geschäftsjahr
+// =====================================================================
+
+/// Geschäftsjahr eines EÜR-Betriebs.
+///
+/// Deep Modeling: Das Geschäftsjahr ist das **Kalenderjahr** (§ 4a EStG). Diese Regel
+/// steht ausschließlich in diesem Typ (`aus_datum` und `zeitraum`) – kein anderer Code
+/// rechnet Jahresgrenzen selbst aus. Ein abweichendes Wirtschaftsjahr würde nur hier
+/// geändert. Das Geschäftsjahr wird nie gespeichert, sondern immer aus dem
+/// Buchungsdatum (= Zahlungsdatum, Zuflussprinzip) abgeleitet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Geschaeftsjahr(i32);
+
+impl Geschaeftsjahr {
+    /// Frühestes plausibles Geschäftsjahr (passt zur Untergrenze von `BuchungsDatum`).
+    pub const ERSTES_JAHR: i32 = 2000;
+
+    /// Precondition: ERSTES_JAHR <= jahr <= aktuelles Jahr
+    /// Postcondition: Self ist ein Jahr, in dem Buchungen existieren können
+    pub fn new(jahr: i32) -> Result<Self, AppError> {
+        Self::new_mit_stichtag(jahr, chrono::Local::now().date_naive())
+    }
+
+    /// Wie `new`, aber mit explizitem Stichtag "heute" (für deterministische Tests).
+    pub fn new_mit_stichtag(jahr: i32, heute: NaiveDate) -> Result<Self, AppError> {
+        use chrono::Datelike;
+        if jahr < Self::ERSTES_JAHR {
+            return Err(AppError::BadRequest(format!("Geschäftsjahr muss ab {} liegen", Self::ERSTES_JAHR)));
+        }
+        if jahr > heute.year() {
+            return Err(AppError::BadRequest("Geschäftsjahr darf nicht in der Zukunft liegen".into()));
+        }
+        Ok(Self(jahr))
+    }
+
+    /// Parst eine Jahresangabe aus einem Query-Parameter.
+    /// Reihenfolge: Size + Lexical (exakt 4 Ziffern) → Syntax → Semantic (`new`).
+    pub fn parse(value: &str) -> Result<Self, AppError> {
+        let value = value.trim();
+        if value.len() != 4 || !value.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(AppError::BadRequest("Jahr muss vierstellig angegeben werden (JJJJ)".into()));
+        }
+        let jahr: i32 = value.parse().map_err(|_| AppError::BadRequest("Ungültiges Jahr".into()))?;
+        Self::new(jahr)
+    }
+
+    /// Geschäftsjahr, in das ein Datum fällt (Kalenderjahr-Regel).
+    /// Liefert einen Fehler für Daten außerhalb des gültigen Bereichs, damit die
+    /// Invariante (ab 2000, nicht in der Zukunft) auch hier gilt.
+    pub fn aus_datum(datum: NaiveDate) -> Result<Self, AppError> {
+        use chrono::Datelike;
+        Self::new(datum.year())
+    }
+
+    /// Das laufende Geschäftsjahr (immer gültig).
+    pub fn aktuelles() -> Self {
+        use chrono::Datelike;
+        Self(chrono::Local::now().date_naive().year())
+    }
+
+    /// Erster und letzter Tag des Geschäftsjahres (beide inklusive): 01.01. bis 31.12.
+    pub fn zeitraum(&self) -> (NaiveDate, NaiveDate) {
+        let von = NaiveDate::from_ymd_opt(self.0, 1, 1).expect("01.01. existiert in jedem Jahr");
+        let bis = NaiveDate::from_ymd_opt(self.0, 12, 31).expect("31.12. existiert in jedem Jahr");
+        (von, bis)
+    }
+
+    /// Das Vorjahr – `None`, wenn es vor ERSTES_JAHR läge.
+    pub fn vorjahr(&self) -> Option<Self> {
+        (self.0 > Self::ERSTES_JAHR).then(|| Self(self.0 - 1))
+    }
+
+    pub fn jahr(&self) -> i32 {
+        self.0
+    }
+}
+
+impl Serialize for Geschaeftsjahr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_i32(self.0)
+    }
+}

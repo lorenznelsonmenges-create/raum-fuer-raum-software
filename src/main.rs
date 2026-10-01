@@ -1,7 +1,7 @@
 use wendepunkt_software::{models, database, pdf, files};
-use wendepunkt_software::domain::{RechnungsNummer, BelegDatei, BelegPfad, MAX_BELEG_BYTES};
+use wendepunkt_software::domain::{RechnungsNummer, BelegDatei, BelegPfad, Geschaeftsjahr, MAX_BELEG_BYTES};
 use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
-use wendepunkt_software::models::{Buchung, BuchungEingabe, BuchungsDaten, BuchungsFilterParameter, BuchungsUebersicht, Zeitraum, ZeitraumParameter, BelegMeta};
+use wendepunkt_software::models::{Buchung, BuchungEingabe, BuchungsDaten, BuchungsFilterParameter, BuchungsUebersicht, ZeitraumParameter, BelegMeta, GeschaeftsjahrInfo};
 use wendepunkt_software::error::AppError;
 
 use axum::{
@@ -44,10 +44,11 @@ async fn main() {
         .route("/logout", get(logout_handler));
 
     // Buchhaltung: eigener Sub-Router, damit das enge Body-Limit (Input Validation
-    // Stufe 2: Size) nur hier greift. Statischer Pfad `uebersicht` vor `:id`.
+    // Stufe 2: Size) nur hier greift. Statische Pfade `uebersicht`/`jahre` vor `:id`.
     let buchungen_routes = Router::new()
         .route("/buchungen", get(list_buchungen).post(add_buchung))
         .route("/buchungen/uebersicht", get(get_buchungen_uebersicht))
+        .route("/buchungen/jahre", get(get_buchungs_jahre))
         .route("/buchungen/:id", get(get_buchung).post(update_buchung))
         .route("/buchungen/:id/delete", post(delete_buchung_handler))
         .layer(DefaultBodyLimit::max(BUCHUNG_MAX_BODY_BYTES));
@@ -713,8 +714,24 @@ async fn get_buchungen_uebersicht(
     State(pool): State<SqlitePool>,
     Query(params): Query<ZeitraumParameter>,
 ) -> Result<Json<BuchungsUebersicht>, AppError> {
-    let zeitraum = Zeitraum::new(params.von.as_deref(), params.bis.as_deref())?;
+    let zeitraum = params.validieren()?;
     let uebersicht = database::get_buchungen_uebersicht(&pool, zeitraum.von, zeitraum.bis).await
         .map_err(|e| buchung_db_fehler("Übersicht", e))?;
     Ok(Json(uebersicht))
+}
+
+/// Jahre für die Jahresauswahl: alle Jahre mit Buchungen plus das laufende Jahr,
+/// absteigend, jeweils mit Zeitraum (von/bis) aus `Geschaeftsjahr::zeitraum()`.
+async fn get_buchungs_jahre(
+    _auth: AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<GeschaeftsjahrInfo>>, AppError> {
+    let mut jahre = database::get_buchungs_jahre(&pool).await
+        .map_err(|e| buchung_db_fehler("Jahre", e))?;
+    let aktuell = Geschaeftsjahr::aktuelles();
+    if !jahre.contains(&aktuell) {
+        jahre.push(aktuell);
+    }
+    jahre.sort_unstable_by(|a, b| b.cmp(a));
+    Ok(Json(jahre.into_iter().map(GeschaeftsjahrInfo::from).collect()))
 }

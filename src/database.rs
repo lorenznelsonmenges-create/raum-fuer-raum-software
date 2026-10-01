@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions, SqliteRow}, SqlitePool, Row};
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum};
-use crate::domain::{BelegFormat, BelegDateiname, BelegPfad};
+use crate::domain::{BelegFormat, BelegDateiname, BelegPfad, Geschaeftsjahr};
 use crate::error::AppError;
 use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings, User};
 use crate::models::{Buchung, BuchungsDaten, BuchungsFilter, BuchungsUebersicht, BelegMeta};
@@ -485,7 +485,8 @@ pub async fn get_buchungen_uebersicht(pool: &SqlitePool, von: Option<NaiveDate>,
     let bis = iso(bis);
     let row = sqlx::query(
         "SELECT COALESCE(SUM(CASE WHEN buchungs_typ = 'einnahme' THEN betrag_cent ELSE 0 END), 0) AS einnahmen, \
-                COALESCE(SUM(CASE WHEN buchungs_typ = 'ausgabe' THEN betrag_cent ELSE 0 END), 0) AS ausgaben \
+                COALESCE(SUM(CASE WHEN buchungs_typ = 'ausgabe' THEN betrag_cent ELSE 0 END), 0) AS ausgaben, \
+                COALESCE(SUM(CASE WHEN beleg_pfad IS NULL THEN 1 ELSE 0 END), 0) AS ohne_beleg \
          FROM buchungen WHERE (? IS NULL OR datum >= ?) AND (? IS NULL OR datum <= ?)")
         .bind(&von).bind(&von)
         .bind(&bis).bind(&bis)
@@ -498,5 +499,20 @@ pub async fn get_buchungen_uebersicht(pool: &SqlitePool, von: Option<NaiveDate>,
         einnahmen_gesamt: Euro::from_cents(einnahmen).map_err(|e| sqlx::Error::Decode(e.into()))?,
         ausgaben_gesamt: Euro::from_cents(ausgaben).map_err(|e| sqlx::Error::Decode(e.into()))?,
         saldo,
+        anzahl_ohne_beleg: row.try_get("ohne_beleg")?,
     })
+}
+
+/// Geschäftsjahre, in denen Buchungen existieren (absteigend).
+/// Die Zuordnung Datum → Jahr erfolgt bewusst in Rust über `Geschaeftsjahr::aus_datum`
+/// und nicht per SQL (`substr(datum, 1, 4)`), damit die Kalenderjahr-Regel nur an
+/// einer Stelle steht.
+pub async fn get_buchungs_jahre(pool: &SqlitePool) -> Result<Vec<Geschaeftsjahr>, sqlx::Error> {
+    let rows = sqlx::query("SELECT DISTINCT datum FROM buchungen").fetch_all(pool).await?;
+    let mut jahre = std::collections::BTreeSet::new();
+    for row in rows {
+        let datum = BuchungsDatum::from_db(&row.try_get::<String, _>("datum")?).map_err(ungueltige_buchung)?;
+        jahre.insert(Geschaeftsjahr::aus_datum(datum.datum()).map_err(ungueltige_buchung)?);
+    }
+    Ok(jahre.into_iter().rev().collect())
 }

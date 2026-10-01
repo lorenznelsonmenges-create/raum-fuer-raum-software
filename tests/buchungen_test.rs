@@ -3,7 +3,8 @@ use sqlx::SqlitePool;
 use wendepunkt_software::database;
 use wendepunkt_software::domain::{BelegReferenz, Beschreibung, BuchungsBetrag, BuchungsDatum, BuchungsTyp, Euro, Kategorie};
 use wendepunkt_software::domain::{BelegDatei, BelegDateiname, BelegFormat, BelegPfad, MAX_BELEG_BYTES};
-use wendepunkt_software::models::{Auftrag, BelegMeta, BuchungEingabe, BuchungsFilterParameter, Kunde, Zeitraum};
+use wendepunkt_software::models::{Auftrag, BelegMeta, BuchungEingabe, BuchungsFilterParameter, GeschaeftsjahrInfo, Kunde, Zeitraum, ZeitraumParameter};
+use wendepunkt_software::domain::Geschaeftsjahr;
 
 async fn setup_db() -> SqlitePool {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -289,4 +290,72 @@ async fn test_buchung_beleg_speichern_und_ersetzen() {
     // DB lehnt Belegpfade außerhalb von uploads/belege ab
     let r = sqlx::query("UPDATE buchungen SET beleg_pfad = 'uploads/../achtsam.db' WHERE id = ?").bind(b.id()).execute(&pool).await;
     assert!(r.is_err());
+}
+
+// --- Geschäftsjahr-Filter ---
+
+#[test]
+fn test_jahr_parameter_validierung() {
+    // ?jahr= wird über Geschaeftsjahr in von/bis übersetzt
+    let z = ZeitraumParameter { jahr: Some("2025".into()), ..Default::default() }.validieren().unwrap();
+    assert_eq!(z.von, NaiveDate::from_ymd_opt(2025, 1, 1));
+    assert_eq!(z.bis, NaiveDate::from_ymd_opt(2025, 12, 31));
+    // jahr + von/bis → 400
+    assert!(ZeitraumParameter { jahr: Some("2025".into()), von: Some("2025-01-01".into()), ..Default::default() }.validieren().is_err());
+    assert!(BuchungsFilterParameter { jahr: Some("2025".into()), bis: Some("2025-06-30".into()), ..Default::default() }.validieren().is_err());
+    // leere Strings zählen als "nicht gesetzt" (Frontend schickt leere Felder nicht, aber kompatibel)
+    assert!(ZeitraumParameter { jahr: Some("2025".into()), von: Some("".into()), ..Default::default() }.validieren().is_ok());
+    // ungültige Jahre
+    assert!(ZeitraumParameter { jahr: Some("1999".into()), ..Default::default() }.validieren().is_err());
+    assert!(ZeitraumParameter { jahr: Some("abcd".into()), ..Default::default() }.validieren().is_err());
+    // von/bis ohne jahr bleibt kompatibel
+    assert!(ZeitraumParameter { von: Some("2025-03-01".into()), bis: Some("2025-03-31".into()), ..Default::default() }.validieren().is_ok());
+    // jahr lässt sich nicht mit unbekannten Feldern kombinieren
+    assert!(serde_json::from_str::<ZeitraumParameter>(r#"{"jahr":"2025","x":"1"}"#).is_err());
+}
+
+#[tokio::test]
+async fn test_jahr_filter_uebersicht_und_ohne_beleg() {
+    let pool = setup_db().await;
+    let user = database::get_user_by_username(&pool, "admin").await.unwrap();
+    // Grenzfälle: 31.12.2024, 01.01.2025, 31.12.2025, 01.01.2026
+    for (typ, betrag, datum) in [("einnahme", 100.0, "2024-12-31"), ("einnahme", 200.0, "2025-01-01"),
+                                 ("ausgabe", 50.0, "2025-12-31"), ("einnahme", 400.0, "2026-01-01")] {
+        database::create_buchung(&pool, &eingabe(typ, betrag, datum).validieren().unwrap(), &beleg(), user.id).await.unwrap();
+    }
+    // Altbuchung ohne Beleg in 2025 (an der Anwendung vorbei, wie vor der Belegpflicht)
+    sqlx::query("INSERT INTO buchungen (buchungs_typ, betrag_cent, kategorie, beschreibung, datum, created_by) VALUES ('ausgabe', 1000, 'Alt', '', '2025-06-15', ?)")
+        .bind(user.id).execute(&pool).await.unwrap();
+
+    let z = ZeitraumParameter { jahr: Some("2025".into()), ..Default::default() }.validieren().unwrap();
+    let u = database::get_buchungen_uebersicht(&pool, z.von, z.bis).await.unwrap();
+    assert_eq!(u.einnahmen_gesamt.as_cents(), 20000);
+    assert_eq!(u.ausgaben_gesamt.as_cents(), 5000 + 1000);
+    assert_eq!(u.saldo, 20000 - 6000);
+    assert_eq!(u.anzahl_ohne_beleg, 1);
+
+    let z = ZeitraumParameter { jahr: Some("2024".into()), ..Default::default() }.validieren().unwrap();
+    let u = database::get_buchungen_uebersicht(&pool, z.von, z.bis).await.unwrap();
+    assert_eq!(u.einnahmen_gesamt.as_cents(), 10000);
+    assert_eq!(u.anzahl_ohne_beleg, 0);
+
+    // Gesamt ohne Zeitraum
+    assert_eq!(database::get_buchungen_uebersicht(&pool, None, None).await.unwrap().anzahl_ohne_beleg, 1);
+
+    // Liste mit ?jahr=2025: genau die drei 2025er Buchungen, neueste zuerst
+    let f = BuchungsFilterParameter { jahr: Some("2025".into()), ..Default::default() }.validieren().unwrap();
+    let liste = database::get_buchungen(&pool, &f).await.unwrap();
+    let daten: Vec<String> = liste.iter().map(|b| b.datum().to_iso()).collect();
+    assert_eq!(daten, vec!["2025-12-31", "2025-06-15", "2025-01-01"]);
+    assert!(liste[1].beleg().is_none());
+
+    // Jahre mit Buchungen, absteigend
+    let jahre: Vec<i32> = database::get_buchungs_jahre(&pool).await.unwrap().iter().map(|j| j.jahr()).collect();
+    assert_eq!(jahre, vec![2026, 2025, 2024]);
+}
+
+#[test]
+fn test_geschaeftsjahr_info_json() {
+    let info = GeschaeftsjahrInfo::from(Geschaeftsjahr::new(2025).unwrap());
+    assert_eq!(serde_json::to_value(&info).unwrap(), serde_json::json!({"jahr": 2025, "von": "2025-01-01", "bis": "2025-12-31"}));
 }
