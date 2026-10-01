@@ -86,8 +86,14 @@ pub fn generate_dynamic_pdf(
             }));
         }
 
+        let stundensatz_nb = if auftrag.stundensatz_nachbereitung.as_cents() > 0 {
+            auftrag.stundensatz_nachbereitung
+        } else {
+            auftrag.stundensatz
+        };
+
         if sum_stunden_nachbereitung > 0.0 {
-            let summe = auftrag.stundensatz.mul_rate(sum_stunden_nachbereitung);
+            let summe = stundensatz_nb.mul_rate(sum_stunden_nachbereitung);
             gesamt_netto_einsaetze = gesamt_netto_einsaetze.add(&summe);
             einsaetze_data.push(json!({
                 "datum": "",
@@ -95,7 +101,7 @@ pub fn generate_dynamic_pdf(
                 "stunden": (sum_stunden_nachbereitung * 100.0).round() / 100.0,
                 "kilometer": 0.0,
                 "notiz": "",
-                "einzelpreis": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),
+                "einzelpreis": format!("{:.2}", stundensatz_nb.as_f64_for_display()),
                 "zeilen_summe": format!("{:.2}", summe.as_f64_for_display())
             }));
         }

@@ -308,10 +308,13 @@ async fn add_auftrag(State(pool): State<SqlitePool>, session: Session, Json(mut 
     let user: Option<User> = session.get("user").await.map_err(|e| AppError::Internal(e.to_string()))?;
     auftrag.created_by = Some(user.map(|u| u.username).unwrap_or_else(|| "Unbekannt".to_string()));
 
-    if auftrag.stundensatz.as_cents() == 0 || auftrag.kilometer_satz.as_cents() == 0 {
+    if auftrag.stundensatz.as_cents() == 0 || auftrag.stundensatz_nachbereitung.as_cents() == 0 || auftrag.kilometer_satz.as_cents() == 0 {
         let settings = database::get_settings(&pool).await?;
         if auftrag.stundensatz.as_cents() == 0 {
             auftrag.stundensatz = settings.stundensatz;
+        }
+        if auftrag.stundensatz_nachbereitung.as_cents() == 0 {
+            auftrag.stundensatz_nachbereitung = settings.stundensatz_nachbereitung;
         }
         if auftrag.kilometer_satz.as_cents() == 0 {
             auftrag.kilometer_satz = settings.kilometer_satz;
@@ -492,6 +495,7 @@ async fn serve_upload_file(
         content,
     ))
 }
+
 
 // --- Buchhaltung ---
 //

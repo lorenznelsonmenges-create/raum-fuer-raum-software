@@ -43,6 +43,8 @@ pub struct Auftrag {
     #[serde(default)]
     pub stundensatz: Euro,
     #[serde(default)]
+    pub stundensatz_nachbereitung: Euro,
+    #[serde(default)]
     pub kilometer_satz: Euro,
     #[serde(default)]
     pub notizen: String,
@@ -66,6 +68,7 @@ impl Default for Auftrag {
             beschreibung: String::new(),
             basis_pauschale: None,
             stundensatz: Euro::default(),
+            stundensatz_nachbereitung: Euro::default(),
             kilometer_satz: Euro::default(),
             notizen: String::new(),
             created_by: None,
@@ -140,6 +143,8 @@ pub struct Settings {
     #[serde(default)]
     pub id: i64,
     pub stundensatz: Euro,
+    #[serde(default)]
+    pub stundensatz_nachbereitung: Euro,
     pub kilometer_satz: Euro,
 }
 
@@ -148,6 +153,7 @@ impl Default for Settings {
         Self {
             id: 1,
             stundensatz: Euro::from_cents(4500).unwrap(),
+            stundensatz_nachbereitung: Euro::from_cents(4500).unwrap(),
             kilometer_satz: Euro::from_cents(50).unwrap(),
         }
     }
@@ -166,6 +172,7 @@ pub struct LoginRequest {
     pub username: String,
     pub password: String,
 }
+
 
 // =====================================================================
 // Buchhaltung

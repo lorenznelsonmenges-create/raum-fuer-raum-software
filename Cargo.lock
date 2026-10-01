@@ -2855,6 +2855,7 @@ dependencies = [
  "base64 0.22.1",
  "bcrypt",
  "chrono",
+ "dotenvy",
  "handlebars",
  "headless_chrome",
  "serde",

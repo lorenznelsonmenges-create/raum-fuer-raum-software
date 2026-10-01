@@ -52,7 +52,6 @@
             <button @click="view = 'kunden'; mobileMenuOpen = false" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">people</span><span>Kunden</span></button>
             <button @click="view = 'auftraege'; mobileMenuOpen = false" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
             <button @click="view = 'archiviert'; mobileMenuOpen = false" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
-            <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
             <button @click="view = 'buchhaltung'; mobileMenuOpen = false" :class="view === 'buchhaltung' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">account_balance_wallet</span><span>Buchhaltung</span></button>
             <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
@@ -187,20 +186,50 @@
                 </div>
 
                 <!-- System-Einstellungen -->
-                <div class="bg-white p-6 md:p-12 rounded-[40px] shadow-sm">
-                    <h2 class="font-headline text-3xl text-primary font-bold mb-10">System-Einstellungen</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:p-12">
-                        <div class="space-y-4">
-                            <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 px-2">Standard-Stundensatz (€)</label>
-                            <input type="number" step="0.5" x-model.number="settings.stundensatz" class="w-full bg-surface-low p-6 rounded-2xl text-2xl font-headline font-bold text-primary border-none shadow-inner">
+                <div class="bg-white p-6 md:p-12 rounded-[40px] shadow-sm max-w-3xl">
+                    <h2 class="font-headline text-3xl text-primary font-bold mb-3">System-Einstellungen</h2>
+                    <p class="text-sm text-on-surface/60 font-body mb-8">Standard-Verrechnungssätze für Tätigkeiten und Fahrtkosten.</p>
+
+                    <div class="flex flex-col space-y-4">
+                        <!-- Dienstleistung -->
+                        <div class="bg-surface-low/50 p-6 rounded-3xl border border-surface-low flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <label class="text-xs font-bold uppercase tracking-widest text-primary block mb-1">Stundensatz Dienstleistung</label>
+                                <span class="text-xs text-on-surface/60">Für Vor-Ort-Arbeiten und Entrümpelungseinsätze</span>
+                            </div>
+                            <div class="relative w-full md:w-60">
+                                <input type="number" step="0.01" min="0" placeholder="z. B. 45,99" x-model.number="settings.stundensatz" class="w-full bg-white p-4 pr-16 rounded-2xl text-xl font-headline font-bold text-primary border border-surface-low text-right shadow-inner focus:ring-2 ring-primary/20">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-sm">€ / Std.</span>
+                            </div>
                         </div>
-                        <div class="space-y-4">
-                            <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 px-2">Standard-Kilometersatz (€)</label>
-                            <input type="number" step="0.05" x-model.number="settings.kilometer_satz" class="w-full bg-surface-low p-6 rounded-2xl text-2xl font-headline font-bold text-primary border-none shadow-inner">
+
+                        <!-- Nachbereitung -->
+                        <div class="bg-surface-low/50 p-6 rounded-3xl border border-surface-low flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <label class="text-xs font-bold uppercase tracking-widest text-primary block mb-1">Stundensatz Nachbereitung</label>
+                                <span class="text-xs text-on-surface/60">Für Vorbereitung, Sortierung und Nacharbeiten</span>
+                            </div>
+                            <div class="relative w-full md:w-60">
+                                <input type="number" step="0.01" min="0" placeholder="z. B. 35,00" x-model.number="settings.stundensatz_nachbereitung" class="w-full bg-white p-4 pr-16 rounded-2xl text-xl font-headline font-bold text-primary border border-surface-low text-right shadow-inner focus:ring-2 ring-primary/20">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-sm">€ / Std.</span>
+                            </div>
+                        </div>
+
+                        <!-- Kilometer -->
+                        <div class="bg-surface-low/50 p-6 rounded-3xl border border-surface-low flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <label class="text-xs font-bold uppercase tracking-widest text-primary block mb-1">Standard-Kilometersatz</label>
+                                <span class="text-xs text-on-surface/60">Fahrtkostenpauschale je gefahrenem Kilometer</span>
+                            </div>
+                            <div class="relative w-full md:w-60">
+                                <input type="number" step="0.01" min="0" placeholder="z. B. 0,50" x-model.number="settings.kilometer_satz" class="w-full bg-white p-4 pr-16 rounded-2xl text-xl font-headline font-bold text-primary border border-surface-low text-right shadow-inner focus:ring-2 ring-primary/20">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40 text-sm">€ / km</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-12 flex justify-end">
-                        <button @click="saveSettings()" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Einstellungen speichern</button>
+
+                    <div class="mt-8 flex justify-end">
+                        <button @click="saveSettings()" class="bg-primary text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-base">Einstellungen speichern</button>
                     </div>
                 </div>
             </div>
@@ -443,6 +472,37 @@
                             </template>
                             <div x-show="activeEinsaetze.filter(e => e.typ === 'KILOMETER' || e.typ === 'FAHRT').length === 0" class="py-6 text-center text-xs opacity-40 italic">
                                 Keine Kilometer erfasst.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stundensätze & Abrechnung -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-surface-low shadow-sm">
+                        <div class="flex justify-between items-center border-b pb-4 mb-4">
+                            <h2 class="font-headline text-2xl text-primary font-bold">Stundensätze & Abrechnung</h2>
+                            <span class="text-xs text-on-surface/50 font-medium">Sätze für diesen Auftrag</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                            <div>
+                                <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Dienstleistung (€/h)</label>
+                                <div class="relative w-full">
+                                    <input x-model.number="activeAuftrag.stundensatz" @blur="updateAuftragSync()" class="w-full bg-surface-low p-4 rounded-2xl text-xl font-headline font-bold text-primary text-center shadow-inner border-none focus:ring-1 ring-primary/20 transition-all" type="number" step="0.01" min="0" placeholder="45.00">
+                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40">€/h</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Nachbereitung (€/h)</label>
+                                <div class="relative w-full">
+                                    <input x-model.number="activeAuftrag.stundensatz_nachbereitung" @blur="updateAuftragSync()" class="w-full bg-surface-low p-4 rounded-2xl text-xl font-headline font-bold text-primary text-center shadow-inner border-none focus:ring-1 ring-primary/20 transition-all" type="number" step="0.01" min="0" placeholder="35.00">
+                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40">€/h</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Kilometersatz (€/km)</label>
+                                <div class="relative w-full">
+                                    <input x-model.number="activeAuftrag.kilometer_satz" @blur="updateAuftragSync()" class="w-full bg-surface-low p-4 rounded-2xl text-xl font-headline font-bold text-primary text-center shadow-inner border-none focus:ring-1 ring-primary/20 transition-all" type="number" step="0.01" min="0" placeholder="0.50">
+                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-40">€/km</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -828,7 +888,7 @@
                 view: 'dashboard', mobileMenuOpen: false, error: null, kunden: [], auftraege: [], templates: [], searchQuery: '', searchOpen: false, kundeSearchQuery: '', auftragSearchQuery: '', activeKunde: null, activeAuftrag: null, activeKundeForAuftrag: { vorname: '?', nachname: '' }, activeEinsaetze: [], activeDateien: [], showTemplateModal: false, showWorkModal: false, workModalEinsatzId: null, workModalSignaturPfad: null, workModalType: 'DIENSTLEISTUNG', workModalValue: '', workModalDate: '', workModalUnterkategorie: 'Praktische Unterstützung', workModalNotiz: '', openArbeitsForm: false, openFahrtForm: false, newKundeModal: false, newKundeData: { vorname: '', nachname: '', strasse: '', hausnummer: '', plz: '', ort: '', email: '', telefon: '', notizen: '' }, newAuftragModal: false, newAuftragKundeID: null, templateEditorOpen: false, editingTemplateName: '', editingTemplateContent: '', feedback: { show: false, message: '', type: 'success' }, isProcessing: false, deleteModal: { show: false, type: '', id: null, title: '', msg: '' }, showInvoiceModal: false,
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
-                settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
+                settings: { stundensatz: 45.0, stundensatz_nachbereitung: 45.0, kilometer_satz: 0.5 },
                 // Buchhaltung
                 buchungen: [],
                 buchungsUebersicht: { einnahmen_gesamt: 0, ausgaben_gesamt: 0, saldo: 0 },
@@ -913,7 +973,7 @@
                 openKundeDetail(k) { this.activeKunde = JSON.parse(JSON.stringify(k)); this.view = 'kunde_detail'; },
                 async saveKundeDetail() { await fetch(`/api/kunden/${this.activeKunde.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeKunde) }); await this.fetchKunden(); this.showFeedback("Gespeichert."); },
                 openAuftragErstellung(kid = null) { this.newAuftragKundeID = kid; this.newAuftragModal = true; },
-                async createNewAuftrag() { const res = await fetch('/api/auftraege', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, kunde_id: this.newAuftragKundeID, status: 'AnfrageLaeuft', beschreibung: '', stundensatz: 0, kilometer_satz: 0, notizen: '' }) }); if (res.ok) { await this.fetchAuftraege(); this.newAuftragModal = false; } },
+                async createNewAuftrag() { const res = await fetch('/api/auftraege', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0, kunde_id: this.newAuftragKundeID, status: 'AnfrageLaeuft', beschreibung: '', stundensatz: this.settings.stundensatz || 0, stundensatz_nachbereitung: this.settings.stundensatz_nachbereitung || 0, kilometer_satz: this.settings.kilometer_satz || 0, notizen: '' }) }); if (res.ok) { await this.fetchAuftraege(); this.newAuftragModal = false; } },
                 async openAuftragDetail(a) { this.activeAuftrag = a; this.activeKundeForAuftrag = this.kunden.find(k => k.id === a.kunde_id) || { vorname: '?', nachname: '' }; await Promise.all([this.fetchEinsaetze(a.id), this.fetchDateien(a.id)]); this.view = 'auftrag_detail'; },
                 async fetchEinsaetze(id) { this.activeEinsaetze = await (await fetch(`/api/auftraege/${id}/einsaetze`)).json(); },
                 async fetchDateien(id) { this.activeDateien = await (await fetch(`/api/auftraege/${id}/dateien`)).json(); },

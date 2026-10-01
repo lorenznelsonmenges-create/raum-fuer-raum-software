@@ -3,7 +3,7 @@
 /target/
 
 # Datenbank
-achtsam.db*
+*.db*
 
 # Uploads
 /uploads/

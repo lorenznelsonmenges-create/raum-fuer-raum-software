@@ -218,15 +218,17 @@ pub struct RechnungsNummer(String);
 
 impl RechnungsNummer {
     pub fn try_new(val: String) -> Result<Self, String> {
-        if val.len() != 7 || !val.starts_with('R') {
-            return Err("Rechnungsnummer muss Format R + 6 Ziffern haben".into());
+        if val.len() == 7 && val.starts_with('R') && val[1..].chars().all(|c| c.is_ascii_digit()) {
+            return Ok(Self(val));
         }
-        let digits = &val[1..];
-        if digits.chars().all(|c| c.is_ascii_digit()) {
-            Ok(Self(val))
-        } else {
-            Err("Rechnungsnummer muss Format R + 6 Ziffern haben".into())
+        if val.starts_with("RE-") || val.starts_with("R-") {
+            return Ok(Self(val));
         }
+        Err("Rechnungsnummer muss Format R + 6 Ziffern haben".into())
+    }
+
+    pub fn from_db(val: String) -> Self {
+        Self(val)
     }
 
     pub fn value(&self) -> &str {

@@ -7,11 +7,16 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_FILE="$SCRIPT_DIR/achtsam.db"
+TARGET="${1:-prod}"
+if [ "$TARGET" = "test" ] || [ "$TARGET" = "achtsam_test.db" ]; then
+    DB_FILE="$SCRIPT_DIR/achtsam_test.db"
+else
+    DB_FILE="$SCRIPT_DIR/achtsam.db"
+fi
 UPLOADS_DIR="$SCRIPT_DIR/uploads"
 
 echo "============================================"
-echo "  Wendepunkt – RESET (Alles auf Null)"
+echo "  Wendepunkt – RESET (Ziel: $(basename "$DB_FILE"))"
 echo "============================================"
 echo ""
 echo "WARNUNG: Alle Daten werden unwiderruflich gelöscht!"
@@ -33,13 +38,17 @@ else
     echo "  Keine Datenbank gefunden (bereits leer)."
 fi
 
-# 2. Uploads löschen (aber Ordner behalten)
-if [ -d "$UPLOADS_DIR" ]; then
-    find "$UPLOADS_DIR" -type f -delete
-    echo "✓ Uploads geleert: $UPLOADS_DIR"
+# 2. Uploads behandeln
+if [ "$TARGET" = "test" ] || [ "$TARGET" = "achtsam_test.db" ]; then
+    echo "ℹ Uploads wurden beibehalten (im Test-Modus bleiben Dateien geschützt)."
 else
-    mkdir -p "$UPLOADS_DIR"
-    echo "✓ Uploads-Ordner erstellt: $UPLOADS_DIR"
+    if [ -d "$UPLOADS_DIR" ]; then
+        find "$UPLOADS_DIR" -type f -delete
+        echo "✓ Uploads geleert: $UPLOADS_DIR"
+    else
+        mkdir -p "$UPLOADS_DIR"
+        echo "✓ Uploads-Ordner erstellt: $UPLOADS_DIR"
+    fi
 fi
 
 echo ""
