@@ -51,8 +51,8 @@
             <button @click="view = 'dashboard'; mobileMenuOpen = false" :class="view === 'dashboard' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">dashboard</span><span>Dashboard</span></button>
             <button @click="view = 'kunden'; mobileMenuOpen = false" :class="view === 'kunden' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">people</span><span>Kunden</span></button>
             <button @click="view = 'auftraege'; mobileMenuOpen = false" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
-            <button @click="view = 'archiviert'; mobileMenuOpen = false" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
             <button @click="view = 'buchhaltung'; mobileMenuOpen = false" :class="view === 'buchhaltung' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">account_balance_wallet</span><span>Buchhaltung</span></button>
+            <button @click="view = 'archiviert'; mobileMenuOpen = false" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
             <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
         
@@ -69,10 +69,12 @@
         <!-- Dashboard -->
         <template x-if="view === 'dashboard'">
             <div>
-                <header class="mb-8 md:mb-12 md:mb-24 flex flex-col md:flex-row gap-6 md:gap-0 justify-between">
-                    <h1 class="font-headline text-3xl md:text-4xl md:text-5xl text-primary font-bold">Übersicht</h1>
-                    <div class="relative w-full md:w-96" @click.stop>
-                        <input x-model="searchQuery" @input="searchOpen = true" placeholder="Kunden oder Aufträge suchen..." class="w-full bg-white border border-surface-low rounded-2xl p-4 shadow-sm font-body">
+                <header class="mb-8 md:mb-12 space-y-6 md:space-y-8">
+                    <h1 class="font-headline text-3xl md:text-5xl text-primary font-bold">Dashboard</h1>
+                    <!-- Suche über die volle Breite -->
+                    <div class="relative w-full" @click.stop>
+                        <span class="material-icons-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/50 pointer-events-none">search</span>
+                        <input x-model="searchQuery" @input="searchOpen = true" @keydown.escape="searchOpen = false" placeholder="Kunden oder Aufträge suchen …" class="w-full bg-white rounded-3xl pl-14 pr-6 py-5 shadow-sm font-body text-base">
                         <div x-show="searchOpen && searchQuery.length > 0" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 border border-surface-low overflow-hidden">
                             <template x-for="res in searchSuggestions" :key="res.key">
                                 <div @click="handleSearchResult(res)" class="px-6 py-4 hover:bg-surface-low cursor-pointer border-b last:border-0 font-body">
@@ -95,7 +97,7 @@
                     </div>
                 </template>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:p-12 text-center">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
                     <div @click="view = 'kunden'" class="bg-white p-6 md:p-12 rounded-3xl shadow-sm cursor-pointer hover:shadow-md transition-shadow">
                         <div class="text-4xl md:text-5xl font-headline text-primary font-bold" x-text="kunden.length"></div>
                         <p class="text-[10px] uppercase font-bold opacity-40">Kunden</p>
@@ -107,7 +109,7 @@
                 </div>
 
                 <!-- Darunter: Auftrags-Statistik (links) und Finanzen (rechts) -->
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start mt-12">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start mt-8">
                 <!-- Status-Verteilung (Horizontales Balkendiagramm) -->
                 <div class="bg-white p-6 md:p-12 rounded-3xl shadow-sm font-body">
                     <h3 class="font-headline text-2xl text-primary font-bold mb-12 text-left">Status-Verteilung</h3>
