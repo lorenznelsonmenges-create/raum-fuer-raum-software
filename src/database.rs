@@ -3,9 +3,10 @@ use chrono::NaiveDate;
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions, SqliteRow}, SqlitePool, Row};
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum};
+use crate::domain::{BelegFormat, BelegDateiname, BelegPfad};
 use crate::error::AppError;
 use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings, User};
-use crate::models::{Buchung, BuchungsDaten, BuchungsFilter, BuchungsUebersicht};
+use crate::models::{Buchung, BuchungsDaten, BuchungsFilter, BuchungsUebersicht, BelegMeta};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
     dotenvy::dotenv().ok();
@@ -357,7 +358,7 @@ pub async fn auftrag_existiert(pool: &SqlitePool, id: i64) -> Result<bool, sqlx:
 // Gelesene Zeilen werden wieder durch die Domain Primitives geschickt – auch Daten aus
 // der eigenen Datenbank gelten erst nach Validierung als gültige Buchung.
 
-const BUCHUNG_SPALTEN: &str = "id, buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, created_at, created_by";
+const BUCHUNG_SPALTEN: &str = "id, buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, beleg_pfad, beleg_dateiname, beleg_typ, created_at, created_by";
 
 fn ungueltige_buchung(e: AppError) -> sqlx::Error {
     sqlx::Error::Decode(format!("Ungültige Buchung in der Datenbank: {:?}", e).into())
@@ -378,16 +379,30 @@ fn buchung_aus_row(row: &SqliteRow) -> Result<Buchung, sqlx::Error> {
         auftrag_id: row.try_get("auftrag_id")?,
         beleg_referenz: row.try_get::<Option<String>, _>("beleg_referenz")?
             .map(|v| BelegReferenz::new(&v)).transpose().map_err(ungueltige_buchung)?,
+        beleg: beleg_aus_row(row)?,
         created_at: row.try_get("created_at")?,
         created_by: row.try_get("created_by")?,
     })
 }
 
+fn beleg_aus_row(row: &SqliteRow) -> Result<Option<BelegMeta>, sqlx::Error> {
+    let pfad: Option<String> = row.try_get("beleg_pfad")?;
+    let Some(pfad) = pfad else { return Ok(None) };
+    let dateiname: Option<String> = row.try_get("beleg_dateiname")?;
+    let typ: Option<String> = row.try_get("beleg_typ")?;
+    Ok(Some(BelegMeta {
+        pfad: BelegPfad::from_db(&pfad).map_err(ungueltige_buchung)?,
+        dateiname: BelegDateiname::new(dateiname.as_deref().unwrap_or("Beleg")).map_err(ungueltige_buchung)?,
+        format: BelegFormat::aus_mime(typ.as_deref().unwrap_or("")).map_err(ungueltige_buchung)?,
+    }))
+}
+
 /// `created_by` kommt aus der Session (AuthUser), niemals aus dem Request-Body.
-pub async fn create_buchung(pool: &SqlitePool, daten: &BuchungsDaten, created_by: i64) -> Result<Buchung, sqlx::Error> {
+/// Der Beleg ist Pflicht – die Signatur lässt keine Buchung ohne Beleg zu.
+pub async fn create_buchung(pool: &SqlitePool, daten: &BuchungsDaten, beleg: &BelegMeta, created_by: i64) -> Result<Buchung, sqlx::Error> {
     let sql = format!(
-        "INSERT INTO buchungen (buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, created_by) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING {}", BUCHUNG_SPALTEN);
+        "INSERT INTO buchungen (buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, beleg_pfad, beleg_dateiname, beleg_typ, created_by) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING {}", BUCHUNG_SPALTEN);
     let row = sqlx::query(&sql)
         .bind(daten.buchungs_typ.as_str())
         .bind(daten.betrag.as_cents())
@@ -396,6 +411,9 @@ pub async fn create_buchung(pool: &SqlitePool, daten: &BuchungsDaten, created_by
         .bind(daten.datum.to_iso())
         .bind(daten.auftrag_id)
         .bind(daten.beleg_referenz.as_ref().map(|b| b.as_str()))
+        .bind(beleg.pfad.as_str())
+        .bind(beleg.dateiname.as_str())
+        .bind(beleg.format.mime())
         .bind(created_by)
         .fetch_one(pool).await?;
     buchung_aus_row(&row)
@@ -428,10 +446,12 @@ pub async fn get_buchung_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Buch
 }
 
 /// Aktualisiert die fachlichen Felder. `created_at`/`created_by` bleiben unverändert.
+/// `neuer_beleg = None` behält den bisherigen Beleg.
 /// Liefert `sqlx::Error::RowNotFound`, wenn die Buchung nicht existiert.
-pub async fn update_buchung(pool: &SqlitePool, id: i64, daten: &BuchungsDaten) -> Result<Buchung, sqlx::Error> {
+pub async fn update_buchung(pool: &SqlitePool, id: i64, daten: &BuchungsDaten, neuer_beleg: Option<&BelegMeta>) -> Result<Buchung, sqlx::Error> {
     let sql = format!(
-        "UPDATE buchungen SET buchungs_typ = ?, betrag_cent = ?, kategorie = ?, beschreibung = ?, datum = ?, auftrag_id = ?, beleg_referenz = ? \
+        "UPDATE buchungen SET buchungs_typ = ?, betrag_cent = ?, kategorie = ?, beschreibung = ?, datum = ?, auftrag_id = ?, beleg_referenz = ?, \
+         beleg_pfad = COALESCE(?, beleg_pfad), beleg_dateiname = COALESCE(?, beleg_dateiname), beleg_typ = COALESCE(?, beleg_typ) \
          WHERE id = ? RETURNING {}", BUCHUNG_SPALTEN);
     let row = sqlx::query(&sql)
         .bind(daten.buchungs_typ.as_str())
@@ -441,6 +461,9 @@ pub async fn update_buchung(pool: &SqlitePool, id: i64, daten: &BuchungsDaten) -
         .bind(daten.datum.to_iso())
         .bind(daten.auftrag_id)
         .bind(daten.beleg_referenz.as_ref().map(|b| b.as_str()))
+        .bind(neuer_beleg.map(|b| b.pfad.as_str()))
+        .bind(neuer_beleg.map(|b| b.dateiname.as_str()))
+        .bind(neuer_beleg.map(|b| b.format.mime()))
         .bind(id)
         .fetch_optional(pool).await?
         .ok_or(sqlx::Error::RowNotFound)?;

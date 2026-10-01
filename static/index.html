@@ -623,14 +623,14 @@
                         <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Kategorie</label>
                         <input type="text" list="buchungs-kategorien" maxlength="100" x-model="buchungsFilter.kategorie" @change="ladeBuchhaltung()" placeholder="Alle" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
                     </div>
-                    <button @click="resetBuchungsFilter()" class="secondary-button justify-center py-3.5 font-bold text-sm"><span class="material-icons-outlined text-lg">filter_alt_off</span><span>Zurücksetzen</span></button>
+                    <button @click="resetBuchungsFilter()" class="secondary-button justify-center py-3.5 font-bold text-sm"><span class="material-icons-outlined text-lg">filter_alt_off</span><span>Filter zurücksetzen</span></button>
                 </div>
 
                 <!-- Buchungsliste -->
                 <div class="bg-white rounded-3xl overflow-x-auto shadow-sm">
                     <table class="w-full text-left font-body">
                         <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40">
-                            <tr><th class="px-4 md:px-8 py-4 md:py-6">Datum</th><th class="px-4 md:px-8 py-4 md:py-6">Typ</th><th class="px-4 md:px-8 py-4 md:py-6">Kategorie</th><th class="px-4 md:px-8 py-4 md:py-6">Beschreibung</th><th class="px-4 md:px-8 py-4 md:py-6 text-right">Betrag</th><th class="px-4 md:px-8 py-4 md:py-6"></th></tr>
+                            <tr><th class="px-4 md:px-8 py-4 md:py-6">Datum</th><th class="px-4 md:px-8 py-4 md:py-6">Typ</th><th class="px-4 md:px-8 py-4 md:py-6">Kategorie</th><th class="px-4 md:px-8 py-4 md:py-6">Beschreibung</th><th class="px-4 md:px-8 py-4 md:py-6 text-right">Betrag</th><th class="px-4 md:px-8 py-4 md:py-6">Beleg</th><th class="px-4 md:px-8 py-4 md:py-6"></th></tr>
                         </thead>
                         <tbody class="divide-y divide-surface-low">
                             <template x-for="b in buchungen" :key="b.id">
@@ -648,13 +648,19 @@
                                         <div class="text-[10px] uppercase opacity-40 font-bold" x-show="b.beleg_referenz || b.auftrag_id" x-text="[b.beleg_referenz ? 'Beleg ' + b.beleg_referenz : '', b.auftrag_id ? formatAuftragID(b.auftrag_id) : ''].filter(Boolean).join(' • ')"></div>
                                     </td>
                                     <td class="px-4 md:px-8 py-4 md:py-5 text-right font-headline text-lg font-bold whitespace-nowrap" :class="b.buchungs_typ === 'einnahme' ? 'text-green-700' : 'text-red-600'" x-text="(b.buchungs_typ === 'einnahme' ? '+ ' : '− ') + formatEuro(b.betrag)"></td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5 whitespace-nowrap">
+                                        <a x-show="b.beleg" :href="b.beleg ? b.beleg.url : '#'" target="_blank" rel="noopener" class="p-2.5 inline-flex text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" :title="b.beleg ? b.beleg.dateiname : ''">
+                                            <span class="material-icons-outlined text-lg" x-text="b.beleg && b.beleg.typ === 'application/pdf' ? 'picture_as_pdf' : 'image'"></span>
+                                        </a>
+                                        <span x-show="!b.beleg" class="text-[10px] font-bold uppercase text-red-600 bg-red-50 px-3 py-1.5 rounded-full" title="Bitte Beleg nachreichen (Bearbeiten)">fehlt</span>
+                                    </td>
                                     <td class="px-4 md:px-8 py-4 md:py-5 text-right whitespace-nowrap">
                                         <button @click="openBuchungModal(b)" class="p-2.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" title="Bearbeiten"><span class="material-icons-outlined text-lg">edit</span></button>
                                         <button @click="deleteBuchung(b.id)" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Löschen"><span class="material-icons-outlined text-lg">delete</span></button>
                                     </td>
                                 </tr>
                             </template>
-                            <tr x-show="buchungen.length === 0"><td colspan="6" class="py-10 text-center text-xs opacity-40 italic">Keine Buchungen gefunden.</td></tr>
+                            <tr x-show="buchungen.length === 0"><td colspan="7" class="py-10 text-center text-xs opacity-40 italic">Keine Buchungen gefunden.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -861,6 +867,16 @@
                     </div>
                 </div>
 
+                <div>
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Beleg * <span class="opacity-50 font-normal normal-case">(PDF, JPG oder PNG, max. 10 MB)</span></label>
+                    <div x-show="buchungBelegAktuell" class="flex items-center gap-2 text-sm px-2 mb-2">
+                        <span class="material-icons-outlined text-base text-primary">attach_file</span>
+                        <a :href="buchungBelegAktuell ? buchungBelegAktuell.url : '#'" target="_blank" rel="noopener" class="text-primary font-semibold underline underline-offset-2 truncate" x-text="buchungBelegAktuell ? buchungBelegAktuell.dateiname : ''"></a>
+                        <span class="text-xs opacity-50 whitespace-nowrap">– neue Datei wählen, um zu ersetzen</span>
+                    </div>
+                    <input type="file" x-ref="belegInput" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" @change="buchungBelegDatei = $event.target.files[0] || null" class="w-full bg-surface-low p-3 rounded-2xl text-sm text-on-surface shadow-inner border-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-primary file:text-white file:font-bold file:text-xs">
+                </div>
+
                 <div x-show="buchungFormFehler" class="bg-red-50 text-red-600 text-sm font-semibold rounded-2xl px-5 py-3 flex items-center gap-2">
                     <span class="material-icons-outlined text-lg">error_outline</span><span x-text="buchungFormFehler"></span>
                 </div>
@@ -893,7 +909,7 @@
                 buchungen: [],
                 buchungsUebersicht: { einnahmen_gesamt: 0, ausgaben_gesamt: 0, saldo: 0 },
                 buchungsFilter: { von: '', bis: '', typ: '', kategorie: '' },
-                buchungModal: false, buchungEditId: null, buchungFormFehler: '',
+                buchungModal: false, buchungEditId: null, buchungFormFehler: '', buchungBelegDatei: null, buchungBelegAktuell: null,
                 buchungForm: { buchungs_typ: 'einnahme', betrag: '', datum: '', kategorie: '', beschreibung: '', beleg_referenz: '', auftrag_id: '' },
                 
                 async init() { 
@@ -1098,6 +1114,9 @@
                 resetBuchungsFilter() { this.buchungsFilter = { von: '', bis: '', typ: '', kategorie: '' }; this.ladeBuchhaltung(); },
                 openBuchungModal(b = null) {
                     this.buchungFormFehler = '';
+                    this.buchungBelegDatei = null;
+                    this.buchungBelegAktuell = b && b.beleg ? b.beleg : null;
+                    if (this.$refs.belegInput) this.$refs.belegInput.value = '';
                     if (b) {
                         this.buchungEditId = b.id;
                         this.buchungForm = { buchungs_typ: b.buchungs_typ, betrag: Number(b.betrag).toFixed(2).replace('.', ','), datum: b.datum, kategorie: b.kategorie, beschreibung: b.beschreibung || '', beleg_referenz: b.beleg_referenz || '', auftrag_id: b.auftrag_id ? String(b.auftrag_id) : '' };
@@ -1126,6 +1145,10 @@
                     if (!f.kategorie.trim()) { this.buchungFormFehler = 'Bitte eine Kategorie angeben.'; return; }
                     if (!f.datum) { this.buchungFormFehler = 'Bitte ein Datum angeben.'; return; }
                     if (f.datum > this.heuteISO()) { this.buchungFormFehler = 'Das Datum darf nicht in der Zukunft liegen.'; return; }
+                    // Belegpflicht (UX-Prüfung; verbindlich prüft der Server inkl. Dateiinhalt)
+                    const beleg = this.buchungBelegDatei;
+                    if (!beleg && !this.buchungBelegAktuell) { this.buchungFormFehler = 'Bitte einen Beleg anhängen (PDF, JPG oder PNG).'; return; }
+                    if (beleg && beleg.size > 10 * 1024 * 1024) { this.buchungFormFehler = 'Der Beleg ist zu groß (max. 10 MB).'; return; }
                     const payload = {
                         buchungs_typ: f.buchungs_typ,
                         betrag,
@@ -1138,7 +1161,10 @@
                     const url = this.buchungEditId ? `/api/buchungen/${this.buchungEditId}` : '/api/buchungen';
                     this.isProcessing = true;
                     try {
-                        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const fd = new FormData();
+                        fd.append('daten', JSON.stringify(payload));
+                        if (beleg) fd.append('beleg', beleg);
+                        const r = await fetch(url, { method: 'POST', body: fd });
                         if (!r.ok) { this.buchungFormFehler = await this.apiFehler(r); return; }
                         this.buchungModal = false;
                         this.showFeedback(this.buchungEditId ? 'Buchung aktualisiert.' : 'Buchung gespeichert.');

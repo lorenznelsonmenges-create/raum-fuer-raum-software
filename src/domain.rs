@@ -518,3 +518,162 @@ impl Serialize for BuchungsDatum {
         serializer.serialize_str(&self.to_iso())
     }
 }
+
+
+// =====================================================================
+// Buchhaltung – Beleg-Dateien (Belegpflicht)
+// =====================================================================
+
+/// Maximale Größe eines Belegs: 10 MB (Input Validation Stufe 2: Size).
+pub const MAX_BELEG_BYTES: usize = 10 * 1024 * 1024;
+
+/// Erlaubte Beleg-Formate. Das Format wird aus dem **Inhalt** (Magic Bytes) bestimmt,
+/// nie aus Dateiname oder Content-Type des Clients – beides ist frei fälschbar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BelegFormat {
+    Pdf,
+    Jpeg,
+    Png,
+}
+
+impl BelegFormat {
+    /// Syntax-Prüfung über die Dateisignatur
+    pub fn erkennen(inhalt: &[u8]) -> Option<Self> {
+        if inhalt.starts_with(b"%PDF-") {
+            Some(Self::Pdf)
+        } else if inhalt.starts_with(&[0xFF, 0xD8, 0xFF]) {
+            Some(Self::Jpeg)
+        } else if inhalt.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+            Some(Self::Png)
+        } else {
+            None
+        }
+    }
+
+    pub fn endung(&self) -> &'static str {
+        match self {
+            Self::Pdf => "pdf",
+            Self::Jpeg => "jpg",
+            Self::Png => "png",
+        }
+    }
+
+    pub fn mime(&self) -> &'static str {
+        match self {
+            Self::Pdf => "application/pdf",
+            Self::Jpeg => "image/jpeg",
+            Self::Png => "image/png",
+        }
+    }
+
+    pub fn aus_mime(mime: &str) -> Result<Self, AppError> {
+        match mime {
+            "application/pdf" => Ok(Self::Pdf),
+            "image/jpeg" => Ok(Self::Jpeg),
+            "image/png" => Ok(Self::Png),
+            _ => Err(AppError::BadRequest("Unbekannter Beleg-Typ".into())),
+        }
+    }
+}
+
+/// Ursprünglicher Dateiname eines Belegs – nur zur Anzeige, nie Teil eines Pfads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BelegDateiname(String);
+
+impl BelegDateiname {
+    pub const MAX_LAENGE: usize = 200;
+
+    /// Kanonisierung vor Validierung: Pfadanteile werden abgeschnitten, unzulässige
+    /// Zeichen durch `_` ersetzt (ein Dateiname soll den Upload nicht verhindern,
+    /// darf aber keine Steuer- oder HTML-Zeichen enthalten).
+    /// Postcondition: 1–200 Zeichen, nur Buchstaben, Ziffern, Leerzeichen und `- _ . ( ) , + &`
+    pub fn new(value: &str) -> Result<Self, AppError> {
+        let basis = value.rsplit(['/', '\\']).next().unwrap_or("").trim();
+        let bereinigt: String = basis
+            .chars()
+            .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.' | '(' | ')' | ',' | '+' | '&') { c } else { '_' })
+            .take(Self::MAX_LAENGE)
+            .collect();
+        let bereinigt = bereinigt.trim().to_string();
+        if bereinigt.is_empty() || bereinigt.chars().all(|c| c == '.' || c == '_') {
+            return Err(AppError::BadRequest("Ungültiger Dateiname des Belegs".into()));
+        }
+        Ok(Self(bereinigt))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Speicherpfad eines Belegs: immer `uploads/belege/<uuid>.<endung>`.
+/// Der Pfad wird ausschließlich serverseitig erzeugt – Path Traversal ist strukturell
+/// ausgeschlossen. Auch Pfade aus der Datenbank werden vor dem Löschen geprüft.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BelegPfad(String);
+
+impl BelegPfad {
+    pub const ORDNER: &'static str = "uploads/belege";
+
+    /// Erzeugt einen neuen, zufälligen Pfad für das gegebene Format.
+    pub fn neu(format: BelegFormat) -> Self {
+        Self(format!("{}/{}.{}", Self::ORDNER, uuid::Uuid::new_v4(), format.endung()))
+    }
+
+    /// Precondition: exakt `uploads/belege/<uuid>.(pdf|jpg|png)`
+    pub fn from_db(value: &str) -> Result<Self, AppError> {
+        let ungueltig = || AppError::BadRequest("Ungültiger Beleg-Pfad".into());
+        let datei = value.strip_prefix("uploads/belege/").ok_or_else(ungueltig)?;
+        let (stamm, endung) = datei.rsplit_once('.').ok_or_else(ungueltig)?;
+        if !matches!(endung, "pdf" | "jpg" | "png") || uuid::Uuid::parse_str(stamm).is_err() {
+            return Err(ungueltig());
+        }
+        Ok(Self(value.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// URL für den Abruf über die geschützte `/uploads`-Route
+    pub fn url(&self) -> String {
+        format!("/{}", self.0)
+    }
+}
+
+/// Validierter Beleg-Upload. Existiert ein `BelegDatei`, ist der Inhalt garantiert
+/// ein nicht-leeres PDF/JPG/PNG mit höchstens 10 MB.
+#[derive(Debug, Clone)]
+pub struct BelegDatei {
+    format: BelegFormat,
+    dateiname: BelegDateiname,
+    inhalt: Vec<u8>,
+}
+
+impl BelegDatei {
+    /// Reihenfolge: Size → Syntax (Magic Bytes) → Dateiname
+    pub fn new(dateiname: &str, inhalt: Vec<u8>) -> Result<Self, AppError> {
+        if inhalt.is_empty() {
+            return Err(AppError::BadRequest("Der Beleg ist leer".into()));
+        }
+        if inhalt.len() > MAX_BELEG_BYTES {
+            return Err(AppError::BadRequest("Beleg ist zu groß (max. 10 MB)".into()));
+        }
+        let format = BelegFormat::erkennen(&inhalt)
+            .ok_or_else(|| AppError::BadRequest("Beleg muss ein PDF, JPG oder PNG sein".into()))?;
+        let dateiname = BelegDateiname::new(dateiname)?;
+        Ok(Self { format, dateiname, inhalt })
+    }
+
+    pub fn format(&self) -> BelegFormat {
+        self.format
+    }
+
+    pub fn dateiname(&self) -> &BelegDateiname {
+        &self.dateiname
+    }
+
+    pub fn inhalt(&self) -> &[u8] {
+        &self.inhalt
+    }
+}

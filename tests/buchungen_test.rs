@@ -2,7 +2,8 @@ use chrono::NaiveDate;
 use sqlx::SqlitePool;
 use wendepunkt_software::database;
 use wendepunkt_software::domain::{BelegReferenz, Beschreibung, BuchungsBetrag, BuchungsDatum, BuchungsTyp, Euro, Kategorie};
-use wendepunkt_software::models::{Auftrag, BuchungEingabe, BuchungsFilterParameter, Kunde, Zeitraum};
+use wendepunkt_software::domain::{BelegDatei, BelegDateiname, BelegFormat, BelegPfad, MAX_BELEG_BYTES};
+use wendepunkt_software::models::{Auftrag, BelegMeta, BuchungEingabe, BuchungsFilterParameter, Kunde, Zeitraum};
 
 async fn setup_db() -> SqlitePool {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -19,6 +20,14 @@ fn eingabe(typ: &str, betrag: f64, datum: &str) -> BuchungEingabe {
         datum: datum.into(),
         auftrag_id: None,
         beleg_referenz: None,
+    }
+}
+
+fn beleg() -> BelegMeta {
+    BelegMeta {
+        pfad: BelegPfad::neu(BelegFormat::Pdf),
+        dateiname: BelegDateiname::new("quittung.pdf").unwrap(),
+        format: BelegFormat::Pdf,
     }
 }
 
@@ -118,9 +127,9 @@ async fn test_buchungen_crud_und_uebersicht() {
     let e2 = eingabe("ausgabe", 200.0, "2026-04-01").validieren().unwrap();
     let e3 = eingabe("ausgabe", 0.44, "2025-12-31").validieren().unwrap();
 
-    let b1 = database::create_buchung(&pool, &e1, user.id).await.unwrap();
-    let b2 = database::create_buchung(&pool, &e2, user.id).await.unwrap();
-    database::create_buchung(&pool, &e3, user.id).await.unwrap();
+    let b1 = database::create_buchung(&pool, &e1, &beleg(), user.id).await.unwrap();
+    let b2 = database::create_buchung(&pool, &e2, &beleg(), user.id).await.unwrap();
+    database::create_buchung(&pool, &e3, &beleg(), user.id).await.unwrap();
 
     assert_eq!(b1.betrag().as_cents(), 123456);
     assert_eq!(b1.created_by(), user.id);
@@ -153,12 +162,12 @@ async fn test_buchungen_crud_und_uebersicht() {
 
     // Negativer Saldo
     let gross = eingabe("ausgabe", 5000.0, "2026-05-01").validieren().unwrap();
-    database::create_buchung(&pool, &gross, user.id).await.unwrap();
+    database::create_buchung(&pool, &gross, &beleg(), user.id).await.unwrap();
     assert!(database::get_buchungen_uebersicht(&pool, None, None).await.unwrap().saldo < 0);
 
     // Update ändert Daten, aber nicht created_by / Identität
     let neu = eingabe("einnahme", 99.99, "2026-04-02").validieren().unwrap();
-    let b2_neu = database::update_buchung(&pool, b2.id(), &neu).await.unwrap();
+    let b2_neu = database::update_buchung(&pool, b2.id(), &neu, None).await.unwrap();
     assert_eq!(b2_neu, b2); // Entity-Gleichheit über ID
     assert_eq!(b2_neu.betrag().as_cents(), 9999);
     assert_eq!(b2_neu.buchungs_typ(), BuchungsTyp::Einnahme);
@@ -168,7 +177,7 @@ async fn test_buchungen_crud_und_uebersicht() {
     database::delete_buchung(&pool, b2.id()).await.unwrap();
     assert!(database::get_buchung_by_id(&pool, b2.id()).await.unwrap().is_none());
     assert!(matches!(database::delete_buchung(&pool, b2.id()).await, Err(sqlx::Error::RowNotFound)));
-    assert!(matches!(database::update_buchung(&pool, b2.id(), &neu).await, Err(sqlx::Error::RowNotFound)));
+    assert!(matches!(database::update_buchung(&pool, b2.id(), &neu, None).await, Err(sqlx::Error::RowNotFound)));
 }
 
 #[tokio::test]
@@ -184,7 +193,7 @@ async fn test_buchung_auftrag_verknuepfung() {
     let mut e = eingabe("einnahme", 100.0, "2026-01-15");
     e.auftrag_id = Some(auftrag_id);
     e.beleg_referenz = Some("R000001".into());
-    let b = database::create_buchung(&pool, &e.validieren().unwrap(), user.id).await.unwrap();
+    let b = database::create_buchung(&pool, &e.validieren().unwrap(), &beleg(), user.id).await.unwrap();
     assert_eq!(b.auftrag_id(), Some(auftrag_id));
     assert_eq!(b.beleg_referenz().unwrap().as_str(), "R000001");
 
@@ -209,4 +218,75 @@ async fn test_db_check_constraints_als_zweite_schicht() {
     assert!(insert("einnahme", 0, "2026-01-01").execute(&pool).await.is_err());
     assert!(insert("einnahme", 100, "2026-02-30").execute(&pool).await.is_err());
     assert!(insert("einnahme", 100, "01.01.2026").execute(&pool).await.is_err());
+}
+
+// --- Belege ---
+
+#[test]
+fn test_beleg_format_ueber_magic_bytes() {
+    assert_eq!(BelegFormat::erkennen(b"%PDF-1.7 ..."), Some(BelegFormat::Pdf));
+    assert_eq!(BelegFormat::erkennen(&[0xFF, 0xD8, 0xFF, 0xE0]), Some(BelegFormat::Jpeg));
+    assert_eq!(BelegFormat::erkennen(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0]), Some(BelegFormat::Png));
+    assert_eq!(BelegFormat::erkennen(b"<html><script>"), None);
+    assert_eq!(BelegFormat::erkennen(b"MZ\x90\x00"), None); // Windows-EXE
+}
+
+#[test]
+fn test_beleg_datei_validierung() {
+    assert!(BelegDatei::new("rechnung.pdf", b"%PDF-1.4 inhalt".to_vec()).is_ok());
+    assert!(BelegDatei::new("leer.pdf", vec![]).is_err());
+    // Endung .pdf hilft nicht: der Inhalt entscheidet
+    assert!(BelegDatei::new("boese.pdf", b"<svg onload=alert(1)>".to_vec()).is_err());
+    let mut zu_gross = b"%PDF-".to_vec();
+    zu_gross.resize(MAX_BELEG_BYTES + 1, b'a');
+    assert!(BelegDatei::new("gross.pdf", zu_gross).is_err());
+}
+
+#[test]
+fn test_beleg_dateiname_wird_bereinigt() {
+    assert_eq!(BelegDateiname::new("../../etc/passwd").unwrap().as_str(), "passwd");
+    assert_eq!(BelegDateiname::new("C:\\Users\\x\\Quittung März.pdf").unwrap().as_str(), "Quittung März.pdf");
+    assert_eq!(BelegDateiname::new("<script>.pdf").unwrap().as_str(), "_script_.pdf");
+    assert!(BelegDateiname::new("../").is_err());
+    assert_eq!(BelegDateiname::new(&"a".repeat(300)).unwrap().as_str().chars().count(), 200);
+}
+
+#[test]
+fn test_beleg_pfad_nur_im_belegordner() {
+    let p = BelegPfad::neu(BelegFormat::Png);
+    assert!(p.as_str().starts_with("uploads/belege/") && p.as_str().ends_with(".png"));
+    assert!(BelegPfad::from_db(p.as_str()).is_ok());
+    assert!(BelegPfad::from_db("uploads/belege/../../achtsam.db").is_err());
+    assert!(BelegPfad::from_db("uploads/rechnungen/R000001.pdf").is_err());
+    assert!(BelegPfad::from_db("uploads/belege/kein-uuid.pdf").is_err());
+    assert!(BelegPfad::from_db("uploads/belege/0b5e6f2a-6c1d-4d0e-9a51-1f2a3b4c5d6e.exe").is_err());
+}
+
+#[tokio::test]
+async fn test_buchung_beleg_speichern_und_ersetzen() {
+    let pool = setup_db().await;
+    let user = database::get_user_by_username(&pool, "admin").await.unwrap();
+    let daten = eingabe("ausgabe", 12.5, "2026-09-01").validieren().unwrap();
+    let erster = beleg();
+    let b = database::create_buchung(&pool, &daten, &erster, user.id).await.unwrap();
+    assert_eq!(b.beleg(), Some(&erster));
+
+    // Update ohne neuen Beleg behält den alten
+    let b = database::update_buchung(&pool, b.id(), &daten, None).await.unwrap();
+    assert_eq!(b.beleg(), Some(&erster));
+
+    // Update mit neuem Beleg ersetzt ihn
+    let zweiter = BelegMeta { pfad: BelegPfad::neu(BelegFormat::Jpeg), dateiname: BelegDateiname::new("foto.jpg").unwrap(), format: BelegFormat::Jpeg };
+    let b = database::update_buchung(&pool, b.id(), &daten, Some(&zweiter)).await.unwrap();
+    assert_eq!(b.beleg(), Some(&zweiter));
+
+    // JSON enthält Abruf-URL, aber kein internes Pfad-Feld
+    let json = serde_json::to_value(&b).unwrap();
+    assert_eq!(json["beleg"]["typ"], "image/jpeg");
+    assert_eq!(json["beleg"]["url"], format!("/{}", zweiter.pfad.as_str()));
+    assert!(json["beleg"].get("pfad").is_none());
+
+    // DB lehnt Belegpfade außerhalb von uploads/belege ab
+    let r = sqlx::query("UPDATE buchungen SET beleg_pfad = 'uploads/../achtsam.db' WHERE id = ?").bind(b.id()).execute(&pool).await;
+    assert!(r.is_err());
 }

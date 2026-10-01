@@ -1,7 +1,7 @@
 use wendepunkt_software::{models, database, pdf, files};
-use wendepunkt_software::domain::RechnungsNummer;
+use wendepunkt_software::domain::{RechnungsNummer, BelegDatei, BelegPfad, MAX_BELEG_BYTES};
 use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
-use wendepunkt_software::models::{Buchung, BuchungEingabe, BuchungsDaten, BuchungsFilterParameter, BuchungsUebersicht, Zeitraum, ZeitraumParameter};
+use wendepunkt_software::models::{Buchung, BuchungEingabe, BuchungsDaten, BuchungsFilterParameter, BuchungsUebersicht, Zeitraum, ZeitraumParameter, BelegMeta};
 use wendepunkt_software::error::AppError;
 
 use axum::{
@@ -502,14 +502,17 @@ async fn serve_upload_file(
 // Secure by Design – Input Validation (Prinzip 6) in fester Reihenfolge, günstigste
 // Prüfung zuerst:
 //   1. Origin   – auth_middleware + `AuthUser`-Extractor (bestehende Session)
-//   2. Size     – `DefaultBodyLimit` auf dem Buchungs-Router (BUCHUNG_MAX_BODY_BYTES)
+//   2. Size     – `DefaultBodyLimit` auf dem Buchungs-Router (BUCHUNG_MAX_BODY_BYTES),
+//                 Formulardaten max. 16 KB, Beleg max. 10 MB
 //   3. Lexical  – Zeichenprüfung in den Domain Primitives (`BuchungEingabe::validieren`)
 //   4. Syntax   – Formatprüfung in den Domain Primitives (Datum, Betrag, Typ)
 //   5. Semantic – Datenbankprüfungen (existiert der Auftrag / die Buchung?) – zuletzt,
 //                 weil am teuersten
 
-/// Eine Buchung ist ein kleines JSON-Objekt; alles darüber ist kein legitimer Request.
-const BUCHUNG_MAX_BODY_BYTES: usize = 16 * 1024;
+/// Formulardaten einer Buchung sind ein kleines JSON-Objekt.
+const BUCHUNG_MAX_DATEN_BYTES: usize = 16 * 1024;
+/// Gesamter Request: Beleg (max. 10 MB) + Formulardaten + Multipart-Overhead.
+const BUCHUNG_MAX_BODY_BYTES: usize = MAX_BELEG_BYTES + 64 * 1024;
 
 /// Availability / Fail Secure: Datenbankfehler werden serverseitig geloggt, der Client
 /// erhält nur eine generische Meldung (keine Preisgabe interner Strukturen).
@@ -570,16 +573,83 @@ async fn get_buchung(
         .ok_or(AppError::NotFound)
 }
 
+/// Liest das Multipart-Formular einer Buchung: Feld `daten` (JSON, Pflicht) und
+/// Feld `beleg` (Datei, optional – ob Pflicht, entscheidet der Aufrufer).
+/// Unbekannte oder doppelte Felder werden abgelehnt.
+async fn lese_buchungsformular(mut multipart: Multipart) -> Result<(BuchungEingabe, Option<BelegDatei>), AppError> {
+    let formular_fehler = |e: axum::extract::multipart::MultipartError| {
+        if e.status() == axum::http::StatusCode::PAYLOAD_TOO_LARGE {
+            AppError::BadRequest("Beleg ist zu groß (max. 10 MB)".into())
+        } else {
+            AppError::BadRequest("Ungültiges Formular".into())
+        }
+    };
+    let mut eingabe: Option<BuchungEingabe> = None;
+    let mut beleg: Option<BelegDatei> = None;
+    while let Some(feld) = multipart.next_field().await.map_err(formular_fehler)? {
+        match feld.name() {
+            Some("daten") if eingabe.is_none() => {
+                let roh = feld.bytes().await.map_err(formular_fehler)?;
+                if roh.len() > BUCHUNG_MAX_DATEN_BYTES {
+                    return Err(AppError::BadRequest("Buchungsdaten zu groß".into()));
+                }
+                let parsed = serde_json::from_slice::<BuchungEingabe>(&roh)
+                    .map_err(|_| AppError::BadRequest("Ungültige Buchungsdaten".into()))?;
+                eingabe = Some(parsed);
+            }
+            Some("beleg") if beleg.is_none() => {
+                let dateiname = feld.file_name().unwrap_or("Beleg").to_string();
+                let inhalt = feld.bytes().await.map_err(formular_fehler)?;
+                beleg = Some(BelegDatei::new(&dateiname, inhalt.to_vec())?);
+            }
+            _ => return Err(AppError::BadRequest("Unerwartetes Formularfeld".into())),
+        }
+    }
+    let eingabe = eingabe.ok_or_else(|| AppError::BadRequest("Buchungsdaten fehlen".into()))?;
+    Ok((eingabe, beleg))
+}
+
+/// Schreibt den Beleg unter einem zufälligen, serverseitig erzeugten Pfad.
+async fn speichere_beleg(beleg: &BelegDatei) -> Result<BelegMeta, AppError> {
+    let pfad = BelegPfad::neu(beleg.format());
+    tokio::fs::create_dir_all(BelegPfad::ORDNER).await
+        .map_err(|e| { eprintln!("[BUCHHALTUNG] Beleg-Ordner: {:?}", e); AppError::Internal("Beleg konnte nicht gespeichert werden".into()) })?;
+    tokio::fs::write(pfad.as_str(), beleg.inhalt()).await
+        .map_err(|e| { eprintln!("[BUCHHALTUNG] Beleg schreiben: {:?}", e); AppError::Internal("Beleg konnte nicht gespeichert werden".into()) })?;
+    Ok(BelegMeta { pfad, dateiname: beleg.dateiname().clone(), format: beleg.format() })
+}
+
+/// Entfernt eine Beleg-Datei. Fehler werden nur geloggt (die Buchung selbst ist dann
+/// bereits konsistent; eine verwaiste Datei ist kein Sicherheitsproblem).
+async fn entferne_beleg(pfad: &BelegPfad) {
+    if let Err(e) = tokio::fs::remove_file(pfad.as_str()).await {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            eprintln!("[BUCHHALTUNG] Beleg {} konnte nicht gelöscht werden: {:?}", pfad.as_str(), e);
+        }
+    }
+}
+
 async fn add_buchung(
     AuthUser(user): AuthUser,
     State(pool): State<SqlitePool>,
-    Json(eingabe): Json<BuchungEingabe>,
+    multipart: Multipart,
 ) -> Result<Json<Buchung>, AppError> {
+    let (eingabe, beleg) = lese_buchungsformular(multipart).await.map_err(|e| buchung_abgelehnt("erstellen", &user, e))?;
     let daten = eingabe.validieren().map_err(|e| buchung_abgelehnt("erstellen", &user, e))?;
+    // Belegpflicht: keine Buchung ohne Beleg
+    let beleg = beleg.ok_or_else(|| buchung_abgelehnt("erstellen", &user,
+        AppError::BadRequest("Ein Beleg (PDF, JPG oder PNG) ist Pflicht".into())))?;
     pruefe_buchung_semantik(&pool, &daten).await.map_err(|e| buchung_abgelehnt("erstellen", &user, e))?;
+
+    let meta = speichere_beleg(&beleg).await?;
     // created_by wird serverseitig aus der Session gesetzt – nie aus dem Request
-    let buchung = database::create_buchung(&pool, &daten, user.id).await
-        .map_err(|e| buchung_db_fehler("Erstellen", e))?;
+    let buchung = match database::create_buchung(&pool, &daten, &meta, user.id).await {
+        Ok(b) => b,
+        Err(e) => {
+            entferne_beleg(&meta.pfad).await; // keine verwaisten Dateien
+            return Err(buchung_db_fehler("Erstellen", e));
+        }
+    };
     buchung_audit("erstellt", buchung.id(), &user);
     Ok(Json(buchung))
 }
@@ -588,13 +658,36 @@ async fn update_buchung(
     AuthUser(user): AuthUser,
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
-    Json(eingabe): Json<BuchungEingabe>,
+    multipart: Multipart,
 ) -> Result<Json<Buchung>, AppError> {
+    let (eingabe, beleg) = lese_buchungsformular(multipart).await.map_err(|e| buchung_abgelehnt("aendern", &user, e))?;
     let daten = eingabe.validieren().map_err(|e| buchung_abgelehnt("aendern", &user, e))?;
     pruefe_buchung_semantik(&pool, &daten).await.map_err(|e| buchung_abgelehnt("aendern", &user, e))?;
-    let buchung = database::update_buchung(&pool, id, &daten).await
-        .map_err(|e| buchung_db_fehler("Ändern", e))?;
-    buchung_audit("geaendert", buchung.id(), &user);
+    let bisher = database::get_buchung_by_id(&pool, id).await
+        .map_err(|e| buchung_db_fehler("Ändern", e))?
+        .ok_or(AppError::NotFound)?;
+    // Belegpflicht: Altbuchungen ohne Beleg können nur mit Beleg gespeichert werden
+    if beleg.is_none() && bisher.beleg().is_none() {
+        return Err(buchung_abgelehnt("aendern", &user,
+            AppError::BadRequest("Ein Beleg (PDF, JPG oder PNG) ist Pflicht".into())));
+    }
+
+    let neuer_beleg = match &beleg {
+        Some(b) => Some(speichere_beleg(b).await?),
+        None => None,
+    };
+    let buchung = match database::update_buchung(&pool, id, &daten, neuer_beleg.as_ref()).await {
+        Ok(b) => b,
+        Err(e) => {
+            if let Some(m) = &neuer_beleg { entferne_beleg(&m.pfad).await; }
+            return Err(buchung_db_fehler("Ändern", e));
+        }
+    };
+    // Alten Beleg erst nach erfolgreichem Update entfernen
+    if let (Some(_), Some(alt)) = (&neuer_beleg, bisher.beleg()) {
+        entferne_beleg(&alt.pfad).await;
+    }
+    buchung_audit(if neuer_beleg.is_some() { "geaendert_mit_neuem_beleg" } else { "geaendert" }, buchung.id(), &user);
     Ok(Json(buchung))
 }
 
@@ -603,8 +696,14 @@ async fn delete_buchung_handler(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
 ) -> Result<(), AppError> {
+    let bisher = database::get_buchung_by_id(&pool, id).await
+        .map_err(|e| buchung_db_fehler("Löschen", e))?
+        .ok_or(AppError::NotFound)?;
     database::delete_buchung(&pool, id).await
         .map_err(|e| buchung_db_fehler("Löschen", e))?;
+    if let Some(beleg) = bisher.beleg() {
+        entferne_beleg(&beleg.pfad).await;
+    }
     buchung_audit("geloescht", id, &user);
     Ok(())
 }

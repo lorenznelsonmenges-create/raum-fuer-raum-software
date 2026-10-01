@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
 use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum, parse_iso_datum};
+use crate::domain::{BelegFormat, BelegDateiname, BelegPfad};
 use crate::error::AppError;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum AuftragStatus {
@@ -194,6 +195,8 @@ pub struct Buchung {
     pub(crate) datum: BuchungsDatum,
     pub(crate) auftrag_id: Option<i64>,
     pub(crate) beleg_referenz: Option<BelegReferenz>,
+    /// Angehängte Beleg-Datei. `None` nur bei Altbuchungen aus der Zeit vor der Belegpflicht.
+    pub(crate) beleg: Option<BelegMeta>,
     pub(crate) created_at: String,
     /// Traceability (CIA-T): wird ausschließlich serverseitig aus der Session gesetzt
     pub(crate) created_by: i64,
@@ -216,8 +219,31 @@ impl Buchung {
     pub fn datum(&self) -> BuchungsDatum { self.datum }
     pub fn auftrag_id(&self) -> Option<i64> { self.auftrag_id }
     pub fn beleg_referenz(&self) -> Option<&BelegReferenz> { self.beleg_referenz.as_ref() }
+    pub fn beleg(&self) -> Option<&BelegMeta> { self.beleg.as_ref() }
     pub fn created_at(&self) -> &str { &self.created_at }
     pub fn created_by(&self) -> i64 { self.created_by }
+}
+
+/// Value Object: Metadaten einer gespeicherten Beleg-Datei.
+/// JSON: `{ "dateiname": "...", "typ": "application/pdf", "url": "/uploads/belege/<uuid>.pdf" }`
+/// – der interne Speicherpfad selbst wird nicht als Feld herausgegeben, nur die Abruf-URL.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BelegMeta {
+    pub pfad: BelegPfad,
+    pub dateiname: BelegDateiname,
+    pub format: BelegFormat,
+}
+
+impl Serialize for BelegMeta {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        use serde::ser::SerializeStruct;
+        let mut st = serializer.serialize_struct("BelegMeta", 3)?;
+        st.serialize_field("dateiname", self.dateiname.as_str())?;
+        st.serialize_field("typ", self.format.mime())?;
+        st.serialize_field("url", &self.pfad.url())?;
+        st.end()
+    }
 }
 
 /// Roh-Eingabe vom Client (DTO). Enthält bewusst nur primitive Typen – sie ist

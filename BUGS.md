@@ -6,6 +6,7 @@ Hier werden bekannte Fehler gesammelt, damit der **Tester** eine klare Arbeitsli
 - [ ] **Kunden-Validierung**: Validierung für E-Mail-Format fehlt im Backend (führt zu 500er statt 400er Fehler).
 
 ## Sicherheit (Offen)
+- [ ] **Path Traversal beim Datei-Upload (Aufträge)**: `files.rs` schreibt nach `uploads/{auftrag_id}_{dateiname}` mit dem ungeprüften Dateinamen des Clients – ein Name wie `../../x` schreibt außerhalb von `uploads/`. Lösung wie bei den Buchungsbelegen: serverseitig erzeugter UUID-Name, Originalname nur zur Anzeige (`BelegDateiname`), Typ per Magic Bytes.
 - [ ] **Port 3001 öffentlich erreichbar**: Backend bindet auf `0.0.0.0:3001` (`main.rs`) – auf dem Server direkt per HTTP erreichbar, an Nginx/HTTPS vorbei. Lösung: auf `127.0.0.1` binden (z.B. über Env-Variable) und/oder Port per `ufw` sperren.
 - [ ] **Klartext-Passwörter im Repo**: `migrations/20260924000001_ensure_users.sql` enthält die Passwörter von `admin` und `stefanie` als Kommentar. Kommentare entfernen (neue Migration ändert nichts an der Git-Historie → Passwörter ändern).
 - [ ] **DB-Fehlerdetails an Client**: `AppError::Sqlx` gibt `e.to_string()` an den Browser zurück (Kunden, Aufträge …). Buchhaltung loggt stattdessen und meldet generisch – Muster übernehmen.

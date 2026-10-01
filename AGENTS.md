@@ -143,11 +143,13 @@ Felder sind nur crate-intern sichtbar (`pub(crate)`), Zugriff von außen über G
 | `datum` | `BuchungsDatum` | ISO `YYYY-MM-DD`, nicht in der Zukunft, nicht vor 2000 |
 | `auftrag_id` | `Option<i64>` | FK auf `auftraege` (`ON DELETE SET NULL`) |
 | `beleg_referenz` | `Option<BelegReferenz>` | Belegnummer, max. 100 Zeichen, Whitelist (`- _ / . #`) |
+| `beleg` | `Option<BelegMeta>` | Beleg-Datei (`pfad: BelegPfad`, `dateiname: BelegDateiname`, `format: BelegFormat`); JSON `{dateiname, typ, url}`. `None` nur bei Altbuchungen vor der Belegpflicht |
 | `created_at` | `String` | Zeitstempel (DB-Default `datetime('now')`, UTC) |
 | `created_by` | `i64` | FK auf `users`, **serverseitig** aus der Session gesetzt |
 
 ### BuchungEingabe (DTO)
 Roh-Eingabe vom Client mit `deny_unknown_fields` (kein Einschleusen von `id`/`created_by`). `validieren()` → `BuchungsDaten` (nur Domain Primitives).
+Wird als Multipart-Feld `daten` (JSON) gesendet, zusammen mit dem Datei-Feld `beleg` (→ `BelegDatei`: PDF/JPG/PNG per Magic Bytes, max. 10 MB).
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `buchungs_typ` | `String` | `einnahme` oder `ausgabe` |
@@ -194,6 +196,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20260928000000_update_categories_and_unterkategorie.sql` | Spalte `unterkategorie` in `einsaetze`; Typen → `DIENSTLEISTUNG` / `NACHBEREITUNG` |
 | `20260928120000_add_stundensatz_nachbereitung.sql` | Spalte `stundensatz_nachbereitung` in `einstellungen` und `auftraege` |
 | `20261001000000_add_buchungen.sql` | Tabelle `buchungen` (Buchhaltung) mit CHECK-Constraints + Indizes auf `datum`, `buchungs_typ`, `created_by` |
+| `20261002000000_add_beleg_zu_buchungen.sql` | Spalten `beleg_pfad`, `beleg_dateiname`, `beleg_typ` in `buchungen` (Belegpflicht) |
 
 ### Wichtige Spalten-Hinweise
 - `kunden.ort` (nicht `stadt` – wurde umbenannt)
@@ -210,7 +213,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
-- [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Body-Limit 16 KB, Audit-Log (`[AUDIT]`) für jede Mutation.
+- [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Anlegen/Ändern als Multipart (`daten` + `beleg`), **Belegpflicht** (PDF/JPG/PNG, max. 10 MB, gespeichert unter `uploads/belege/<uuid>`, Abruf nur eingeloggt über `/uploads/…`). Audit-Log (`[AUDIT]`) für jede Mutation.
 
 ## 5. Nächste Schritte
 

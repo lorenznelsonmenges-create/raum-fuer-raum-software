@@ -1,6 +1,6 @@
 # Datenbank-Schema (Source of Truth)
 
-Diese Datei beschreibt den aktuellen Stand der SQLite-Datenbank (`achtsam.db`), wie er sich aus allen Dateien in `migrations/` ergibt (Stand: Migration `20261001000000_add_buchungen.sql`).
+Diese Datei beschreibt den aktuellen Stand der SQLite-Datenbank (`achtsam.db`), wie er sich aus allen Dateien in `migrations/` ergibt (Stand: Migration `20261002000000_add_beleg_zu_buchungen.sql`).
 Alle Änderungen MUSS ein Agent über neue `.sql`-Dateien in `migrations/` vornehmen und danach dieses Dokument aktualisieren.
 
 **Konventionen**
@@ -101,7 +101,7 @@ Singleton-Tabelle (`CHECK (id = 1)`).
 | `role` | `TEXT NOT NULL` | Default `ADMIN` (wird nicht ausgewertet) |
 
 ### buchungen (Buchhaltung)
-Primäre Validierung über Domain Primitives in `src/domain.rs`; die CHECK-Constraints sind eine zweite Schicht (Defense in Depth).
+Primäre Validierung über Domain Primitives in `src/domain.rs`; die CHECK-Constraints sind eine zweite Schicht (Defense in Depth). Beleg-Spalten sind nullable (Altbuchungen); die **Belegpflicht** setzt die Anwendung durch.
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `INTEGER` | Primärschlüssel (Auto-Increment) |
@@ -112,6 +112,9 @@ Primäre Validierung über Domain Primitives in `src/domain.rs`; die CHECK-Const
 | `datum` | `TEXT NOT NULL` | ISO `YYYY-MM-DD`, `CHECK(date(julianday(datum)) IS datum)` – nur real existierende Daten |
 | `auftrag_id` | `INTEGER` | FK → `auftraege(id)`, `ON DELETE SET NULL` |
 | `beleg_referenz` | `TEXT` | Belegnummer, `CHECK NULL oder length 1–100` |
+| `beleg_pfad` | `TEXT` | Beleg-Datei `uploads/belege/<uuid>.<pdf\|jpg\|png>`, `CHECK LIKE 'uploads/belege/%'`, kein `..` |
+| `beleg_dateiname` | `TEXT` | Ursprünglicher Dateiname (nur Anzeige), `CHECK length 1–200` |
+| `beleg_typ` | `TEXT` | `CHECK IN ('application/pdf', 'image/jpeg', 'image/png')` |
 | `created_at` | `TEXT NOT NULL` | Default `datetime('now')` (UTC) |
 | `created_by` | `INTEGER NOT NULL` | FK → `users(id)`, serverseitig aus der Session gesetzt |
 
