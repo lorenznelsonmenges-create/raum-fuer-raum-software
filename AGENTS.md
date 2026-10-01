@@ -1,4 +1,4 @@
-# Software-Projekt: Achtsam Entrümpeln (Backend)
+# Software-Projekt: Wendepunkt – Raum für Neues (vormals Achtsam Entrümpeln) – Backend
 
 **GESCHÜTZTE DATEI:** Diese Datei darf ausschließlich geändert werden,
 > wenn der Nutzer dies in der aktuellen Konversation explizit erlaubt hat.
@@ -8,14 +8,17 @@ Dieses Dokument dient als zentrale Wissensbasis ("Source of Truth") für die Arc
 
 ## 1. Architektur & Design-Entscheidungen
 
-- **Backend:** Rust mit dem **Axum** Web-Framework (Port 3000).
-- **Datenbank:** **SQLite** (`achtsam.db`), asynchron angebunden via `sqlx`.
+- **Backend:** Rust mit dem **Axum** Web-Framework. Port über Umgebungsvariable `PORT` (Default `3000`, Produktion `3001`).
+- **Datenbank:** **SQLite** (`achtsam.db`), asynchron angebunden via `sqlx`. Pfad über `DATABASE_URL` (aus `.env` via `dotenvy`, Default `sqlite:achtsam.db`).
 - **Migrationen:** Automatische Migrationen beim Start der Anwendung (Ordner `migrations/`).
 - **Error-Handling:** Zentralisiertes System in `src/error.rs` für konsistente HTTP-Statuscodes.
 - **Datei-Management:** Uploads landen im Ordner `uploads/` auf der Festplatte; Pfade werden in der DB gespeichert.
 - **Frontend-Anbindung:** Aktuell als reine REST-API konzipiert (bereit für Nginx/HTTPS-Reverse-Proxy).
 - **Templating:** Handlebars 6.x (nicht Tera – trotz anderslautender älterer Notizen).
 - **PDF-Generierung:** `headless_chrome` 1.x via HTML → PDF.
+- **Domain Primitives (Secure by Design):** `src/domain.rs` – selbstvalidierende, unveränderliche Typen (`Euro` in Cent als `i64`, `Stunden`, `Kilometer`, `EinsatzTyp`, `RechnungsNummer` sowie für die Buchhaltung `BuchungsTyp`, `BuchungsBetrag`, `Kategorie`, `Beschreibung`, `BelegReferenz`, `BuchungsDatum`). **Niemals `f64` für Geldbeträge.**
+- **Code-Struktur:** Monolithisch – Handler + Router in `main.rs`, Modelle in `models.rs`, DB-Funktionen in `database.rs`, Domain Primitives in `domain.rs`. Neue Module folgen diesem Muster.
+- **Autorisierung:** Session-basiert (`auth_middleware` + `AuthUser`-Extractor). Keine Rollen – jeder eingeloggte User hat vollen Zugriff auf alle Module.
 
 ## 2. Datenmodell (Source of Truth)
 
@@ -45,11 +48,13 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `kunde_id` | `i64` | Fremdschlüssel auf `kunden` |
 | `status` | `Enum` | AnfrageLaeuft, InBearbeitung, Abgeschlossen, Storniert |
 | `beschreibung` | `String` | Kurzbeschreibung des Auftrags |
-| `basis_pauschale` | `Option<f64>` | Optionale Fixkosten-Pauschale |
-| `stundensatz` | `f64` | Stundensatz (Default: 0.00) |
-| `kilometer_satz` | `f64` | Kilometersatz (Default: 0.00) |
+| `basis_pauschale` | `Option<Euro>` | Optionale Fixkosten-Pauschale |
+| `stundensatz` | `Euro` | Stundensatz Dienstleistung (fällt bei 0 auf Einstellungen zurück) |
+| `stundensatz_nachbereitung` | `Euro` | Stundensatz Nachbereitung (fällt bei 0 auf Einstellungen zurück) |
+| `kilometer_satz` | `Euro` | Kilometersatz (fällt bei 0 auf Einstellungen zurück) |
 | `notizen` | `String` | Interne Auftragsnotizen |
-| `created_by` | `Option<String>` | Ersteller des Auftrags (Benutzername) |
+| `created_by` | `Option<String>` | Ersteller des Auftrags (Benutzername, serverseitig aus Session) |
+| `einsaetze`, `dateien`, `rechnungen`, `rechnungs_notizen` | `Vec<…>` | Beim Laden mitgeliefert (nicht in der Tabelle `auftraege`) |
 
 ### Einsatz (Arbeitszeit & Fahrtkosten)
 | Feld | Typ | Beschreibung |
@@ -57,10 +62,11 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `id` | `i64` | Primärschlüssel |
 | `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
 | `datum` | `String` | Datum des Einsatzes |
-| `kilometer` | `f64` | Gefahrene Kilometer |
-| `stunden` | `f64` | Gearbeitete Stunden |
-| `notiz` | `String` | Notiz zum Einsatz |
-| `typ` | `String` | ARBEIT_VOR_ORT, ARBEIT_VORBEREITUNG oder KILOMETER |
+| `kilometer` | `Kilometer` | Gefahrene Kilometer (≥ 0) |
+| `stunden` | `Stunden` | Gearbeitete Stunden (≥ 0) |
+| `notiz` | `String` | Interne Notiz zum Einsatz |
+| `typ` | `EinsatzTyp` | `DIENSTLEISTUNG`, `NACHBEREITUNG` oder `KILOMETER` (Altwerte `ARBEIT_VOR_ORT`/`ARBEIT`, `ARBEIT_VORBEREITUNG`, `FAHRT` werden beim Einlesen gemappt) |
+| `unterkategorie` | `Option<String>` | Dienstleistung: Praktische Unterstützung, Beratung, Mediation · Nachbereitung: Auswertung, Verteilung |
 | `signatur_pfad` | `Option<String>` | Pfad zum Signaturbild (digital vor Ort) |
 
 ### Datei (Uploads)
@@ -79,10 +85,10 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel |
 | `auftrag_id` | `i64` | Fremdschlüssel auf `auftraege` |
-| `rechnungs_nummer` | `String` | Rechnungsnummer (fortlaufend) |
+| `rechnungs_nummer` | `RechnungsNummer` | Fortlaufend, Format `R` + 6 Ziffern |
 | `datum` | `String` | Ausstellungsdatum |
-| `gesamt_netto` | `f64` | Gesamtsumme (Netto) |
-| `gesamt_brutto` | `f64` | Gesamtsumme (Brutto) |
+| `gesamt_netto` | `Euro` | Gesamtsumme (Netto) |
+| `gesamt_brutto` | `Euro` | Gesamtsumme (Brutto, 19 % USt.) |
 | `status` | `String` | z.B. ENTWURF, GESENDET, BEZAHLT |
 | `pdf_pfad` | `String` | Relativer Pfad zur PDF-Datei |
 
@@ -98,8 +104,9 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | Feld | Typ | Beschreibung |
 | :--- | :--- | :--- |
 | `id` | `i64` | Primärschlüssel (immer 1) |
-| `stundensatz` | `f64` | Standard-Stundensatz (45.00) |
-| `kilometer_satz` | `f64` | Standard-Kilometersatz (0.50) |
+| `stundensatz` | `Euro` | Standard-Stundensatz Dienstleistung (45,00 €) |
+| `stundensatz_nachbereitung` | `Euro` | Standard-Stundensatz Nachbereitung (45,00 €) |
+| `kilometer_satz` | `Euro` | Standard-Kilometersatz (0,50 €) |
 
 ### User
 | Feld | Typ | Beschreibung |
@@ -107,7 +114,7 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `id` | `i64` | Primärschlüssel |
 | `username` | `String` | Benutzername |
 | `password_hash` | `String` | Gehashtes Passwort |
-| `role` | `String` | Benutzerrolle (z.B. ADMIN) |
+| `role` | `String` | Benutzerrolle (aktuell nur `ADMIN`, wird nicht ausgewertet) |
 
 ### LoginRequest (DTO)
 | Feld | Typ | Beschreibung |
@@ -184,6 +191,8 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20260914000000_add_created_by_to_auftraege.sql` | Spalte `created_by` in `auftraege` |
 | `20260922000000_update_einsatz_typen.sql` | Migration auf 3 Einsatz-Typen (`ARBEIT_VOR_ORT`, `ARBEIT_VORBEREITUNG`, `KILOMETER`) |
 | `20260924000001_ensure_users.sql` | Tabelle `users` & sichere Bcrypt-Hashes für `admin` und `stefanie` |
+| `20260928000000_update_categories_and_unterkategorie.sql` | Spalte `unterkategorie` in `einsaetze`; Typen → `DIENSTLEISTUNG` / `NACHBEREITUNG` |
+| `20260928120000_add_stundensatz_nachbereitung.sql` | Spalte `stundensatz_nachbereitung` in `einstellungen` und `auftraege` |
 | `20261001000000_add_buchungen.sql` | Tabelle `buchungen` (Buchhaltung) mit CHECK-Constraints + Indizes auf `datum`, `buchungs_typ`, `created_by` |
 
 ### Wichtige Spalten-Hinweise
@@ -191,6 +200,8 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - `auftraege.kilometer_satz` (nicht `km_satz` – wurde umbenannt)
 - `auftraege.created_by` (Ersteller des Auftrags)
 - `auftraege.preis_manuell` existiert noch in der DB aber nicht mehr im Rust-Code
+- Geldbeträge: Alt-Tabellen speichern `REAL` (Euro), `buchungen.betrag_cent` speichert `INTEGER` (Cent). Im Rust-Code ist beides `Euro(i64)`.
+- Vollständiges Tabellenschema: siehe `SCHEMA.md`.
 
 ## 4. Status der API-Endpunkte
 
@@ -210,6 +221,9 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 5. [ ] **Dokumenten-Feedback:** Visuelle Hervorhebung nach erfolgreichem Upload.
 6. [ ] **Frontend:** Weiterer Ausbau der Admin-UI.
 7. [ ] **Kunden-Validierung:** Backend-Prüfung für E-Mail-Formate (400 statt 500 Fehler).
+8. [x] **Buchhaltung:** Einnahmen/Ausgaben mit Übersicht (Einnahmen, Ausgaben, Saldo).
+9. [ ] **Buchhaltung GoBD:** Storno-Buchungen statt Löschen.
+10. [ ] **Sicherheit:** Offene Punkte siehe `BUGS.md` (Abschnitt „Sicherheit“).
 
 ## 6. Betriebliche Hinweise
 
@@ -218,10 +232,22 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - **Domains:**
   - Haupt-Website: `https://wendepunkt-ruf.de`
   - Interne Auftragsverwaltung: `https://app.wendepunkt-ruf.de`
-- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy auf Port 3000.
+- **Server-Setup:** Ubuntu 24.04 (Noble), Nginx als Reverse-Proxy (HTTPS) vor dem Backend.
 - **SSL:** Let's Encrypt via Certbot.
-- **Prozess-Management:** Systemd-Service `wendepunkt.service` (Restart=always).
-- **Dateipfade:** App liegt auf dem Server unter `/var/www/`, Uploads in `uploads/`, DB ist `achtsam.db`.
+- **Prozess-Management:** Systemd-Service **`achtsam.service`** („Achtsam Entruempeln Backend“, enabled) – *nicht* `wendepunkt.service`.
+- **Port (Produktion):** Backend lauscht auf **3001** (`0.0.0.0:3001`). Port 3000 ist auf dem Server durch ein anderes Projekt (`carsharing-backend`) belegt.
+- **Dateipfade:** Projektordner **`/var/www/achtsam-backend`** (Git-Checkout, Arbeitsverzeichnis des Dienstes). Dort liegen auch `achtsam.db` und `uploads/`.
+- **Deployment:**
+  ```bash
+  cd /var/www/achtsam-backend
+  cp achtsam.db achtsam.db.bak-$(date +%F)   # Backup vor Migrationen
+  git pull
+  cargo build --release
+  systemctl restart achtsam
+  systemctl status achtsam | head -5
+  ```
+  Migrationen laufen beim Start automatisch. Neue Migrationen vor dem Deploy committen, damit sie in der richtigen Reihenfolge laufen.
+- **Logs / Audit:** `journalctl -u achtsam` – Buchhaltungs-Mutationen sind mit `[AUDIT]` markiert (Zeitstempel, User-ID).
 - **Email:** `info@wendepunkt-ruf.de` (Postfach in konsoleH, DNS bei Hetzner konfiguriert).
 - **PDF-Generierung:** `headless_chrome` benötigt `chromium-browser` auf dem Server.
 - **Sicherheit/Sessions:** Da die App hinter einem Nginx-Reverse-Proxy mit HTTPS läuft, MUSS `tower_sessions` in `src/main.rs` zwingend mit `.with_secure(true)` konfiguriert sein, andernfalls verweigern Browser (wie Firefox/Chrome) das Speichern des Login-Cookies.

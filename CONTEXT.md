@@ -4,14 +4,14 @@
 
 ---
 
-## Aktueller Stand (24.09.2026)
-- **Rebranding:** "Wendepunkt", Mail `info@wendepunkt-ruf.de`, Domain `wendepunkt-ruf.de`.
-- **Sicherheit & Auth:** `logins.json` entfernt. Migration `20260924000001_ensure_users.sql` für `admin` & `stefanie` via Bcrypt.
-- **Backend & Tests:** Alle Tests (`cargo test`) grün (Auth, PDF, DB-Stats, Rechnungen).
-- **Hosting & Server:** Hetzner Cloud VPS (`46.62.148.232`), `app.wendepunkt-ruf.de` & `wendepunkt-ruf.de`.
-- **Doku:** `Architektur.md`, `GEMINI.md` und Datenschutz-Hoster auf Hetzner aktualisiert.
-- **Ordner:** Umbenannt von `Achtsam_entruempeln` nach `Wendepunkt`.
+## Aktueller Stand (01.10.2026)
+- **Buchhaltung:** Modul (Einnahmen/Ausgaben, Übersicht, Filter) auf `main` gepusht (Commit `b94c713`), Tests grün.
+- **Uncommitted lokal:** Stundensatz Nachbereitung (inkl. Migration `20260928120000`), `DATABASE_URL`/`dotenvy`, `reset_db.sh test`, `pdf.rs`.
+- **Server:** `/var/www/achtsam-backend`, Dienst `achtsam.service`, Port 3001 (Port 3000 = carsharing-backend).
+- **Doku:** `AGENTS.md`, `SCHEMA.md`, `Architektur.md`, `BUGS.md` auf Stand 01.10.2026 gebracht.
 
 ## Nächste Schritte
-1. Auf Server (`46.62.148.232`): `git pull` & `cargo build --release` & `systemctl restart wendepunkt`.
-2. Status & Login (`stefanie` / `admin`) im Web testen.
+1. Lokale Änderungen (Stundensatz Nachbereitung etc.) committen & pushen.
+2. Server: Backup `achtsam.db`, `git pull`, `cargo build --release`, `systemctl restart achtsam`.
+3. Buchhaltung im Browser testen (`app.wendepunkt-ruf.de` → Buchhaltung).
+4. Sicherheitspunkte aus `BUGS.md` angehen (Port 3001 absichern).
