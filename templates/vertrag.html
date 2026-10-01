@@ -2,8 +2,10 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <title>Dienstleistungsvertrag {{auftrag_id}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
+        /* Design an rechnung.html angeglichen (DESIGN.md: "The Curated Sanctuary") */
         :root {
             --surface: #fbf9f3;
             --surface-low: #f5f4ec;
@@ -11,152 +13,332 @@
             --primary: #526447;
             --primary-container: #d4e9c4;
             --on-surface: #31332c;
-            --outline-variant: rgba(178, 179, 169, 0.15);
+            --text-light: rgba(49, 51, 44, 0.6);
+            --outline-variant: rgba(178, 179, 169, 0.35);
         }
-        @page {
-            size: A4;
-            margin: 0;
-        }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        /* Mehrseitig: Seitenränder über @page, damit jede Folgeseite oben/unten Luft hat */
+        @page { size: A4; margin: 18mm 0 18mm 0; }
+        @page :first { margin-top: 0; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { background-color: var(--surface); }
         body {
-            background-color: var(--surface);
-            color: var(--on-surface);
             font-family: 'Manrope', sans-serif;
-            margin: 0; padding: 0;
-            line-height: 1.6;
-            font-size: 11pt;
-        }
-        .page {
+            color: var(--on-surface);
+            background-color: var(--surface);
             width: 210mm;
-            padding: 25mm 30mm;
-            background: var(--surface);
             margin: 0 auto;
-            position: relative;
+            padding: 25mm 25mm 10mm 25mm;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact;
+            line-height: 1.55;
+            font-size: 9.5pt;
         }
-        h1 {
-            font-family: 'Noto Serif', serif;
-            color: var(--primary);
-            font-size: 3.5rem;
-            margin-bottom: 20mm;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-        }
-        h2 {
-            font-family: 'Noto Serif', serif;
-            color: var(--primary);
-            font-size: 1.5rem;
-            margin-top: 30pt;
-            margin-bottom: 15pt;
-        }
-        .label-md {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: rgba(49, 51, 44, 0.4);
-            margin-bottom: 10pt;
-            display: block;
-        }
-        .compact-header {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 20pt;
-            margin-bottom: 25mm;
-            padding-bottom: 15pt;
-            border-bottom: 1px solid var(--outline-variant);
-        }
-        .compact-header-item .label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(49, 51, 44, 0.4);
-            margin-bottom: 4pt;
-        }
-        .compact-header-item .value {
-            font-family: 'Noto Serif', serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        .content-section {
-            margin-bottom: 25pt;
-            padding-left: 20pt;
-            border-left: 2px solid var(--primary-container);
-        }
-        .signature-area {
-            margin-top: 40mm;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60pt;
-            page-break-inside: avoid;
-        }
-        .sig-box {
-            border-top: 1px solid var(--outline-variant);
-            padding-top: 10pt;
-        }
+
+        /* Header mit Logo oben links (wie Rechnung) */
+        .header { display: flex; justify-content: flex-start; margin-bottom: 14mm; }
+        .brand-box { display: flex; align-items: center; text-align: left; }
+        .brand-logo { height: 45px; width: auto; margin-right: 15px; }
+        .brand-name { font-family: 'Noto Serif', serif; font-size: 32pt; color: var(--primary); line-height: 1; letter-spacing: -0.02em; }
+        .brand-sub { font-family: 'Noto Serif', serif; font-style: italic; font-size: 10pt; color: var(--text-light); margin-top: 5px; }
+
+        /* Adressen & Meta (wie Rechnung) */
+        .info-section { display: flex; justify-content: space-between; margin-bottom: 12mm; }
+        .sender-line { font-size: 8pt; color: var(--primary); margin-bottom: 10px; text-decoration: underline; text-decoration-color: var(--outline-variant); }
+        .recipient-address { font-size: 11pt; line-height: 1.5; }
+        .meta-table { font-size: 10pt; border-collapse: collapse; }
+        .meta-table td { padding: 4px 0 4px 20px; text-align: right; }
+        .meta-table td:first-child { font-weight: 600; color: var(--text-light); }
+
+        h1 { font-family: 'Noto Serif', serif; font-weight: 400; color: var(--primary); font-size: 24pt; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 4mm; }
+        .lead { font-size: 10pt; color: var(--text-light); margin-bottom: 8mm; }
+        h2 { font-family: 'Noto Serif', serif; color: var(--primary); font-size: 12.5pt; font-weight: 700; margin: 7mm 0 2.5mm 0; page-break-after: avoid; break-after: avoid; }
+        h3 { font-size: 9.5pt; font-weight: 700; color: var(--on-surface); margin: 3mm 0 1mm 0; page-break-after: avoid; break-after: avoid; }
+        p { margin-bottom: 2mm; }
+        ol, ul { margin: 0 0 2mm 5mm; }
+        li { margin-bottom: 1mm; padding-left: 1mm; }
+        section { page-break-inside: auto; }
+        .keep { page-break-inside: avoid; break-inside: avoid; }
+        .hinweis { background: var(--surface-low); border-left: 3px solid var(--primary); padding: 3mm 4mm; margin: 2mm 0 3mm 0; page-break-inside: avoid; break-inside: avoid; }
+        .ph { background: #fff3c4; color: #6b5300; padding: 0 2px; border-radius: 2px; font-weight: 600; }
+
+        .preis-table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm 0; page-break-inside: avoid; }
+        .preis-table td { padding: 7px 5px; border-bottom: 1px solid var(--outline-variant); font-size: 9.5pt; }
+        .preis-table td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }
+
+        .neue-seite { page-break-before: always; break-before: page; }
+        .anhang-label { font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-light); margin-bottom: 2mm; }
+
+        /* Muster-Formular */
+        .formular-zeile { border-bottom: 1px solid var(--on-surface); height: 9mm; margin-bottom: 3mm; }
+        .formular-label { font-size: 8.5pt; color: var(--text-light); margin-bottom: 1mm; }
+
+        /* Ankreuzfelder */
+        .check { display: flex; gap: 4mm; align-items: flex-start; margin: 3mm 0; page-break-inside: avoid; break-inside: avoid; }
+        .box { flex: 0 0 4.5mm; height: 4.5mm; border: 1.3px solid var(--on-surface); border-radius: 1px; margin-top: 0.6mm; background: #fff; }
+
+        /* Unterschriften */
+        .signature-area { margin-top: 10mm; display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; page-break-inside: avoid; break-inside: avoid; }
+        .sig-space { height: 18mm; display: flex; align-items: flex-end; }
+        .sig-image { max-height: 17mm; max-width: 100%; }
+        .sig-line { border-top: 1px solid var(--on-surface); padding-top: 2mm; font-size: 8.5pt; color: var(--text-light); }
+        .sig-name { font-weight: 600; color: var(--on-surface); font-size: 9.5pt; }
+
+        /* Footer (wie Rechnung) */
+        .footer { margin-top: 12mm; page-break-inside: avoid; break-inside: avoid; font-size: 8pt; color: var(--text-light); border-top: 1px solid var(--outline-variant); padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .footer-col { text-align: left; line-height: 1.4; }
+        .footer-col:nth-child(2) { text-align: center; }
+        .footer-col:nth-child(3) { text-align: right; }
     </style>
 </head>
 <body>
-    <div class="page">
-        <header style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--primary); padding-bottom: 10pt; margin-bottom: 25mm">
+    <div class="header">
+        <div class="brand-box">
+            <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C12 22 16 18 16 13C16 11 15 9 12 7C9 9 8 11 8 13C8 18 12 22 12 22Z" fill="#526447"/>
+                <path d="M12 22C12 22 19 20 21 13C22 11 21 8 18 7C16 9 15 11 15 13C15 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <path d="M12 22C12 22 5 20 3 13C2 11 3 8 6 7C8 9 9 11 9 13C9 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <circle cx="12" cy="5" r="2" fill="#526447"/>
+            </svg>
             <div>
-                <div style="font-family: 'Noto Serif'; font-size: 2.2rem; font-weight: 700; color: var(--primary); line-height: 1">Wendepunkt.</div>
-                <div style="font-size: 0.85rem; color: var(--primary); opacity: 0.8; margin-top: 5pt; letter-spacing: 0.05em">Raum für Neues. Mit Respekt fürs Bisherige.</div>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--primary); text-align: right; line-height: 1.4">
-                <strong>Stefanie Ruf</strong><br>
-                Musterstraße 1 • 12345 Musterstadt<br>
-                <span style="opacity: 0.6">Tel: +49 (0) 123 456789<br>info@wendepunkt-ruf.de</span>
-            </div>
-        </header>
-
-        <h1>Rahmenvertrag</h1>
-
-        <div class="compact-header">
-            <div class="compact-header-item">
-                <div class="label">Kunde</div>
-                <div class="value">{{kunde_name}}</div>
-            </div>
-            <div class="compact-header-item">
-                <div class="label">Kunde-Nr</div>
-                <div class="value">{{kunde_id}}</div>
-            </div>
-            <div class="compact-header-item">
-                <div class="label">Auftrag-Nr</div>
-                <div class="value">{{auftrag_id}}</div>
-            </div>
-        </div>
-
-        <div class="content-section">
-            <h2>§1 Gegenstand der Vereinbarung</h2>
-            <p>Dieser Vertrag regelt die Zusammenarbeit für den Auftrag <strong>{{auftrag_id}}</strong>. Der Auftragnehmer verpflichtet sich zur achtsamen, diskreten und fachgerechten Durchführung der Entrümpelungs- und Reinigungsarbeiten im vereinbarten Objekt.</p>
-        </div>
-
-        <div class="content-section">
-            <h2>§2 Vergütung & Abrechnung</h2>
-            <p>Die Basis-Pauschale für den initialen Aufwand wird auf <strong>{{basis_pauschale}} €</strong> festgesetzt. Alle weiteren Leistungen werden transparent und fair nach den tatsächlich angefallenen und im System erfassten Arbeitsstunden sowie Fahrtkilometern abgerechnet.</p>
-        </div>
-
-        <div class="content-section">
-            <h2>§3 Eigentumsübergang & Haftungsausschluss</h2>
-            <p>Alle Gegenstände, die im Rahmen dieses Auftrages in beidseitigem Einvernehmen aus dem Haushalt bzw. dem Objekt entfernt und abtransportiert werden, gehen mit dem Zeitpunkt der Entfernung in das alleinige Eigentum des Auftragnehmers oder der beauftragten Verwertungsstelle über. <strong>Ein späteres Rückgabe- oder Rückforderungsrecht des Auftraggebers ist hiermit ausdrücklich und unwiderruflich ausgeschlossen.</strong> Der Auftragnehmer kann nachträglich nicht für den Wert oder den Verlust dieser Gegenstände haftbar gemacht werden.</p>
-        </div>
-
-        <div class="atemzug">
-            „Raum für Neues. Mit Respekt fürs Bisherige."
-        </div>
-
-        <div class="signature-area">
-            <div class="sig-box">
-                <span class="label-md">Datum, Unterschrift Auftragnehmer</span>
-                <div style="margin-top: 40pt; font-weight: 600; color: var(--primary);">Stefanie Ruf</div>
-            </div>
-            <div class="sig-box">
-                <span class="label-md">Datum, Unterschrift Auftraggeber</span>
-                <div style="margin-top: 40pt; font-weight: 600;">{{kunde_name}}</div>
+                <div class="brand-name">Wendepunkt</div>
+                <div class="brand-sub">Raum für Neues. Mit Respekt fürs Bisherige.</div>
             </div>
         </div>
     </div>
+
+    <div class="info-section">
+        <div>
+            <div class="sender-line">Wendepunkt | Stefanie Ruf | Egerländer Str. 9 | 65232 Taunusstein</div>
+            <div class="recipient-address">
+                {{kunde_name}}<br>
+                {{kunde_strasse}} {{kunde_hausnummer}}<br>
+                {{kunde_plz}} {{kunde_ort}}
+            </div>
+        </div>
+        <table class="meta-table">
+            <tr><td>Datum:</td><td>{{datum_heute}}</td></tr>
+            <tr><td>Kunde-Nr:</td><td>{{kunde_id}}</td></tr>
+            <tr><td>Auftrag-Nr:</td><td>{{auftrag_id}}</td></tr>
+        </table>
+    </div>
+
+    <h1>Dienstleistungsvertrag</h1>
+    <p class="lead">Dieser Vertrag besteht aus den folgenden Regelungen sowie den Anhängen 1 (Widerrufsbelehrung), 2 (Muster-Widerrufsformular) und 3 (Erklärung zum vorzeitigen Beginn). Bitte nehmen Sie sich Zeit, alles in Ruhe zu lesen – bei Fragen sprechen Sie uns jederzeit an.</p>
+
+    <section>
+        <h2>§ 1 Vertragsparteien</h2>
+        <p><strong>Auftragnehmerin:</strong> Wendepunkt – Raum für Neues, Inhaberin Stefanie Ruf <span class="ph">[PLATZHALTER: Rechtsform – bei Einzelunternehmen entfällt; bei GbR: Name der GbR, Gesellschafter, vertreten durch]</span>, Egerländer Str. 9, 65232 Taunusstein, Telefon 0177 7574529, E-Mail info@wendepunkt-ruf.de, <span class="ph">[PLATZHALTER: Steuernummer]</span> (nachfolgend „Wendepunkt“ oder „wir“).</p>
+        <p><strong>Auftraggeber/in:</strong> {{kunde_name}}, {{kunde_strasse}} {{kunde_hausnummer}}, {{kunde_plz}} {{kunde_ort}}{{#if kunde_email}}, E-Mail {{kunde_email}}{{/if}}{{#if kunde_telefon}}, Telefon {{kunde_telefon}}{{/if}} (nachfolgend „Sie“).</p>
+        <p>Dieser Vertrag ist für Verbraucherinnen und Verbraucher gestaltet. Schließen Sie ihn für ein Unternehmen oder eine Hausverwaltung, gelten die Regelungen zum Widerrufsrecht (Anhänge 1 bis 3) nicht.</p>
+    </section>
+
+    <section>
+        <h2>§ 2 Leistungen</h2>
+        <p>(1) Wendepunkt erbringt für Sie folgende Leistungen:</p>
+        <div class="hinweis">{{#if auftrag_beschreibung}}{{auftrag_beschreibung}}{{else}}<span class="ph">[PLATZHALTER: Leistungsbeschreibung – Objekt/Adresse, Räume, Umfang, gewünschte Leistungen]</span>{{/if}}</div>
+        <p>(2) Je nach Vereinbarung kann dies insbesondere umfassen: achtsame Entrümpelung und Haushaltsauflösung, praktische Unterstützung beim Sortieren und Entscheiden, Beratung, Gesprächsbegleitung und Mediation (siehe § 10), Nachbereitung (Auswertung, Verteilung, Verschenken, Verkauf oder Entsorgung freigegebener Gegenstände) sowie auf Wunsch die Gestaltung von Fotoalben oder Erinnerungsstücken.</p>
+        <p>(3) Wendepunkt erbringt die Leistungen als Dienstleistung mit Sorgfalt und nach bestem Wissen. Ein bestimmter Erfolg (z. B. eine besenreine Übergabe zu einem festen Termin) ist nur geschuldet, wenn er ausdrücklich vereinbart ist.</p>
+        <p>(4) Wendepunkt darf zuverlässige, zur Vertraulichkeit verpflichtete Hilfskräfte sowie fachkundige Dritte (z. B. Entsorgungsbetriebe, gemeinnützige Abnehmer) einsetzen. Für deren Verschulden haften wir wie für eigenes.</p>
+    </section>
+
+    <section>
+        <h2>§ 3 Vergütung</h2>
+        <p>(1) Die Vergütung richtet sich nach dem tatsächlichen Aufwand:</p>
+        <table class="preis-table">
+            <tr><td>Basis-Pauschale (Vorgespräch, Planung, Organisation)</td><td>{{#eq basis_pauschale "0.00"}}entfällt{{else}}{{basis_pauschale}} €{{/eq}}</td></tr>
+            <tr><td>Stundensatz Dienstleistung (vor Ort, Beratung, Begleitung)</td><td>{{stundensatz}} € / Std.</td></tr>
+            <tr><td>Stundensatz Nachbereitung (Auswertung, Verteilung, Fotoalben)</td><td>{{stundensatz_nachbereitung}} € / Std.</td></tr>
+            <tr><td>Fahrtkosten je gefahrenem Kilometer</td><td>{{kilometer_satz}} € / km</td></tr>
+        </table>
+        <p>(2) Abgerechnet wird nach den tatsächlich erbrachten und dokumentierten Zeiten im Takt von <span class="ph">[PLATZHALTER: Abrechnungstakt, z. B. 15 Minuten]</span> sowie nach den gefahrenen Kilometern ab <span class="ph">[PLATZHALTER: Startpunkt der Fahrten, z. B. Geschäftssitz]</span>.</p>
+        <p>(3) Kosten Dritter, die nur mit Ihrer vorherigen Zustimmung entstehen (z. B. Deponie- oder Entsorgungsgebühren, Containermiete), berechnen wir ohne Aufschlag gegen Nachweis weiter: <span class="ph">[PLATZHALTER: voraussichtliche Fremdkosten oder „keine“]</span>.</p>
+        <p>(4) Auf Wunsch nennen wir Ihnen vorab eine unverbindliche Aufwandsschätzung: <span class="ph">[PLATZHALTER: geschätzter Umfang in Stunden / Gesamtbetrag oder „keine“]</span>. Zeichnet sich ab, dass sie um mehr als <span class="ph">[PLATZHALTER: z. B. 15 %]</span> überschritten wird, sprechen wir das mit Ihnen ab, bevor wir weiterarbeiten.</p>
+        <p>(5) Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung). Alle genannten Beträge sind Endpreise.</p>
+    </section>
+
+    <section>
+        <h2>§ 4 Rechnung und Zahlung</h2>
+        <p>(1) Sie erhalten nach Abschluss der Leistungen – bei längeren Aufträgen <span class="ph">[PLATZHALTER: Abrechnungsintervall, z. B. monatlich]</span> – eine Rechnung mit Aufstellung der Einsätze. Die Rechnung ist innerhalb von <span class="ph">[PLATZHALTER: Zahlungsziel in Tagen]</span> Tagen nach Zugang ohne Abzug zahlbar, per Überweisung auf das in der Rechnung genannte Konto.</p>
+        <p>(2) Anzahlung: <span class="ph">[PLATZHALTER: „keine“ oder Betrag]</span>. Eine Anzahlung wird mit der Schlussrechnung verrechnet und bei einem Widerruf nach Anhang 1 erstattet, soweit sie den Wertersatz übersteigt.</p>
+        <p>(3) Rechnungen und Vertragsunterlagen senden wir Ihnen per E-Mail als PDF; auf Wunsch erhalten Sie sie auf Papier.</p>
+    </section>
+
+    <section>
+        <h2>§ 5 Ihre Mitwirkung</h2>
+        <ol>
+            <li>Sie ermöglichen uns zu den vereinbarten Terminen den Zugang zu den Räumen und sorgen – soweit erforderlich – für Strom, Wasser und Beleuchtung.</li>
+            <li>Sie entscheiden, welche Gegenstände abgegeben werden dürfen (Freigabe nach § 7), und stellen Gegenstände, die bleiben sollen, möglichst vorher sicher oder kennzeichnen sie.</li>
+            <li>Bitte weisen Sie uns vor Beginn auf Gefahrstoffe oder Gefahrenquellen hin, z. B. Asbest, Chemikalien, Gasflaschen, Schimmel, Ungeziefer, Waffen, Munition oder Medikamente, sowie auf bekannte Wertsachen und wichtige Unterlagen.</li>
+            <li>Benötigen wir eine Genehmigung oder die Zustimmung Dritter (z. B. Vermieter, Hausverwaltung, Miterben), unterstützen Sie uns bei der Einholung.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>§ 6 Termine, Absage und Kündigung</h2>
+        <p>(1) Termine vereinbaren wir gemeinsam. Bitte sagen Sie einen Termin, wenn er nicht stattfinden kann, so früh wie möglich ab (in Textform, z. B. per E-Mail oder Nachricht).</p>
+        <p>(2) Eine Absage bis <span class="ph">[PLATZHALTER: Stornofrist in Tagen]</span> Tage vor dem Termin ist kostenfrei. Bei einer späteren Absage berechnen wir eine Ausfallpauschale von <span class="ph">[PLATZHALTER: Stornogebühr in % der für den Termin geplanten Stunden, z. B. 50 %]</span>, höchstens jedoch <span class="ph">[PLATZHALTER: Höchstbetrag in €]</span>. Ihnen bleibt ausdrücklich der Nachweis gestattet, dass uns kein oder ein wesentlich geringerer Schaden entstanden ist. Keine Pauschale fällt an, wenn Sie die Absage nicht zu vertreten haben (z. B. Krankheit, Todesfall in der Familie) oder wir den Termin anderweitig nutzen konnten.</p>
+        <p>(3) Sie können diesen Vertrag jederzeit ohne Angabe von Gründen in Textform kündigen. Bis dahin erbrachte Leistungen und angefallene Fremdkosten werden nach § 3 abgerechnet; Absatz 2 gilt für bereits vereinbarte Termine entsprechend. Wendepunkt kann aus wichtigem Grund kündigen und berücksichtigt dabei Ihre berechtigten Interessen.</p>
+        <p>(4) Ihr gesetzliches Widerrufsrecht (Anhang 1) bleibt von diesen Regelungen unberührt.</p>
+    </section>
+
+    <section>
+        <h2>§ 7 Gegenstände</h2>
+        <div class="hinweis"><strong>Wichtig:</strong> Gegenstände, die Sie zur Abgabe freigeben, gehen mit der Entnahme aus den Räumen in das Eigentum von Wendepunkt über. Wir verteilen, verschenken, verkaufen oder entsorgen sie; ein Verkaufserlös steht Wendepunkt zu und wird nicht mit der Vergütung verrechnet.</div>
+        <h3>(1) Freigabe</h3>
+        <p>Abgegeben werden nur Gegenstände, die Sie ausdrücklich freigegeben haben – einzeln, als Liste, per Foto oder für einen ganzen Raum. Wir dokumentieren die Freigabe (z. B. in einer Freigabeliste mit Datum). Im Zweifel fragen wir nach, bevor wir etwas mitnehmen.</p>
+        <h3>(2) Eigentumsübergang</h3>
+        <p>Sie und Wendepunkt sind sich einig, dass das Eigentum an jedem freigegebenen Gegenstand mit der Entnahme aus den Räumen auf Wendepunkt übergeht. Wendepunkt entscheidet dann über die weitere Verwendung und bemüht sich, Brauchbares weiterzugeben statt zu entsorgen. Auf Wunsch teilen wir Ihnen mit, wohin größere Stücke gegangen sind.</p>
+        <h3>(3) Ihre Berechtigung</h3>
+        <p>Sie versichern, dass Sie über die freigegebenen Gegenstände verfügen dürfen. Gehören Gegenstände nicht Ihnen allein – z. B. einer Erbengemeinschaft, einem Vermieter, einer Leasing- oder Finanzierungsbank oder sonstigen Dritten –, geben Sie diese nur frei, wenn die Berechtigten zugestimmt haben, und informieren uns darüber. Sind Ihnen Rechte Dritter bekannt, sagen Sie es uns bitte vorher.</p>
+        <h3>(4) Funde</h3>
+        <p>Bargeld, Wertpapiere, Schmuck und andere erkennbare Wertsachen, persönliche Dokumente und Briefe, Fotos, Datenträger (z. B. Festplatten, Smartphones, USB-Sticks) sowie Waffen, Munition und Medikamente gehen <strong>nicht</strong> auf Wendepunkt über, auch nicht innerhalb freigegebener Räume. Wir legen sie für Sie beiseite und übergeben sie Ihnen. Datenträger und Unterlagen vernichten wir nur auf Ihre ausdrückliche Weisung datenschutzgerecht; Waffen, Munition und Medikamente geben wir nur an die zuständigen Stellen ab.</p>
+        <h3>(5) Gegenstände während der Widerrufsfrist</h3>
+        <p>Freigegebene Gegenstände mit einem erkennbaren Wert von mehr als <span class="ph">[PLATZHALTER: Wertgrenze in €]</span> verkaufen oder verschenken wir erst nach Ablauf der Widerrufsfrist (Anhang 1) und verwahren sie bis dahin. Gegenstände von geringem Wert dürfen wir bereits vorher verteilen oder entsorgen, wenn Sie den vorzeitigen Beginn verlangt haben (Anhang 3). Verlangen Sie ausdrücklich, dass auch wertvollere Gegenstände sofort weitergegeben werden (Anhang 3, Ziffer 3), ist das ebenfalls möglich.</p>
+        <p>Widerrufen Sie den Vertrag, geben wir Ihnen alle noch vorhandenen Gegenstände zurück. Für bereits weitergegebene Gegenstände erhalten Sie von uns einen erzielten Erlös bzw. – falls kein Erlös erzielt wurde – Ersatz des Wertes, den der Gegenstand zum Zeitpunkt der Weitergabe hatte; bei entsorgten Gegenständen ohne Marktwert entfällt ein Ersatz.</p>
+    </section>
+
+    <section>
+        <h2>§ 8 Fotos</h2>
+        <p>Fotos in Ihren Räumen fertigen wir nur, soweit Sie in der separaten Datenschutzinformation eingewilligt haben (z. B. zur Dokumentation oder für ein Fotoalbum). Ohne Einwilligung bleibt der Vertrag unverändert gültig. Veröffentlichungen (Website, soziale Medien) erfolgen nie ohne Ihre gesonderte, schriftliche Zustimmung im Einzelfall.</p>
+    </section>
+
+    <section>
+        <h2>§ 9 Vertraulichkeit</h2>
+        <p>Wir behandeln alles, was wir in Ihren Räumen und in Gesprächen über Sie, Ihre Familie und Dritte erfahren, streng vertraulich – auch nach Ende des Auftrags. Das gilt ebenso für eingesetzte Hilfskräfte, die wir schriftlich zur Vertraulichkeit verpflichten. Ausnahmen gelten nur, soweit eine gesetzliche Pflicht zur Offenlegung besteht oder Sie zustimmen.</p>
+    </section>
+
+    <section>
+        <h2>§ 10 Beratung, Gesprächsbegleitung und Mediation</h2>
+        <p>(1) Unsere Beratung und Begleitung unterstützt Sie praktisch und menschlich beim Loslassen und bei Entscheidungen. Sie ersetzt <strong>keine</strong> Rechtsberatung (z. B. zu Erbrecht oder Mietrecht), Steuerberatung und keine psychotherapeutische oder medizinische Behandlung. Bei Bedarf empfehlen wir, entsprechende Fachleute hinzuzuziehen.</p>
+        <p>(2) Eine Mediation im Sinne des Mediationsgesetzes – ein strukturiertes, vertrauliches Verfahren, in dem mehrere Parteien eigenverantwortlich eine Einigung suchen – führen wir nur auf Grundlage einer gesonderten schriftlichen Mediationsvereinbarung mit allen Beteiligten durch. Wendepunkt legt dabei alle Umstände offen, die die Unabhängigkeit und Neutralität beeinträchtigen können (§ 3 Abs. 1 MediationsG). Waren wir in derselben Sache bereits für eine der Parteien tätig – etwa durch die Entrümpelung für eine Miterbin –, dürfen wir in dieser Sache nicht als Mediatorin tätig werden (§ 3 Abs. 2 MediationsG); in diesem Fall vermitteln wir Ihnen gern eine andere Mediatorin oder einen anderen Mediator.</p>
+        <p>(3) In einer Mediation gilt die Verschwiegenheitspflicht nach § 4 MediationsG. Sie gilt nicht, soweit die Offenlegung zur Umsetzung oder Vollstreckung einer Einigung erforderlich ist, aus vorrangigen Gründen der öffentlichen Ordnung geboten ist – insbesondere um eine Gefährdung des Wohles eines Kindes oder eine schwerwiegende Beeinträchtigung der körperlichen oder seelischen Unversehrtheit einer Person abzuwenden – oder Tatsachen offenkundig sind.</p>
+    </section>
+
+    <section>
+        <h2>§ 11 Haftung</h2>
+        <p>(1) Wendepunkt haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit sowie für Schäden, die auf Vorsatz oder grober Fahrlässigkeit von Wendepunkt, gesetzlichen Vertretern oder Erfüllungsgehilfen beruhen, und nach dem Produkthaftungsgesetz.</p>
+        <p>(2) Bei leicht fahrlässiger Verletzung einer wesentlichen Vertragspflicht – also einer Pflicht, deren Erfüllung die ordnungsgemäße Durchführung des Vertrags erst ermöglicht und auf deren Einhaltung Sie regelmäßig vertrauen dürfen – ist die Haftung auf den vorhersehbaren, vertragstypischen Schaden begrenzt. Im Übrigen ist die Haftung für leichte Fahrlässigkeit ausgeschlossen.</p>
+        <p>(3) Für Wertsachen und Unterlagen, auf die Sie uns nicht hingewiesen haben und die nicht als solche erkennbar waren, haften wir nur nach Absatz 1. Unsere Betriebshaftpflichtversicherung: <span class="ph">[PLATZHALTER: Versicherer und Deckungssumme oder „keine“]</span>.</p>
+        <p>(4) Mit der Weitergabe freigegebener Gegenstände nach § 7 erfüllt Wendepunkt den Vertrag; ein späterer Anspruch auf Rückgabe besteht – außer im Fall des Widerrufs (§ 7 Abs. 5) oder einer Pflichtverletzung durch Wendepunkt – nicht.</p>
+    </section>
+
+    <section>
+        <h2>§ 12 Datenschutz</h2>
+        <p>Wie wir mit Ihren Daten umgehen, erläutert die separate „Datenschutzinformation und Einwilligungen“, die Sie mit diesem Vertrag erhalten. Für die Durchführung dieses Vertrags benötigen wir keine Einwilligung; freiwillige Einwilligungen (z. B. für Fotos) können Sie dort einzeln erteilen und jederzeit widerrufen.</p>
+    </section>
+
+    <section>
+        <h2>§ 13 Streitbeilegung</h2>
+        <p>Wir sind <span class="ph">[PLATZHALTER: „nicht bereit und nicht verpflichtet“ ODER „bereit“ – bei „bereit“: Name, Anschrift und Webseite der Verbraucherschlichtungsstelle]</span>, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen. Uns ist wichtig, Unstimmigkeiten zuerst im persönlichen Gespräch zu klären.</p>
+    </section>
+
+    <div class="keep">
+    <section>
+        <h2>§ 14 Schlussbestimmungen</h2>
+        <p>(1) Änderungen und Ergänzungen dieses Vertrags sowie Kündigungen bedürfen der Textform (z. B. E-Mail). Mündliche Absprachen bleiben wirksam, sollen aber zur Klarheit in Textform bestätigt werden.</p>
+        <p>(2) Sie erhalten diesen Vertrag einschließlich der Anhänge unmittelbar nach Unterzeichnung auf Papier oder als PDF per E-Mail.</p>
+        <p>(3) Es gilt deutsches Recht. Zwingende Verbraucherschutzvorschriften des Staates, in dem Sie Ihren gewöhnlichen Aufenthalt haben, bleiben unberührt.</p>
+        <p>(4) Sind Sie Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen, ist Gerichtsstand <span class="ph">[PLATZHALTER: Gerichtsstand am Geschäftssitz]</span>. Gegenüber Verbrauchern gelten die gesetzlichen Gerichtsstände.</p>
+        <p>(5) Sollte eine Bestimmung dieses Vertrags unwirksam sein, bleibt der Vertrag im Übrigen wirksam. An die Stelle der unwirksamen Bestimmung treten die gesetzlichen Vorschriften.</p>
+    </section>
+
+    <div class="signature-area">
+        <div>
+            <div class="sig-space"><span>{{datum_heute}}</span></div>
+            <div class="sig-line">Ort, Datum, Unterschrift Wendepunkt<br><span class="sig-name">Stefanie Ruf</span></div>
+        </div>
+        <div>
+            <div class="sig-space">{{#if signatur_pfad}}{{#if signatur_bild}}<img src="{{{signatur_bild}}}" class="sig-image" alt="Unterschrift">{{/if}}{{/if}}</div>
+            <div class="sig-line">Ort, Datum, Unterschrift Auftraggeber/in<br><span class="sig-name">{{kunde_name}}</span></div>
+        </div>
+    </div>
+    </div>
+
+    <!-- ================= Anhang 1: Widerrufsbelehrung (Muster Anlage 1 zu Art. 246a § 1 Abs. 2 S. 2 EGBGB, Fassung ab 19.06.2026) ================= -->
+    <section class="neue-seite">
+        <div class="anhang-label">Anhang 1 zum Vertrag {{auftrag_id}}</div>
+        <h1>Widerrufsbelehrung</h1>
+        <h2>Widerrufsrecht</h2>
+        <p>Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.</p>
+        <p>Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.</p>
+        <p>Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (Wendepunkt – Raum für Neues, Stefanie Ruf <span class="ph">[PLATZHALTER: Rechtsform/Name der GbR]</span>, Egerländer Str. 9, 65232 Taunusstein, Telefon: 0177 7574529, E-Mail: info@wendepunkt-ruf.de) mittels einer eindeutigen Erklärung (z.B. ein mit der Post versandter Brief oder eine E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren. Sie können dafür das beigefügte Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.</p>
+        <p>Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.</p>
+        <h2>Folgen des Widerrufs</h2>
+        <p>Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben, es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.</p>
+        <p>Haben Sie verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen soll, so haben Sie uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.</p>
+        <p style="margin-top: 4mm; color: var(--text-light);">– Ende der Widerrufsbelehrung –</p>
+        <div class="hinweis" style="margin-top: 6mm;"><strong>Ergänzender Hinweis (nicht Teil der gesetzlichen Belehrung):</strong> Haben Sie den vorzeitigen Beginn verlangt und Ihre Kenntnis vom Erlöschen bestätigt (Anhang 3), erlischt Ihr Widerrufsrecht, sobald wir die Dienstleistung vollständig erbracht haben (§ 356 Abs. 5 Nr. 2 BGB). Was bei einem Widerruf mit bereits weitergegebenen Gegenständen geschieht, regelt § 7 Abs. 5 des Vertrags.</div>
+    </section>
+
+    <!-- ================= Anhang 2: Muster-Widerrufsformular (Anlage 2 zu Art. 246a § 1 Abs. 2 S. 1 Nr. 1 EGBGB) ================= -->
+    <section class="neue-seite">
+        <div class="anhang-label">Anhang 2 zum Vertrag {{auftrag_id}}</div>
+        <h1>Muster-Widerrufsformular</h1>
+        <p>(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.)</p>
+        <p style="margin-top: 5mm;">– An Wendepunkt – Raum für Neues, Stefanie Ruf <span class="ph">[PLATZHALTER: Rechtsform/Name der GbR]</span>, Egerländer Str. 9, 65232 Taunusstein, E-Mail: info@wendepunkt-ruf.de:</p>
+        <p style="margin-top: 4mm;">– Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über den Kauf der folgenden Waren (*)/die Erbringung der folgenden Dienstleistung (*)</p>
+        <div class="formular-zeile"></div>
+        <div class="formular-zeile"></div>
+        <div class="formular-label">– Bestellt am (*)/erhalten am (*)</div>
+        <div class="formular-zeile"></div>
+        <div class="formular-label">– Name des/der Verbraucher(s)</div>
+        <div class="formular-zeile"></div>
+        <div class="formular-label">– Anschrift des/der Verbraucher(s)</div>
+        <div class="formular-zeile"></div>
+        <div class="formular-zeile"></div>
+        <div class="formular-label">– Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)</div>
+        <div class="formular-zeile"></div>
+        <div class="formular-label">– Datum</div>
+        <div class="formular-zeile"></div>
+        <p style="margin-top: 4mm; font-size: 8.5pt; color: var(--text-light);">(*) Unzutreffendes streichen.</p>
+    </section>
+
+    <!-- ================= Anhang 3: Vorzeitiger Leistungsbeginn (§ 356 Abs. 5 Nr. 2, § 357a Abs. 2, § 312f BGB) ================= -->
+    <section class="neue-seite">
+        <div class="anhang-label">Anhang 3 zum Vertrag {{auftrag_id}}</div>
+        <h1>Erklärung zum vorzeitigen Beginn</h1>
+        <p>Grundsätzlich beginnen wir erst nach Ablauf der vierzehntägigen Widerrufsfrist. Wenn wir schon früher – zum Beispiel direkt nach Unterzeichnung – für Sie tätig werden sollen, kreuzen Sie bitte die folgenden Erklärungen an. Die Erklärungen sind freiwillig; ohne sie bleibt der Vertrag gültig, wir beginnen dann nach Ablauf der Widerrufsfrist.</p>
+
+        <div class="check"><div class="box"></div><div><strong>1. Vorzeitiger Beginn.</strong> Ich verlange ausdrücklich, dass Wendepunkt mit den vereinbarten Dienstleistungen bereits vor Ablauf der Widerrufsfrist beginnt.</div></div>
+        <div class="check"><div class="box"></div><div><strong>2. Kenntnis vom Erlöschen und Wertersatz.</strong> Mir ist bekannt, dass mein Widerrufsrecht erlischt, sobald Wendepunkt die Dienstleistung vollständig erbracht hat, und dass ich bei einem Widerruf vorher einen angemessenen Betrag für die bis dahin erbrachten Leistungen zahlen muss.</div></div>
+        <div class="check"><div class="box"></div><div><strong>3. Sofortige Weitergabe von Gegenständen (optional).</strong> Ich verlange ausdrücklich, dass freigegebene Gegenstände – auch solche mit einem Wert über der in § 7 Abs. 5 genannten Grenze – bereits vor Ablauf der Widerrufsfrist verschenkt, verkauft oder entsorgt werden dürfen. Mir ist bekannt, dass diese Gegenstände bei einem Widerruf nicht zurückgegeben werden können; ich erhalte dann den Erlös bzw. Wertersatz nach § 7 Abs. 5.</div></div>
+
+        <div class="hinweis" style="margin-top: 5mm;">
+            <strong>Bestätigung auf einem dauerhaften Datenträger:</strong> Sie erhalten diese Erklärung zusammen mit dem Vertrag unmittelbar nach Unterzeichnung als Kopie auf Papier oder als PDF per E-Mail. Wird der Vertrag per E-Mail geschlossen, genügt es, wenn Sie uns die angekreuzten Erklärungen per E-Mail an info@wendepunkt-ruf.de bestätigen, z. B. mit dem Satz: „Ich verlange den vorzeitigen Beginn und bestätige meine Kenntnis vom Erlöschen des Widerrufsrechts (Anhang 3, Ziffern 1 und 2).“
+        </div>
+
+        <div class="signature-area">
+            <div>
+                <div class="sig-space"><span>{{datum_heute}}</span></div>
+                <div class="sig-line">Ort, Datum</div>
+            </div>
+            <div>
+                <div class="sig-space">{{#if signatur_pfad}}{{#if signatur_bild}}<img src="{{{signatur_bild}}}" class="sig-image" alt="Unterschrift">{{/if}}{{/if}}</div>
+                <div class="sig-line">Unterschrift Auftraggeber/in<br><span class="sig-name">{{kunde_name}}</span></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-col">
+                <strong>Kontakt</strong><br>
+                Stefanie Ruf<br>
+                Egerländer Str. 9, 65232 Taunusstein<br>
+                0177 7574529 · info@wendepunkt-ruf.de
+            </div>
+            <div class="footer-col">
+                <strong>Rechtliches</strong><br>
+                <span class="ph">[PLATZHALTER: Rechtsform]</span><br>
+                Steuernummer: <span class="ph">[PLATZHALTER: Steuernummer]</span><br>
+                Kleinunternehmer gem. § 19 UStG
+            </div>
+            <div class="footer-col">
+                <strong>Wendepunkt</strong><br>
+                Raum für Neues.<br>
+                Mit Respekt fürs Bisherige.<br>
+                wendepunkt-ruf.de
+            </div>
+        </div>
+    </section>
 </body>
 </html>

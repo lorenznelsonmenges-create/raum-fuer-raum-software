@@ -2,8 +2,10 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <title>Datenschutzinformation {{auftrag_id}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
+        /* Design an rechnung.html angeglichen (DESIGN.md: "The Curated Sanctuary") */
         :root {
             --surface: #fbf9f3;
             --surface-low: #f5f4ec;
@@ -11,171 +13,243 @@
             --primary: #526447;
             --primary-container: #d4e9c4;
             --on-surface: #31332c;
-            --outline-variant: rgba(178, 179, 169, 0.15);
+            --text-light: rgba(49, 51, 44, 0.6);
+            --outline-variant: rgba(178, 179, 169, 0.35);
         }
-        @page {
-            size: A4;
-            margin: 0;
-        }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        /* Mehrseitig: Seitenränder über @page, damit jede Folgeseite oben/unten Luft hat */
+        @page { size: A4; margin: 18mm 0 18mm 0; }
+        @page :first { margin-top: 0; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { background-color: var(--surface); }
         body {
-            background-color: var(--surface);
-            color: var(--on-surface);
             font-family: 'Manrope', sans-serif;
-            margin: 0; padding: 0;
-            line-height: 1.6;
-            font-size: 11pt;
-        }
-        .page {
+            color: var(--on-surface);
+            background-color: var(--surface);
             width: 210mm;
-            padding: 25mm 30mm;
-            background: var(--surface);
             margin: 0 auto;
+            padding: 25mm 25mm 10mm 25mm;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact;
+            line-height: 1.55;
+            font-size: 9.5pt;
         }
-        header {
-            margin-bottom: 20mm;
-        }
-        .brand-name {
-            font-family: 'Noto Serif', serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        h1 {
-            font-family: 'Noto Serif', serif;
-            color: var(--primary);
-            font-size: 3.5rem;
-            margin-bottom: 15mm;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-        }
-        h2 {
-            font-family: 'Noto Serif', serif;
-            color: var(--primary);
-            font-size: 1.5rem;
-            margin-top: 30pt;
-            margin-bottom: 15pt;
-        }
-        .label-md {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: rgba(49, 51, 44, 0.4);
-            margin-bottom: 10pt;
-            display: block;
-        }
-        .compact-header {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 20pt;
-            margin-bottom: 25mm;
-            padding-bottom: 15pt;
-            border-bottom: 1px solid var(--outline-variant);
-        }
-        .compact-header-item .label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(49, 51, 44, 0.4);
-            margin-bottom: 4pt;
-        }
-        .compact-header-item .value {
-            font-family: 'Noto Serif', serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        .content-section {
-            margin-bottom: 25pt;
-        }
-        p {
-            margin-bottom: 12pt;
-        }
-        .signature-area {
-            margin-top: 30mm;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60pt;
-            page-break-inside: avoid;
-        }
-        .sig-box {
-            border-top: 1px solid var(--outline-variant);
-            padding-top: 10pt;
-            position: relative;
-        }
-        .sig-placeholder {
-            height: 50pt;
-            display: flex;
-            align-items: center;
-        }
-        .sig-image {
-            max-height: 50pt;
-            max-width: 100%;
-        }
+
+        /* Header mit Logo oben links (wie Rechnung) */
+        .header { display: flex; justify-content: flex-start; margin-bottom: 14mm; }
+        .brand-box { display: flex; align-items: center; text-align: left; }
+        .brand-logo { height: 45px; width: auto; margin-right: 15px; }
+        .brand-name { font-family: 'Noto Serif', serif; font-size: 32pt; color: var(--primary); line-height: 1; letter-spacing: -0.02em; }
+        .brand-sub { font-family: 'Noto Serif', serif; font-style: italic; font-size: 10pt; color: var(--text-light); margin-top: 5px; }
+
+        /* Adressen & Meta (wie Rechnung) */
+        .info-section { display: flex; justify-content: space-between; margin-bottom: 12mm; }
+        .sender-line { font-size: 8pt; color: var(--primary); margin-bottom: 10px; text-decoration: underline; text-decoration-color: var(--outline-variant); }
+        .recipient-address { font-size: 11pt; line-height: 1.5; }
+        .meta-table { font-size: 10pt; border-collapse: collapse; }
+        .meta-table td { padding: 4px 0 4px 20px; text-align: right; }
+        .meta-table td:first-child { font-weight: 600; color: var(--text-light); }
+
+        h1 { font-family: 'Noto Serif', serif; font-weight: 400; color: var(--primary); font-size: 24pt; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 4mm; }
+        .lead { font-size: 10pt; color: var(--text-light); margin-bottom: 8mm; }
+        h2 { font-family: 'Noto Serif', serif; color: var(--primary); font-size: 12.5pt; font-weight: 700; margin: 7mm 0 2.5mm 0; page-break-after: avoid; break-after: avoid; }
+        h3 { font-size: 9.5pt; font-weight: 700; color: var(--on-surface); margin: 3mm 0 1mm 0; page-break-after: avoid; break-after: avoid; }
+        p { margin-bottom: 2mm; }
+        ol, ul { margin: 0 0 2mm 5mm; }
+        li { margin-bottom: 1mm; padding-left: 1mm; }
+        section { page-break-inside: auto; }
+        .keep { page-break-inside: avoid; break-inside: avoid; }
+        .hinweis { background: var(--surface-low); border-left: 3px solid var(--primary); padding: 3mm 4mm; margin: 2mm 0 3mm 0; page-break-inside: avoid; break-inside: avoid; }
+        .ph { background: #fff3c4; color: #6b5300; padding: 0 2px; border-radius: 2px; font-weight: 600; }
+
+        .preis-table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm 0; page-break-inside: avoid; }
+        .preis-table td { padding: 7px 5px; border-bottom: 1px solid var(--outline-variant); font-size: 9.5pt; }
+        .preis-table td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }
+
+        .neue-seite { page-break-before: always; break-before: page; }
+        .anhang-label { font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-light); margin-bottom: 2mm; }
+
+        /* Muster-Formular */
+        .formular-zeile { border-bottom: 1px solid var(--on-surface); height: 9mm; margin-bottom: 3mm; }
+        .formular-label { font-size: 8.5pt; color: var(--text-light); margin-bottom: 1mm; }
+
+        /* Ankreuzfelder */
+        .check { display: flex; gap: 4mm; align-items: flex-start; margin: 3mm 0; page-break-inside: avoid; break-inside: avoid; }
+        .box { flex: 0 0 4.5mm; height: 4.5mm; border: 1.3px solid var(--on-surface); border-radius: 1px; margin-top: 0.6mm; background: #fff; }
+
+        /* Unterschriften */
+        .signature-area { margin-top: 10mm; display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; page-break-inside: avoid; break-inside: avoid; }
+        .sig-space { height: 18mm; display: flex; align-items: flex-end; }
+        .sig-image { max-height: 17mm; max-width: 100%; }
+        .sig-line { border-top: 1px solid var(--on-surface); padding-top: 2mm; font-size: 8.5pt; color: var(--text-light); }
+        .sig-name { font-weight: 600; color: var(--on-surface); font-size: 9.5pt; }
+
+        /* Footer (wie Rechnung) */
+        .footer { margin-top: 12mm; page-break-inside: avoid; break-inside: avoid; font-size: 8pt; color: var(--text-light); border-top: 1px solid var(--outline-variant); padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .footer-col { text-align: left; line-height: 1.4; }
+        .footer-col:nth-child(2) { text-align: center; }
+        .footer-col:nth-child(3) { text-align: right; }
+    </style>
+    <style>
+        .daten-table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm 0; font-size: 8.8pt; }
+        .daten-table th { text-align: left; font-size: 8pt; text-transform: uppercase; color: var(--primary); padding: 6px 4px; border-bottom: 1px solid var(--outline-variant); font-weight: 600; }
+        .daten-table td { padding: 6px 4px; border-bottom: 1px solid var(--outline-variant); vertical-align: top; }
+        .daten-table tr { page-break-inside: avoid; break-inside: avoid; }
     </style>
 </head>
 <body>
-    <div class="page">
-        <header style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--primary); padding-bottom: 10pt; margin-bottom: 25mm">
+    <div class="header">
+        <div class="brand-box">
+            <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C12 22 16 18 16 13C16 11 15 9 12 7C9 9 8 11 8 13C8 18 12 22 12 22Z" fill="#526447"/>
+                <path d="M12 22C12 22 19 20 21 13C22 11 21 8 18 7C16 9 15 11 15 13C15 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <path d="M12 22C12 22 5 20 3 13C2 11 3 8 6 7C8 9 9 11 9 13C9 18 12 22 12 22Z" fill="#526447" fill-opacity="0.6"/>
+                <circle cx="12" cy="5" r="2" fill="#526447"/>
+            </svg>
             <div>
-                <div style="font-family: 'Noto Serif'; font-size: 2.2rem; font-weight: 700; color: var(--primary); line-height: 1">Wendepunkt.</div>
-                <div style="font-size: 0.85rem; color: var(--primary); opacity: 0.8; margin-top: 5pt; letter-spacing: 0.05em">Raum für Neues. Mit Respekt fürs Bisherige.</div>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--primary); text-align: right; line-height: 1.4">
-                <strong>Stefanie Ruf</strong><br>
-                Musterstraße 1 • 12345 Musterstadt<br>
-                <span style="opacity: 0.6">Tel: +49 (0) 123 456789<br>info@wendepunkt-ruf.de</span>
-            </div>
-        </header>
-
-        <h1>Datenschutz</h1>
-
-        <div class="compact-header">
-            <div class="compact-header-item">
-                <div class="label">Kunde</div>
-                <div class="value">{{kunde_name}}</div>
-            </div>
-            <div class="compact-header-item">
-                <div class="label">Kunde-Nr</div>
-                <div class="value">{{kunde_id}}</div>
-            </div>
-            <div class="compact-header-item">
-                <div class="label">Auftrag-Nr</div>
-                <div class="value">{{auftrag_id}}</div>
-            </div>
-        </div>
-
-        <div class="content-section">
-            <h2>1. Zweck der Datenverarbeitung</h2>
-            <p>Ich willige hiermit ein, dass <strong>Wendepunkt (Inh. Stefanie Ruf)</strong> meine personenbezogenen Daten (Name, Anschrift, Kontaktdaten) sowie auftragsbezogene Informationen zum Zwecke der Vertragsabwicklung, Rechnungsstellung und Dokumentation verarbeitet.</p>
-            
-            <h2>2. Rechtsgrundlage</h2>
-            <p>Die Verarbeitung Ihrer Daten erfolgt auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).</p>
-
-            <h2>3. Speicherdauer</h2>
-            <p>Ihre Daten werden nur so lange gespeichert, wie es für die Erfüllung des Zwecks erforderlich ist oder gesetzliche Aufbewahrungsfristen (z.B. nach HGB oder AO) dies vorschreiben.</p>
-
-            <h2>4. Rechte des Betroffenen & Widerruf</h2>
-            <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung sowie auf Datenübertragbarkeit. Zudem können Sie diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen. Ein Widerruf berührt nicht die Rechtmäßigkeit der bis zum Widerruf erfolgten Verarbeitung.</p>
-        </div>
-
-        <div class="signature-area">
-            <div class="sig-box">
-                <span class="label-md">Datum</span>
-                <div style="font-weight: 600; margin-top: 10pt">{{datum_heute}}</div>
-            </div>
-            <div class="sig-box">
-                <span class="label-md">Digitale Unterschrift</span>
-                <div class="sig-placeholder">
-                    {{#if signatur_pfad}}
-                        <img src="file:///{{signatur_pfad}}" class="sig-image">
-                    {{/if}}
-                </div>
-                <div style="font-weight: 600">{{kunde_name}}</div>
+                <div class="brand-name">Wendepunkt</div>
+                <div class="brand-sub">Raum für Neues. Mit Respekt fürs Bisherige.</div>
             </div>
         </div>
     </div>
+
+    <div class="info-section">
+        <div>
+            <div class="sender-line">Wendepunkt | Stefanie Ruf | Egerländer Str. 9 | 65232 Taunusstein</div>
+            <div class="recipient-address">
+                {{kunde_name}}<br>
+                {{kunde_strasse}} {{kunde_hausnummer}}<br>
+                {{kunde_plz}} {{kunde_ort}}
+            </div>
+        </div>
+        <table class="meta-table">
+            <tr><td>Datum:</td><td>{{datum_heute}}</td></tr>
+            <tr><td>Kunde-Nr:</td><td>{{kunde_id}}</td></tr>
+            <tr><td>Auftrag-Nr:</td><td>{{auftrag_id}}</td></tr>
+        </table>
+    </div>
+
+    
+    <h1>Datenschutzinformation und Einwilligungen</h1>
+    <p class="lead">Teil A informiert Sie, wie wir Ihre Daten verarbeiten (Art. 13 und 14 DSGVO) – hierfür ist keine Unterschrift und keine Einwilligung nötig. Teil B enthält freiwillige Einwilligungen, die Sie einzeln erteilen oder ablehnen können.</p>
+
+    <h2 style="margin-top: 2mm;">Teil A – Datenschutzinformation</h2>
+
+    <section>
+        <h3>1. Verantwortliche Stelle</h3>
+        <p>Wendepunkt – Raum für Neues, Inhaberin Stefanie Ruf <span class="ph">[PLATZHALTER: Rechtsform – bei GbR: Name der GbR, Gesellschafter, vertreten durch]</span>, Egerländer Str. 9, 65232 Taunusstein, Telefon 0177 7574529, E-Mail info@wendepunkt-ruf.de. Eine Datenschutzbeauftragte ist derzeit gesetzlich nicht vorgeschrieben (§ 38 BDSG) <span class="ph">[PLATZHALTER: ggf. Kontakt Datenschutzbeauftragte/r, sobald erforderlich]</span>.</p>
+    </section>
+
+    <section>
+        <h3>2. Welche Daten wir verarbeiten, wozu und auf welcher Rechtsgrundlage</h3>
+        <table class="daten-table">
+            <tr><th style="width:30%">Daten</th><th style="width:42%">Zweck</th><th>Rechtsgrundlage (DSGVO)</th></tr>
+            <tr><td>Name, Anschrift, E-Mail, Telefon</td><td>Angebot, Vertragsschluss, Terminabsprachen, Kommunikation</td><td>Art. 6 Abs. 1 lit. b</td></tr>
+            <tr><td>Auftrags- und Einsatzdaten (Leistungen, Zeiten, Kilometer, Freigabelisten)</td><td>Durchführung und Abrechnung des Auftrags, Nachweis der Freigabe von Gegenständen</td><td>Art. 6 Abs. 1 lit. b; lit. f (Beweissicherung)</td></tr>
+            <tr><td>Rechnungen, Zahlungen, Buchhaltungsbelege</td><td>Rechnungsstellung, Buchführung, steuerliche Pflichten</td><td>Art. 6 Abs. 1 lit. b und c (i. V. m. § 147 AO, § 14b UStG)</td></tr>
+            <tr><td>Unterschriften (auch als Bild bei Unterzeichnung auf dem Tablet)</td><td>Abschluss und Nachweis von Vertrag und Erklärungen</td><td>Art. 6 Abs. 1 lit. b und f</td></tr>
+            <tr><td>Interne Notizen zum Auftrag</td><td>Organisation, Rücksichtnahme auf Ihre Wünsche und Situation</td><td>Art. 6 Abs. 1 lit. b; bei Gesundheits- oder vergleichbar sensiblen Angaben nur mit Einwilligung, Art. 9 Abs. 2 lit. a (Teil B, Nr. 4)</td></tr>
+            <tr><td>Fotos aus Ihren Räumen</td><td>Dokumentation, Fotoalben/Erinnerungsstücke</td><td>Nur mit Einwilligung, Art. 6 Abs. 1 lit. a (Teil B, Nr. 1–3)</td></tr>
+            <tr><td>Hochgeladene Dokumente (z. B. Vollmachten, Listen)</td><td>Durchführung des Auftrags</td><td>Art. 6 Abs. 1 lit. b</td></tr>
+            <tr><td>Fundsachen mit Personenbezug (Briefe, Fotos, Datenträger)</td><td>Übergabe an Sie bzw. Vernichtung auf Ihre Weisung</td><td>Art. 6 Abs. 1 lit. b; lit. f</td></tr>
+        </table>
+        <p>Unser berechtigtes Interesse (lit. f) besteht darin, nachweisen zu können, welche Gegenstände Sie freigegeben haben und welche Erklärungen abgegeben wurden, sowie Ansprüche abzuwehren oder durchzusetzen.</p>
+    </section>
+
+    <section>
+        <h3>3. Daten Dritter</h3>
+        <p>Im Rahmen des Auftrags erfahren wir oft auch etwas über andere Personen, etwa Angehörige, Miterben oder Verstorbene, deren Haushalt aufgelöst wird. Diese Angaben stammen von Ihnen oder aus den Räumen und Unterlagen. Wir verarbeiten sie nur, soweit es für den Auftrag nötig ist, und behandeln sie vertraulich. Angaben zu Verstorbenen fallen nicht unter die DSGVO (Erwägungsgrund 27), werden von uns aber ebenso vertraulich behandelt. Bitte informieren Sie betroffene Angehörige, soweit dies zumutbar ist; eine gesonderte Information durch uns unterbleibt, wenn sie unmöglich oder unverhältnismäßig aufwendig wäre (Art. 14 Abs. 5 lit. b DSGVO).</p>
+    </section>
+
+    <section>
+        <h3>4. Empfänger</h3>
+        <ul>
+            <li><strong>Hosting und E-Mail:</strong> Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, als Auftragsverarbeiter (Art. 28 DSGVO). Die Auftragsverwaltung und die Daten liegen auf Servern im Rechenzentrum in Helsinki (Finnland, EU).</li>
+            <li><strong>Steuerberatung:</strong> <span class="ph">[PLATZHALTER: Name der Steuerberatung, sobald beauftragt – sonst entfällt]</span>, für Buchführung und Steuererklärungen.</li>
+            <li><strong>Beschäftigte und Hilfskräfte:</strong> soweit vorhanden und für den Auftrag erforderlich; alle sind zur Vertraulichkeit verpflichtet.</li>
+            <li><strong>Abnehmer von Gegenständen</strong> (z. B. Käufer, gemeinnützige Einrichtungen, Entsorger) erhalten keine Daten über Sie. Persönliche Unterlagen entfernen wir vorher (siehe Vertrag § 7 Abs. 4).</li>
+            <li><strong>Behörden</strong> nur, soweit eine gesetzliche Pflicht besteht (z. B. Finanzamt, Abgabe von Waffen oder Medikamenten).</li>
+        </ul>
+        <p>Eine Übermittlung in Länder außerhalb der EU bzw. des EWR findet nicht statt.</p>
+    </section>
+
+    <section>
+        <h3>5. Speicherdauer</h3>
+        <table class="daten-table">
+            <tr><th style="width:42%">Daten</th><th>Löschung</th></tr>
+            <tr><td>Rechnungen und Buchungsbelege</td><td>nach 8 Jahren (§ 147 Abs. 1 Nr. 4, Abs. 3 AO; § 14b UStG)</td></tr>
+            <tr><td>Vertrag, Erklärungen, geschäftliche Korrespondenz</td><td>nach 6 Jahren, soweit steuerlich relevant (§ 147 Abs. 1 Nr. 2, 3, Abs. 3 AO); sonst nach Ablauf der Verjährungsfrist von 3 Jahren (§§ 195, 199 BGB)</td></tr>
+            <tr><td>Aufzeichnungen der Gewinnermittlung</td><td>nach 10 Jahren (§ 147 Abs. 1 Nr. 1, Abs. 3 AO)</td></tr>
+            <tr><td>Stammdaten und Auftragsdaten</td><td>mit Ablauf der jeweils längsten der obigen Fristen</td></tr>
+            <tr><td>Interne Notizen</td><td><span class="ph">[PLATZHALTER: z. B. 6 Monate]</span> nach Abschluss des Auftrags</td></tr>
+            <tr><td>Fotos zur Dokumentation</td><td><span class="ph">[PLATZHALTER: z. B. 6 Monate]</span> nach Abschluss des Auftrags oder früher bei Widerruf</td></tr>
+            <tr><td>Fotos für Fotoalben/Erinnerungsstücke</td><td><span class="ph">[PLATZHALTER: z. B. 3 Monate]</span> nach Übergabe des Albums oder früher bei Widerruf</td></tr>
+            <tr><td>Nachweis erteilter Einwilligungen</td><td>3 Jahre nach Widerruf bzw. Zweckerfüllung (Nachweispflicht, Art. 7 Abs. 1 DSGVO)</td></tr>
+        </table>
+        <p>Die steuerlichen Fristen beginnen mit dem Schluss des Kalenderjahres, in dem die Unterlage entstanden ist (§ 147 Abs. 4 AO).</p>
+    </section>
+
+    <section>
+        <h3>6. Ihre Rechte</h3>
+        <p>Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18) und Datenübertragbarkeit (Art. 20 DSGVO). Eine Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO), z. B. per E-Mail an info@wendepunkt-ruf.de; die Rechtmäßigkeit der bis dahin erfolgten Verarbeitung bleibt unberührt.</p>
+        <div class="hinweis"><strong>Widerspruchsrecht (Art. 21 DSGVO):</strong> Soweit wir Daten auf Grundlage berechtigter Interessen (Art. 6 Abs. 1 lit. f DSGVO) verarbeiten, können Sie aus Gründen, die sich aus Ihrer besonderen Situation ergeben, jederzeit widersprechen. Wir verarbeiten die Daten dann nicht mehr, es sei denn, wir können zwingende schutzwürdige Gründe nachweisen oder die Verarbeitung dient der Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen.</div>
+        <p>Sie können sich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), insbesondere bei der für uns zuständigen Behörde: <span class="ph">[PLATZHALTER: Aufsichtsbehörde je nach Sitz – Vorschlag: Der Hessische Beauftragte für Datenschutz und Informationsfreiheit, aktuelle Anschrift vor Verwendung prüfen]</span>.</p>
+    </section>
+
+    <section>
+        <h3>7. Pflicht zur Bereitstellung, keine automatisierten Entscheidungen</h3>
+        <p>Ihre Kontakt- und Auftragsdaten benötigen wir für den Vertragsschluss und die Durchführung; ohne sie können wir den Auftrag nicht übernehmen. Einwilligungen nach Teil B sind freiwillig – ohne sie bleibt der Vertrag unverändert gültig (Art. 7 Abs. 4 DSGVO). Eine automatisierte Entscheidungsfindung einschließlich Profiling (Art. 22 DSGVO) findet nicht statt.</p>
+    </section>
+
+    <section>
+        <h3>8. Mediation</h3>
+        <p>Bei einer Mediation nach dem Mediationsgesetz gilt zusätzlich die Verschwiegenheitspflicht nach § 4 MediationsG; ihre Grenzen sind im Vertrag (§ 10 Abs. 3) beschrieben.</p>
+    </section>
+
+    <section class="neue-seite">
+        <div class="anhang-label">Datenschutzinformation zum Auftrag {{auftrag_id}}</div>
+        <h2 style="margin-top: 0;">Teil B – Freiwillige Einwilligungen</h2>
+        <p>Bitte kreuzen Sie nur an, womit Sie einverstanden sind. <strong>Nur angekreuzte Einwilligungen gelten als erteilt.</strong> Jede Einwilligung können Sie jederzeit einzeln mit Wirkung für die Zukunft widerrufen, z. B. per E-Mail an info@wendepunkt-ruf.de. Eine Ablehnung oder ein Widerruf hat keinen Einfluss auf den Vertrag.</p>
+
+        <div class="check"><div class="box"></div><div><strong>1. Fotos zur Dokumentation.</strong> Wendepunkt darf in meinen Räumen Fotos zur Dokumentation des Auftrags anfertigen (z. B. Zustand vor/nach der Räumung, Freigabe von Gegenständen) und intern speichern. Personen werden möglichst nicht abgebildet. (Art. 6 Abs. 1 lit. a DSGVO)</div></div>
+        <div class="check"><div class="box"></div><div><strong>2. Fotoalbum / Erinnerungsstücke.</strong> Wendepunkt darf Fotos von Räumen und Gegenständen – auf Wunsch auch von mir überlassene Familienfotos – zur Gestaltung eines Fotoalbums oder von Erinnerungsstücken für mich verwenden. (Art. 6 Abs. 1 lit. a DSGVO)</div></div>
+        <div class="check"><div class="box"></div><div><strong>3. Weitergabe von Fotos an Angehörige.</strong> Wendepunkt darf Fotos bzw. das Fotoalbum an folgende Personen weitergeben: <span class="ph">[PLATZHALTER: Namen der Angehörigen]</span>. (Art. 6 Abs. 1 lit. a DSGVO)</div></div>
+        <div class="check"><div class="box"></div><div><strong>4. Sensible Angaben in Notizen.</strong> Wendepunkt darf Angaben zu meiner Gesundheit, Pflegesituation oder vergleichbar sensiblen Umständen, die ich mitteile und die für eine rücksichtsvolle Durchführung wichtig sind, in internen Notizen festhalten. (Art. 9 Abs. 2 lit. a DSGVO – ausdrückliche Einwilligung)</div></div>
+        <div class="check"><div class="box"></div><div><strong>5. E-Mail-Versand sensibler Unterlagen.</strong> Wendepunkt darf mir auch Unterlagen mit sensiblen Inhalten (z. B. Fotos, Notizen) per E-Mail senden. Mir ist bekannt, dass E-Mails zwar transportverschlüsselt übertragen werden, aber nicht Ende-zu-Ende-verschlüsselt sind. Rechnungen und Vertragsunterlagen erhalte ich ohnehin per E-Mail (Teil A, Vertragsdurchführung). (Art. 6 Abs. 1 lit. a DSGVO)</div></div>
+
+        <div class="hinweis" style="margin-top: 5mm;"><strong>Veröffentlichungen:</strong> Fotos werden nie auf der Website oder in sozialen Medien veröffentlicht, auch nicht anonymisiert, es sei denn, Sie stimmen im Einzelfall gesondert schriftlich zu.</div>
+
+        <div class="signature-area">
+            <div>
+                <div class="sig-space"><span>{{datum_heute}}</span></div>
+                <div class="sig-line">Ort, Datum</div>
+            </div>
+            <div>
+                <div class="sig-space">{{#if signatur_pfad}}{{#if signatur_bild}}<img src="{{{signatur_bild}}}" class="sig-image" alt="Unterschrift">{{/if}}{{/if}}</div>
+                <div class="sig-line">Unterschrift (nur für die angekreuzten Einwilligungen)<br><span class="sig-name">{{kunde_name}}</span></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-col">
+                <strong>Kontakt</strong><br>
+                Stefanie Ruf<br>
+                Egerländer Str. 9, 65232 Taunusstein<br>
+                0177 7574529 · info@wendepunkt-ruf.de
+            </div>
+            <div class="footer-col">
+                <strong>Rechtliches</strong><br>
+                <span class="ph">[PLATZHALTER: Rechtsform]</span><br>
+                Steuernummer: <span class="ph">[PLATZHALTER: Steuernummer]</span><br>
+                Kleinunternehmer gem. § 19 UStG
+            </div>
+            <div class="footer-col">
+                <strong>Wendepunkt</strong><br>
+                Raum für Neues.<br>
+                Mit Respekt fürs Bisherige.<br>
+                wendepunkt-ruf.de
+            </div>
+        </div>
+    </section>
 </body>
 </html>

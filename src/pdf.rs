@@ -133,6 +133,14 @@ pub fn generate_dynamic_pdf(
     }
     
     let basis = auftrag.basis_pauschale.unwrap_or(Euro::default());
+    let stundensatz_nachbereitung = if auftrag.stundensatz_nachbereitung.as_cents() > 0 {
+        auftrag.stundensatz_nachbereitung
+    } else {
+        auftrag.stundensatz
+    };
+    // Unterschrift als Data-URI einbetten: Das HTML wird als data:-URL geladen, von dort
+    // aus blockiert Chrome file://-Bilder. Nur PNG/JPEG (Magic Bytes), sonst kein Bild.
+    let signatur_bild = signature_path.map(signatur_als_data_uri).unwrap_or_default();
     let netto_total = gesamt_netto_einsaetze.add(&basis);
     let mwst = netto_total.vat_19_percent();
     let brutto_total = netto_total.add(&mwst);
@@ -150,6 +158,11 @@ pub fn generate_dynamic_pdf(
         "auftrag_beschreibung": auftrag.beschreibung,
         "datum_heute": Local::now().format("%d.%m.%Y").to_string(),
         "basis_pauschale": format!("{:.2}", basis.as_f64_for_display()),
+        "stundensatz": format!("{:.2}", auftrag.stundensatz.as_f64_for_display()),
+        "stundensatz_nachbereitung": format!("{:.2}", stundensatz_nachbereitung.as_f64_for_display()),
+        "kilometer_satz": format!("{:.2}", auftrag.kilometer_satz.as_f64_for_display()),
+        "kunde_email": kunde.email.clone().unwrap_or_default(),
+        "kunde_telefon": kunde.telefon.clone().unwrap_or_default(),
         "rechnungs_nummer": rechnungs_nummer.unwrap_or(""),
         "einsaetze": einsaetze_data,
         "rechnungs_notizen": notizen_data,
@@ -157,6 +170,7 @@ pub fn generate_dynamic_pdf(
         "mwst": format!("{:.2}", mwst.as_f64_for_display()),
         "gesamt_brutto": format!("{:.2}", brutto_total.as_f64_for_display()),
         "signatur_pfad": signature_path.unwrap_or(""),
+        "signatur_bild": signatur_bild,
         "created_by": created_by.unwrap_or("Unbekannt")
     });
 
@@ -166,6 +180,24 @@ pub fn generate_dynamic_pdf(
     // PDF Generierung via Headless Chrome
     let pdf_bytes = print_html_to_pdf(html)?;
     Ok((pdf_bytes, netto_total, brutto_total))
+}
+
+/// Liest ein Unterschriftsbild und liefert es als `data:`-URI (leer bei Fehler oder
+/// unbekanntem Format). Der Typ wird aus dem Inhalt bestimmt, nicht aus der Endung.
+fn signatur_als_data_uri(pfad: &str) -> String {
+    let Ok(bytes) = fs::read(pfad) else {
+        eprintln!("WARN: Unterschriftsbild '{}' nicht lesbar", pfad);
+        return String::new();
+    };
+    let mime = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else {
+        eprintln!("WARN: Unterschriftsbild '{}' ist kein PNG/JPEG", pfad);
+        return String::new();
+    };
+    format!("data:{};base64,{}", mime, general_purpose::STANDARD.encode(bytes))
 }
 
 fn print_html_to_pdf(html: String) -> Result<Vec<u8>, AppError> {
@@ -211,7 +243,13 @@ fn print_html_to_pdf(html: String) -> Result<Vec<u8>, AppError> {
         AppError::PdfError(err_msg)
     })?;
 
-    let pdf_options = None; // Default A4
+    // CSS-Seitengröße (@page size: A4) und Hintergründe übernehmen – ohne
+    // preferCSSPageSize erzeugt Chrome US-Letter.
+    let pdf_options = Some(headless_chrome::types::PrintToPdfOptions {
+        prefer_css_page_size: Some(true),
+        print_background: Some(true),
+        ..Default::default()
+    });
     let pdf_data = tab.print_to_pdf(pdf_options).map_err(|e| {
         let err_msg = format!("Headless Chrome tab.print_to_pdf Fehler: {}", e);
         eprintln!("CRITICAL: {}", err_msg);
