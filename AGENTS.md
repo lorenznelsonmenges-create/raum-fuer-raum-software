@@ -222,7 +222,8 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
-- [x] **Dashboard:** Zweispaltig – links Auftrags-Statistik (`/api/stats`), rechts „Einnahmen & Ausgaben“ je Geschäftsjahr mit Vorjahresvergleich und Hinweis auf Buchungen ohne Beleg.
+- [x] **Dashboard:** Oben Kacheln Kunden / Aktuelle Aufträge; darunter zweispaltig links Status-Verteilung (`/api/stats`), rechts „Einnahmen & Ausgaben“ je Geschäftsjahr mit Vorjahresvergleich und Hinweis auf Buchungen ohne Beleg.
+- [x] **Buchhaltung-Übersicht:** Zeitraum-Modus *Alles* / *Geschäftsjahr* / *Monat* (bzw. *Freier Zeitraum* bei manuellem Von/Bis); Kacheln und Liste folgen dem Zeitraum.
 - [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis` **oder** `jahr`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis` **oder** `jahr`; inkl. `anzahl_ohne_beleg`), `GET /api/buchungen/jahre` (Jahre mit Buchungen + laufendes Jahr, absteigend, je mit `von`/`bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Anlegen/Ändern als Multipart (`daten` + `beleg`), **Belegpflicht** (PDF/JPG/PNG, max. 10 MB, gespeichert unter `uploads/belege/<uuid>`, Abruf nur eingeloggt über `/uploads/…`). Audit-Log (`[AUDIT]`) für jede Mutation.
 
 ## 5. Nächste Schritte
