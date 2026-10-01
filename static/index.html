@@ -53,6 +53,8 @@
             <button @click="view = 'auftraege'; mobileMenuOpen = false" :class="view === 'auftraege' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">assignment</span><span>Aufträge</span></button>
             <button @click="view = 'archiviert'; mobileMenuOpen = false" :class="view === 'archiviert' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">history</span><span>Archiv</span></button>
             <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
+            <button @click="view = 'buchhaltung'; mobileMenuOpen = false" :class="view === 'buchhaltung' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">account_balance_wallet</span><span>Buchhaltung</span></button>
+            <button @click="view = 'admin'; mobileMenuOpen = false" :class="view === 'admin' ? 'sidebar-item active' : 'sidebar-item'" class="w-full flex items-center gap-4 px-6 py-4 rounded-lg"><span class="material-icons-outlined">settings</span><span>Admin</span></button>
         </nav>
         
         <div class="pt-8 mt-8 border-t border-surface-low px-4">
@@ -511,7 +513,99 @@
                 </div>
             </div>
         </template>
+        <!-- Buchhaltung -->
+        <template x-if="view === 'buchhaltung'">
+            <div class="space-y-10 font-body">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-end gap-8">
+                    <h1 class="font-headline text-4xl text-primary font-bold">Buchhaltung</h1>
+                    <button @click="openBuchungModal()" class="bg-primary text-white px-10 py-5 rounded-2xl font-bold shadow-lg hover:bg-primary-dim transition-all">Neue Buchung</button>
+                </div>
+
+                <!-- Übersicht: Einnahmen | Ausgaben | Saldo -->
+                <div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-sm">
+                            <div class="text-3xl md:text-4xl font-headline font-bold text-green-700" x-text="formatEuro(buchungsUebersicht.einnahmen_gesamt)"></div>
+                            <p class="text-[10px] uppercase font-bold opacity-40 mt-2">Gesamteinnahmen</p>
+                        </div>
+                        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-sm">
+                            <div class="text-3xl md:text-4xl font-headline font-bold text-red-600" x-text="formatEuro(buchungsUebersicht.ausgaben_gesamt)"></div>
+                            <p class="text-[10px] uppercase font-bold opacity-40 mt-2">Gesamtausgaben</p>
+                        </div>
+                        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-sm">
+                            <!-- saldo kommt vom Server in Cent (kann negativ sein) -->
+                            <div class="text-3xl md:text-4xl font-headline font-bold" :class="buchungsUebersicht.saldo > 0 ? 'text-green-700' : (buchungsUebersicht.saldo < 0 ? 'text-red-600' : 'text-primary')" x-text="formatEuro(buchungsUebersicht.saldo / 100)"></div>
+                            <p class="text-[10px] uppercase font-bold opacity-40 mt-2">Saldo</p>
+                        </div>
+                    </div>
+                    <p x-show="buchungsFilter.von || buchungsFilter.bis" class="text-xs opacity-50 mt-4 text-center">Summen für den gewählten Zeitraum</p>
+                </div>
+
+                <!-- Filter -->
+                <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Von</label>
+                        <input type="date" x-model="buchungsFilter.von" @change="ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Bis</label>
+                        <input type="date" x-model="buchungsFilter.bis" @change="ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Typ</label>
+                        <select x-model="buchungsFilter.typ" @change="ladeBuchhaltung()" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                            <option value="">Alle</option>
+                            <option value="einnahme">Einnahmen</option>
+                            <option value="ausgabe">Ausgaben</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 block">Kategorie</label>
+                        <input type="text" list="buchungs-kategorien" maxlength="100" x-model="buchungsFilter.kategorie" @change="ladeBuchhaltung()" placeholder="Alle" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary border-none shadow-inner">
+                    </div>
+                    <button @click="resetBuchungsFilter()" class="secondary-button justify-center py-3.5 font-bold text-sm"><span class="material-icons-outlined text-lg">filter_alt_off</span><span>Zurücksetzen</span></button>
+                </div>
+
+                <!-- Buchungsliste -->
+                <div class="bg-white rounded-3xl overflow-x-auto shadow-sm">
+                    <table class="w-full text-left font-body">
+                        <thead class="bg-surface-low text-[10px] font-bold uppercase opacity-40">
+                            <tr><th class="px-4 md:px-8 py-4 md:py-6">Datum</th><th class="px-4 md:px-8 py-4 md:py-6">Typ</th><th class="px-4 md:px-8 py-4 md:py-6">Kategorie</th><th class="px-4 md:px-8 py-4 md:py-6">Beschreibung</th><th class="px-4 md:px-8 py-4 md:py-6 text-right">Betrag</th><th class="px-4 md:px-8 py-4 md:py-6"></th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-low">
+                            <template x-for="b in buchungen" :key="b.id">
+                                <tr class="hover:bg-surface-low/50 transition-colors">
+                                    <td class="px-4 md:px-8 py-4 md:py-5 font-bold text-sm whitespace-nowrap" x-text="formatDate(b.datum)"></td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5">
+                                        <span class="inline-flex items-center gap-1 text-xs font-bold uppercase whitespace-nowrap" :class="b.buchungs_typ === 'einnahme' ? 'text-green-700' : 'text-red-600'">
+                                            <span class="material-icons-outlined text-base" x-text="b.buchungs_typ === 'einnahme' ? 'arrow_upward' : 'arrow_downward'"></span>
+                                            <span x-text="b.buchungs_typ === 'einnahme' ? 'Einnahme' : 'Ausgabe'"></span>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5 text-sm font-semibold" x-text="b.kategorie"></td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5 text-sm">
+                                        <div x-text="b.beschreibung"></div>
+                                        <div class="text-[10px] uppercase opacity-40 font-bold" x-show="b.beleg_referenz || b.auftrag_id" x-text="[b.beleg_referenz ? 'Beleg ' + b.beleg_referenz : '', b.auftrag_id ? formatAuftragID(b.auftrag_id) : ''].filter(Boolean).join(' • ')"></div>
+                                    </td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5 text-right font-headline text-lg font-bold whitespace-nowrap" :class="b.buchungs_typ === 'einnahme' ? 'text-green-700' : 'text-red-600'" x-text="(b.buchungs_typ === 'einnahme' ? '+ ' : '− ') + formatEuro(b.betrag)"></td>
+                                    <td class="px-4 md:px-8 py-4 md:py-5 text-right whitespace-nowrap">
+                                        <button @click="openBuchungModal(b)" class="p-2.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors" title="Bearbeiten"><span class="material-icons-outlined text-lg">edit</span></button>
+                                        <button @click="deleteBuchung(b.id)" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Löschen"><span class="material-icons-outlined text-lg">delete</span></button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="buchungen.length === 0"><td colspan="6" class="py-10 text-center text-xs opacity-40 italic">Keine Buchungen gefunden.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
     </main>
+
+    <!-- Kategorie-Vorschläge (Filter + Buchungsformular) -->
+    <datalist id="buchungs-kategorien">
+        <template x-for="k in buchungsKategorien" :key="k"><option :value="k"></option></template>
+    </datalist>
 
     <!-- Modals -->
     <div x-show="templateEditorOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-8 glass" x-cloak><div class="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] p-16 relative flex flex-col shadow-2xl text-on-surface font-body"><button @click="templateEditorOpen = false" class="absolute top-10 right-10 text-on-surface/20 transition-all font-body"><span class="material-icons-outlined text-4xl">close</span></button><h2 class="font-headline text-4xl mb-8 text-primary font-bold" x-text="'Vorlage: ' + editingTemplateName"></h2><textarea x-model="editingTemplateContent" class="flex-1 bg-surface-low p-10 rounded-3xl font-mono text-sm border-none shadow-inner no-scrollbar text-on-surface"></textarea><div class="pt-8 flex justify-end gap-6 font-bold font-body"><button @click="templateEditorOpen = false" class="text-xs uppercase opacity-40">Abbrechen</button><button @click="saveTemplateContent()" class="bg-primary text-white px-4 md:px-12 py-5 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all">Speichern</button></div></div></div>
@@ -653,6 +747,69 @@
         </div>
     </div>
 
+    <!-- Buchung Modal (Neu / Bearbeiten) -->
+    <div x-show="buchungModal" class="fixed inset-0 z-[500] flex items-center justify-center p-4 md:p-8 glass" x-cloak>
+        <div class="bg-white w-full max-w-lg max-h-[92dvh] overflow-y-auto no-scrollbar rounded-[40px] p-6 md:p-10 relative shadow-2xl text-on-surface font-body">
+            <button @click="buchungModal = false" class="absolute top-8 right-8 text-on-surface/20 hover:text-primary transition-colors"><span class="material-icons-outlined text-3xl">close</span></button>
+            <div class="w-16 h-16 bg-primary-container text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <span class="material-icons-outlined text-3xl">receipt_long</span>
+            </div>
+            <h2 class="font-headline text-2xl md:text-3xl mb-6 text-primary font-bold text-center" x-text="buchungEditId ? 'Buchung bearbeiten' : 'Neue Buchung'"></h2>
+
+            <!-- Client-Validierung dient nur der UX – die Sicherheitsschicht sind die Domain Primitives im Backend -->
+            <form @submit.prevent="speichereBuchung()" class="flex flex-col gap-4 text-left">
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" @click="buchungForm.buchungs_typ = 'einnahme'" :class="buchungForm.buchungs_typ === 'einnahme' ? 'bg-green-100 text-green-800 shadow-inner' : 'bg-surface-low text-on-surface/50'" class="py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"><span class="material-icons-outlined text-lg">arrow_upward</span>Einnahme</button>
+                    <button type="button" @click="buchungForm.buchungs_typ = 'ausgabe'" :class="buchungForm.buchungs_typ === 'ausgabe' ? 'bg-red-100 text-red-700 shadow-inner' : 'bg-surface-low text-on-surface/50'" class="py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"><span class="material-icons-outlined text-lg">arrow_downward</span>Ausgabe</button>
+                </div>
+
+                <div class="relative">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Betrag *</label>
+                    <input type="text" inputmode="decimal" maxlength="15" x-model="buchungForm.betrag" placeholder="12,50" required class="w-full bg-surface-low p-4 pr-12 rounded-2xl text-2xl font-headline font-bold text-primary text-center shadow-inner border-none placeholder-primary/20">
+                    <span class="absolute right-6 top-[65%] -translate-y-1/2 text-primary font-bold opacity-40">€</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Datum *</label>
+                        <input type="date" x-model="buchungForm.datum" :max="heuteISO()" required class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary text-center shadow-inner border-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Kategorie *</label>
+                        <input type="text" list="buchungs-kategorien" maxlength="100" x-model="buchungForm.kategorie" placeholder="z. B. Material" required class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary shadow-inner border-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Beschreibung</label>
+                    <input type="text" maxlength="500" x-model="buchungForm.beschreibung" placeholder="Optionale Beschreibung..." class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-medium text-on-surface shadow-inner border-none">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Belegnummer</label>
+                        <input type="text" maxlength="100" x-model="buchungForm.beleg_referenz" placeholder="optional" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-medium text-on-surface shadow-inner border-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-primary/60 px-2 block mb-1.5">Auftrag</label>
+                        <select x-model="buchungForm.auftrag_id" class="w-full bg-surface-low p-3.5 rounded-2xl text-sm font-bold text-primary shadow-inner border-none">
+                            <option value="">– kein Auftrag –</option>
+                            <template x-for="a in [...auftraege].sort((x, y) => y.id - x.id)" :key="a.id">
+                                <option :value="String(a.id)" x-text="formatAuftragID(a.id) + ' – ' + getKundeName(a.kunde_id)" :selected="String(a.id) === buchungForm.auftrag_id"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+
+                <div x-show="buchungFormFehler" class="bg-red-50 text-red-600 text-sm font-semibold rounded-2xl px-5 py-3 flex items-center gap-2">
+                    <span class="material-icons-outlined text-lg">error_outline</span><span x-text="buchungFormFehler"></span>
+                </div>
+
+                <button type="submit" class="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-primary-dim transition-all text-base mt-2" x-text="buchungEditId ? 'Änderungen speichern' : 'Buchung speichern'"></button>
+            </form>
+        </div>
+    </div>
+
     <!-- Feedback -->
     <div x-show="feedback.show" class="fixed bottom-12 right-12 z-[300] flex items-center gap-6 px-10 py-6 rounded-[32px] shadow-2xl font-bold text-white glass border border-white/20" :class="feedback.type === 'error' ? 'bg-red-500/90' : 'bg-primary/90'">
         <span class="material-icons-outlined text-2xl" x-text="feedback.type === 'error' ? 'error_outline' : 'check_circle'"></span>
@@ -672,6 +829,12 @@
                 currentUser: null,
                 stats: { anfrage_laeuft: 0, in_bearbeitung: 0, abgeschlossen: 0, storniert: 0, aktuelle_auftraege: 0 },
                 settings: { stundensatz: 45.0, kilometer_satz: 0.5 },
+                // Buchhaltung
+                buchungen: [],
+                buchungsUebersicht: { einnahmen_gesamt: 0, ausgaben_gesamt: 0, saldo: 0 },
+                buchungsFilter: { von: '', bis: '', typ: '', kategorie: '' },
+                buchungModal: false, buchungEditId: null, buchungFormFehler: '',
+                buchungForm: { buchungs_typ: 'einnahme', betrag: '', datum: '', kategorie: '', beschreibung: '', beleg_referenz: '', auftrag_id: '' },
                 
                 async init() { 
                     this.error = null;
@@ -696,6 +859,8 @@
                                 await this.fetchAuftraege();
                             } else if (newView === 'kunden') {
                                 await this.fetchKunden();
+                            } else if (newView === 'buchhaltung') {
+                                await Promise.all([this.ladeBuchhaltung(), this.fetchAuftraege(), this.fetchKunden()]);
                             }
                         } catch (e) { console.error('Auto-refresh error:', e); }
                     });
@@ -721,6 +886,7 @@
                         else if (m.type === 'einsatz') { await fetch(`/api/einsaetze/${m.id}/delete`, { method: 'POST' }); await this.fetchEinsaetze(this.activeAuftrag.id); }
                         else if (m.type === 'doc') { await fetch(`/api/dateien/${m.id}/delete`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); }
                         else if (m.type === 'auftrag') { await fetch(`/api/auftraege/${m.id}`, { method: 'DELETE' }); await this.fetchAuftraege(); this.view = 'auftraege'; }
+                        else if (m.type === 'buchung') { const r = await fetch(`/api/buchungen/${m.id}/delete`, { method: 'POST' }); if (r.ok) this.showFeedback("Buchung gelöscht."); else this.showFeedback(await this.apiFehler(r), 'error'); await this.ladeBuchhaltung(); }
                     } finally { this.isProcessing = false; }
                 },
                 deleteTemplateFile(n) { this.openDeleteModal('template', n, 'Vorlage löschen?', 'Möchten Sie diese Vorlage wirklich löschen?'); },
@@ -839,6 +1005,89 @@
                 async updateAuftragSync() { await fetch(`/api/auftraege/${this.activeAuftrag.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.activeAuftrag) }); await this.fetchAuftraege(); },
                 async generateDocFromTemplate(t) { this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/generate_doc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: t }) }); this.showTemplateModal = false; await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; },
                 createInvoice() { this.showInvoiceModal = true; },
+                // --- Buchhaltung ---
+                formatEuro(v) { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(Number(v) || 0); },
+                heuteISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
+                get buchungsKategorien() {
+                    const s = new Set(['Dienstleistung', 'Material', 'Fahrtkosten', 'Entsorgung', 'Büro', 'Versicherung', 'Werbung', 'Sonstiges']);
+                    this.buchungen.forEach(b => s.add(b.kategorie));
+                    return [...s].sort((a, b) => a.localeCompare(b, 'de'));
+                },
+                buchungsQuery(felder) {
+                    const p = new URLSearchParams();
+                    felder.forEach(f => { const v = (this.buchungsFilter[f] || '').trim(); if (v) p.set(f, v); });
+                    const q = p.toString();
+                    return q ? '?' + q : '';
+                },
+                async apiFehler(r) {
+                    if (r.status === 401) { window.location.href = '/static/login.html'; return 'Nicht angemeldet.'; }
+                    const t = await r.text();
+                    try { const j = JSON.parse(t); if (j && j.error) return j.error; } catch (_) {}
+                    return t || ('Fehler (' + r.status + ')');
+                },
+                async ladeBuchhaltung() {
+                    const [rl, ru] = await Promise.all([
+                        fetch('/api/buchungen' + this.buchungsQuery(['von', 'bis', 'typ', 'kategorie'])),
+                        fetch('/api/buchungen/uebersicht' + this.buchungsQuery(['von', 'bis']))
+                    ]);
+                    if (!rl.ok) { this.showFeedback(await this.apiFehler(rl), 'error'); return; }
+                    if (!ru.ok) { this.showFeedback(await this.apiFehler(ru), 'error'); return; }
+                    this.buchungen = await rl.json();
+                    this.buchungsUebersicht = await ru.json();
+                },
+                resetBuchungsFilter() { this.buchungsFilter = { von: '', bis: '', typ: '', kategorie: '' }; this.ladeBuchhaltung(); },
+                openBuchungModal(b = null) {
+                    this.buchungFormFehler = '';
+                    if (b) {
+                        this.buchungEditId = b.id;
+                        this.buchungForm = { buchungs_typ: b.buchungs_typ, betrag: Number(b.betrag).toFixed(2).replace('.', ','), datum: b.datum, kategorie: b.kategorie, beschreibung: b.beschreibung || '', beleg_referenz: b.beleg_referenz || '', auftrag_id: b.auftrag_id ? String(b.auftrag_id) : '' };
+                    } else {
+                        this.buchungEditId = null;
+                        this.buchungForm = { buchungs_typ: 'einnahme', betrag: '', datum: this.heuteISO(), kategorie: '', beschreibung: '', beleg_referenz: '', auftrag_id: '' };
+                    }
+                    this.buchungModal = true;
+                },
+                // "12,50" / "1.234,56" / "12.5" → Zahl in Euro. Die Umrechnung in Cent erfolgt
+                // serverseitig über Euro::from_euro_f64() – dort liegt die verbindliche Validierung.
+                parseEuroEingabe(text) {
+                    const t = String(text).trim().replace(/[\s€]/g, '');
+                    let norm = null;
+                    if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(t)) norm = t.replace(/\./g, '').replace(',', '.');
+                    else if (/^\d+([.,]\d{1,2})?$/.test(t)) norm = t.replace(',', '.');
+                    if (norm === null) return null;
+                    const v = Number(norm);
+                    return (isFinite(v) && v > 0 && v <= 10000000) ? v : null;
+                },
+                async speichereBuchung() {
+                    this.buchungFormFehler = '';
+                    const f = this.buchungForm;
+                    const betrag = this.parseEuroEingabe(f.betrag);
+                    if (betrag === null) { this.buchungFormFehler = 'Bitte einen gültigen Betrag eingeben (z. B. 12,50).'; return; }
+                    if (!f.kategorie.trim()) { this.buchungFormFehler = 'Bitte eine Kategorie angeben.'; return; }
+                    if (!f.datum) { this.buchungFormFehler = 'Bitte ein Datum angeben.'; return; }
+                    if (f.datum > this.heuteISO()) { this.buchungFormFehler = 'Das Datum darf nicht in der Zukunft liegen.'; return; }
+                    const payload = {
+                        buchungs_typ: f.buchungs_typ,
+                        betrag,
+                        kategorie: f.kategorie.trim(),
+                        beschreibung: f.beschreibung.trim(),
+                        datum: f.datum,
+                        auftrag_id: f.auftrag_id ? Number(f.auftrag_id) : null,
+                        beleg_referenz: f.beleg_referenz.trim() || null
+                    };
+                    const url = this.buchungEditId ? `/api/buchungen/${this.buchungEditId}` : '/api/buchungen';
+                    this.isProcessing = true;
+                    try {
+                        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!r.ok) { this.buchungFormFehler = await this.apiFehler(r); return; }
+                        this.buchungModal = false;
+                        this.showFeedback(this.buchungEditId ? 'Buchung aktualisiert.' : 'Buchung gespeichert.');
+                        await this.ladeBuchhaltung();
+                    } catch (e) {
+                        this.buchungFormFehler = 'Verbindungsfehler – bitte erneut versuchen.';
+                    } finally { this.isProcessing = false; }
+                },
+                deleteBuchung(id) { this.openDeleteModal('buchung', id, 'Buchung löschen?', 'Möchten Sie diese Buchung wirklich unwiderruflich löschen?'); },
                 async confirmCreateInvoice() { this.showInvoiceModal = false; this.isProcessing = true; await fetch(`/api/auftraege/${this.activeAuftrag.id}/rechnung`, { method: 'POST' }); await this.fetchDateien(this.activeAuftrag.id); this.isProcessing = false; }
             }
         }

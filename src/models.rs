@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
+use chrono::NaiveDate;
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
+use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum, parse_iso_datum};
+use crate::error::AppError;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum AuftragStatus {
     #[default]
@@ -162,4 +165,185 @@ pub struct User {
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
+}
+
+// =====================================================================
+// Buchhaltung
+// =====================================================================
+
+/// Entity (DDD): Eine Buchung hat eine Identität (`id`). Zwei Buchungen sind genau
+/// dann gleich, wenn ihre IDs gleich sind – unabhängig von Betrag oder Datum.
+///
+/// Alle fachlichen Felder sind Domain Primitives (Value Objects) und damit garantiert
+/// gültig. Die Felder sind nur crate-intern sichtbar (Immutability): Außerhalb der
+/// Anwendung kann eine Buchung gelesen, aber nicht verändert werden.
+#[derive(Debug, Clone, Serialize)]
+pub struct Buchung {
+    pub(crate) id: i64,
+    pub(crate) buchungs_typ: BuchungsTyp,
+    pub(crate) betrag: BuchungsBetrag,
+    pub(crate) kategorie: Kategorie,
+    pub(crate) beschreibung: Beschreibung,
+    pub(crate) datum: BuchungsDatum,
+    pub(crate) auftrag_id: Option<i64>,
+    pub(crate) beleg_referenz: Option<BelegReferenz>,
+    pub(crate) created_at: String,
+    /// Traceability (CIA-T): wird ausschließlich serverseitig aus der Session gesetzt
+    pub(crate) created_by: i64,
+}
+
+impl PartialEq for Buchung {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Buchung {}
+
+impl Buchung {
+    pub fn id(&self) -> i64 { self.id }
+    pub fn buchungs_typ(&self) -> BuchungsTyp { self.buchungs_typ }
+    pub fn betrag(&self) -> BuchungsBetrag { self.betrag }
+    pub fn kategorie(&self) -> &Kategorie { &self.kategorie }
+    pub fn beschreibung(&self) -> &Beschreibung { &self.beschreibung }
+    pub fn datum(&self) -> BuchungsDatum { self.datum }
+    pub fn auftrag_id(&self) -> Option<i64> { self.auftrag_id }
+    pub fn beleg_referenz(&self) -> Option<&BelegReferenz> { self.beleg_referenz.as_ref() }
+    pub fn created_at(&self) -> &str { &self.created_at }
+    pub fn created_by(&self) -> i64 { self.created_by }
+}
+
+/// Roh-Eingabe vom Client (DTO). Enthält bewusst nur primitive Typen – sie ist
+/// NICHT vertrauenswürdig und wird über `validieren()` in `BuchungsDaten` überführt.
+///
+/// `deny_unknown_fields`: Felder wie `id`, `created_by` oder `created_at` können
+/// vom Client nicht eingeschleust werden (Mass-Assignment-Schutz).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BuchungEingabe {
+    pub buchungs_typ: String,
+    /// Betrag in Euro (z.B. 12.5) – nur das JSON-Transportformat. Wird sofort über
+    /// `Euro::from_euro_f64()` in Cent (i64) umgewandelt; gerechnet wird nie mit f64.
+    pub betrag: f64,
+    pub kategorie: String,
+    #[serde(default)]
+    pub beschreibung: String,
+    pub datum: String,
+    #[serde(default)]
+    pub auftrag_id: Option<i64>,
+    #[serde(default)]
+    pub beleg_referenz: Option<String>,
+}
+
+impl BuchungEingabe {
+    /// Input Validation Stufen 3 + 4 (Lexical Content, Syntax) über die Domain
+    /// Primitives. Stufe 5 (Semantic, z.B. Existenz des Auftrags) folgt im Handler,
+    /// weil sie die Datenbank benötigt und damit die teuerste Prüfung ist.
+    pub fn validieren(&self) -> Result<BuchungsDaten, AppError> {
+        let buchungs_typ = BuchungsTyp::parse(&self.buchungs_typ)?;
+        let euro = Euro::from_euro_f64(self.betrag).map_err(AppError::BadRequest)?;
+        let betrag = BuchungsBetrag::new(euro)?;
+        let kategorie = Kategorie::new(&self.kategorie)?;
+        let beschreibung = Beschreibung::new(&self.beschreibung)?;
+        let datum = BuchungsDatum::new(&self.datum)?;
+        let auftrag_id = match self.auftrag_id {
+            Some(id) if id <= 0 => return Err(AppError::BadRequest("Ungültige Auftrags-ID".into())),
+            other => other,
+        };
+        let beleg_referenz = match self.beleg_referenz.as_deref().map(str::trim) {
+            None | Some("") => None,
+            Some(v) => Some(BelegReferenz::new(v)?),
+        };
+        Ok(BuchungsDaten { buchungs_typ, betrag, kategorie, beschreibung, datum, auftrag_id, beleg_referenz })
+    }
+}
+
+/// Validierte fachliche Daten einer Buchung (ohne Identität und ohne Audit-Felder).
+/// Kann nur aus gültigen Domain Primitives zusammengesetzt werden.
+#[derive(Debug, Clone)]
+pub struct BuchungsDaten {
+    pub buchungs_typ: BuchungsTyp,
+    pub betrag: BuchungsBetrag,
+    pub kategorie: Kategorie,
+    pub beschreibung: Beschreibung,
+    pub datum: BuchungsDatum,
+    pub auftrag_id: Option<i64>,
+    pub beleg_referenz: Option<BelegReferenz>,
+}
+
+/// Roh-Query-Parameter für `GET /api/buchungen` (leere Strings = kein Filter).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BuchungsFilterParameter {
+    pub von: Option<String>,
+    pub bis: Option<String>,
+    pub typ: Option<String>,
+    pub kategorie: Option<String>,
+}
+
+/// Validierter Zeitraum (beide Grenzen inklusive).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Zeitraum {
+    pub von: Option<NaiveDate>,
+    pub bis: Option<NaiveDate>,
+}
+
+impl Zeitraum {
+    /// Precondition: Datumsangaben im Format YYYY-MM-DD, `von` <= `bis`
+    /// (Filter-Daten dürfen in der Zukunft liegen, z.B. "bis Monatsende").
+    pub fn new(von: Option<&str>, bis: Option<&str>) -> Result<Self, AppError> {
+        let parse = |v: Option<&str>| match v.map(str::trim) {
+            None | Some("") => Ok(None),
+            Some(s) => parse_iso_datum(s).map(Some),
+        };
+        let zeitraum = Self { von: parse(von)?, bis: parse(bis)? };
+        if let (Some(v), Some(b)) = (zeitraum.von, zeitraum.bis) {
+            if v > b {
+                return Err(AppError::BadRequest("Zeitraum ungültig: 'Von' liegt nach 'Bis'".into()));
+            }
+        }
+        Ok(zeitraum)
+    }
+}
+
+/// Validierter Filter für die Buchungsliste.
+#[derive(Debug, Clone, Default)]
+pub struct BuchungsFilter {
+    pub zeitraum: Zeitraum,
+    pub typ: Option<BuchungsTyp>,
+    pub kategorie: Option<Kategorie>,
+}
+
+impl BuchungsFilterParameter {
+    pub fn validieren(&self) -> Result<BuchungsFilter, AppError> {
+        let zeitraum = Zeitraum::new(self.von.as_deref(), self.bis.as_deref())?;
+        let typ = match self.typ.as_deref().map(str::trim) {
+            None | Some("") => None,
+            Some(t) => Some(BuchungsTyp::parse(t)?),
+        };
+        let kategorie = match self.kategorie.as_deref().map(str::trim) {
+            None | Some("") => None,
+            Some(k) => Some(Kategorie::new(k)?),
+        };
+        Ok(BuchungsFilter { zeitraum, typ, kategorie })
+    }
+}
+
+/// Roh-Query-Parameter für `GET /api/buchungen/uebersicht`.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ZeitraumParameter {
+    pub von: Option<String>,
+    pub bis: Option<String>,
+}
+
+/// Übersicht für das Buchhaltungs-Dashboard.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct BuchungsUebersicht {
+    /// Summe aller Einnahmen (JSON: Euro als Zahl, wie alle `Euro`-Felder)
+    pub einnahmen_gesamt: Euro,
+    /// Summe aller Ausgaben (JSON: Euro als Zahl)
+    pub ausgaben_gesamt: Euro,
+    /// Einnahmen - Ausgaben in **Cent** (kann negativ sein, daher kein `Euro`)
+    pub saldo: i64,
 }

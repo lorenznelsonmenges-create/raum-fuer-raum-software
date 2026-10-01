@@ -1,11 +1,12 @@
 use wendepunkt_software::{models, database, pdf, files};
 use wendepunkt_software::domain::RechnungsNummer;
 use wendepunkt_software::models::{Kunde, Auftrag, Einsatz, Datei, DashboardStats, Settings, LoginRequest, User};
+use wendepunkt_software::models::{Buchung, BuchungEingabe, BuchungsDaten, BuchungsFilterParameter, BuchungsUebersicht, Zeitraum, ZeitraumParameter};
 use wendepunkt_software::error::AppError;
 
 use axum::{
     routing::{get, post},
-    extract::{State, Path, Multipart, FromRequestParts, Request},
+    extract::{State, Path, Query, Multipart, FromRequestParts, Request, DefaultBodyLimit},
     http::request::Parts,
     middleware::{self, Next},
     response::{Html, IntoResponse, Redirect},
@@ -42,6 +43,15 @@ async fn main() {
         .route("/login", post(login_handler))
         .route("/logout", get(logout_handler));
 
+    // Buchhaltung: eigener Sub-Router, damit das enge Body-Limit (Input Validation
+    // Stufe 2: Size) nur hier greift. Statischer Pfad `uebersicht` vor `:id`.
+    let buchungen_routes = Router::new()
+        .route("/buchungen", get(list_buchungen).post(add_buchung))
+        .route("/buchungen/uebersicht", get(get_buchungen_uebersicht))
+        .route("/buchungen/:id", get(get_buchung).post(update_buchung))
+        .route("/buchungen/:id/delete", post(delete_buchung_handler))
+        .layer(DefaultBodyLimit::max(BUCHUNG_MAX_BODY_BYTES));
+
     let protected_routes = Router::new()
         .route("/check_auth", get(check_auth))
         // 1. Statische API-Pfade (keine Parameter)
@@ -66,6 +76,9 @@ async fn main() {
         .route("/einsaetze/:id", post(update_einsatz))
         .route("/einsaetze/:id/delete", post(delete_einsatz_handler))
         .route("/dateien/:id/delete", post(delete_datei_handler))
+        // Buchhaltung – liegt wie alle Module hinter der bestehenden auth_middleware
+        // (Input Validation Stufe 1: Origin). KEINE zusätzliche Authentifizierung.
+        .merge(buchungen_routes)
         .route_layer(middleware::from_fn(auth_middleware));
 
     // Upload-Route: Authentifizierung erforderlich (Datenschutz!)
@@ -478,4 +491,127 @@ async fn serve_upload_file(
         ],
         content,
     ))
+}
+
+// --- Buchhaltung ---
+//
+// Secure by Design – Input Validation (Prinzip 6) in fester Reihenfolge, günstigste
+// Prüfung zuerst:
+//   1. Origin   – auth_middleware + `AuthUser`-Extractor (bestehende Session)
+//   2. Size     – `DefaultBodyLimit` auf dem Buchungs-Router (BUCHUNG_MAX_BODY_BYTES)
+//   3. Lexical  – Zeichenprüfung in den Domain Primitives (`BuchungEingabe::validieren`)
+//   4. Syntax   – Formatprüfung in den Domain Primitives (Datum, Betrag, Typ)
+//   5. Semantic – Datenbankprüfungen (existiert der Auftrag / die Buchung?) – zuletzt,
+//                 weil am teuersten
+
+/// Eine Buchung ist ein kleines JSON-Objekt; alles darüber ist kein legitimer Request.
+const BUCHUNG_MAX_BODY_BYTES: usize = 16 * 1024;
+
+/// Availability / Fail Secure: Datenbankfehler werden serverseitig geloggt, der Client
+/// erhält nur eine generische Meldung (keine Preisgabe interner Strukturen).
+fn buchung_db_fehler(aktion: &str, e: sqlx::Error) -> AppError {
+    match e {
+        sqlx::Error::RowNotFound => AppError::NotFound,
+        e => {
+            eprintln!("[BUCHHALTUNG] {} Datenbankfehler bei '{}': {:?}", Local::now().to_rfc3339(), aktion, e);
+            AppError::Internal("Interner Fehler in der Buchhaltung".into())
+        }
+    }
+}
+
+/// Traceability (CIA-T): Jede Mutation wird mit Zeitstempel und User-ID protokolliert.
+/// Bewusst ohne Beträge/Beschreibungen, damit keine Finanzdaten in Logs landen (Confidentiality).
+fn buchung_audit(aktion: &str, buchung_id: i64, user: &User) {
+    println!("[AUDIT] {} buchung.{} id={} user_id={} user={}", Local::now().to_rfc3339(), aktion, buchung_id, user.id, user.username);
+}
+
+/// Abgelehnte Eingaben sind sicherheitsrelevant (möglicher Angriffsversuch) und werden
+/// mit User-ID protokolliert – ohne den Inhalt der Eingabe.
+fn buchung_abgelehnt(aktion: &str, user: &User, e: AppError) -> AppError {
+    eprintln!("[AUDIT] {} buchung.{}.abgelehnt user_id={} user={}", Local::now().to_rfc3339(), aktion, user.id, user.username);
+    e
+}
+
+/// Input Validation Stufe 5 (Semantic): Referenzierte Objekte müssen existieren.
+async fn pruefe_buchung_semantik(pool: &SqlitePool, daten: &BuchungsDaten) -> Result<(), AppError> {
+    if let Some(auftrag_id) = daten.auftrag_id {
+        let vorhanden = database::auftrag_existiert(pool, auftrag_id).await
+            .map_err(|e| buchung_db_fehler("Auftragsprüfung", e))?;
+        if !vorhanden {
+            return Err(AppError::BadRequest("Der verknüpfte Auftrag existiert nicht".into()));
+        }
+    }
+    Ok(())
+}
+
+async fn list_buchungen(
+    _auth: AuthUser,
+    State(pool): State<SqlitePool>,
+    Query(params): Query<BuchungsFilterParameter>,
+) -> Result<Json<Vec<Buchung>>, AppError> {
+    let filter = params.validieren()?;
+    let buchungen = database::get_buchungen(&pool, &filter).await
+        .map_err(|e| buchung_db_fehler("Liste", e))?;
+    Ok(Json(buchungen))
+}
+
+async fn get_buchung(
+    _auth: AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+) -> Result<Json<Buchung>, AppError> {
+    database::get_buchung_by_id(&pool, id).await
+        .map_err(|e| buchung_db_fehler("Abruf", e))?
+        .map(Json)
+        .ok_or(AppError::NotFound)
+}
+
+async fn add_buchung(
+    AuthUser(user): AuthUser,
+    State(pool): State<SqlitePool>,
+    Json(eingabe): Json<BuchungEingabe>,
+) -> Result<Json<Buchung>, AppError> {
+    let daten = eingabe.validieren().map_err(|e| buchung_abgelehnt("erstellen", &user, e))?;
+    pruefe_buchung_semantik(&pool, &daten).await.map_err(|e| buchung_abgelehnt("erstellen", &user, e))?;
+    // created_by wird serverseitig aus der Session gesetzt – nie aus dem Request
+    let buchung = database::create_buchung(&pool, &daten, user.id).await
+        .map_err(|e| buchung_db_fehler("Erstellen", e))?;
+    buchung_audit("erstellt", buchung.id(), &user);
+    Ok(Json(buchung))
+}
+
+async fn update_buchung(
+    AuthUser(user): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+    Json(eingabe): Json<BuchungEingabe>,
+) -> Result<Json<Buchung>, AppError> {
+    let daten = eingabe.validieren().map_err(|e| buchung_abgelehnt("aendern", &user, e))?;
+    pruefe_buchung_semantik(&pool, &daten).await.map_err(|e| buchung_abgelehnt("aendern", &user, e))?;
+    let buchung = database::update_buchung(&pool, id, &daten).await
+        .map_err(|e| buchung_db_fehler("Ändern", e))?;
+    buchung_audit("geaendert", buchung.id(), &user);
+    Ok(Json(buchung))
+}
+
+async fn delete_buchung_handler(
+    AuthUser(user): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+) -> Result<(), AppError> {
+    database::delete_buchung(&pool, id).await
+        .map_err(|e| buchung_db_fehler("Löschen", e))?;
+    buchung_audit("geloescht", id, &user);
+    Ok(())
+}
+
+async fn get_buchungen_uebersicht(
+    _auth: AuthUser,
+    State(pool): State<SqlitePool>,
+    Query(params): Query<ZeitraumParameter>,
+) -> Result<Json<BuchungsUebersicht>, AppError> {
+    let zeitraum = Zeitraum::new(params.von.as_deref(), params.bis.as_deref())?;
+    let uebersicht = database::get_buchungen_uebersicht(&pool, zeitraum.von, zeitraum.bis).await
+        .map_err(|e| buchung_db_fehler("Übersicht", e))?;
+    Ok(Json(uebersicht))
 }

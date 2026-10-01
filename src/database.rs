@@ -1,6 +1,10 @@
-use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool, Row};
+use chrono::NaiveDate;
+use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions, SqliteRow}, SqlitePool, Row};
 use crate::domain::{Euro, Stunden, Kilometer, EinsatzTyp, RechnungsNummer};
+use crate::domain::{BuchungsTyp, BuchungsBetrag, Kategorie, Beschreibung, BelegReferenz, BuchungsDatum};
+use crate::error::AppError;
 use crate::models::{Kunde, Auftrag, AuftragStatus, Einsatz, Datei, RechnungNotiz, Rechnung, DashboardStats, Settings, User};
+use crate::models::{Buchung, BuchungsDaten, BuchungsFilter, BuchungsUebersicht};
 
 pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
     if !std::path::Path::new("uploads").exists() {
@@ -310,4 +314,135 @@ pub async fn get_user_by_username(pool: &SqlitePool, username: &str) -> Result<U
         .bind(username)
         .fetch_one(pool)
         .await
+}
+
+pub async fn auftrag_existiert(pool: &SqlitePool, id: i64) -> Result<bool, sqlx::Error> {
+    let row = sqlx::query("SELECT EXISTS(SELECT 1 FROM auftraege WHERE id = ?) AS vorhanden").bind(id).fetch_one(pool).await?;
+    Ok(row.get::<i64, _>("vorhanden") == 1)
+}
+
+// --- Buchungen ---
+// Secure by Design: Alle Queries sind parametrisiert (Integrity, kein SQL-Injection-Risiko).
+// Gelesene Zeilen werden wieder durch die Domain Primitives geschickt – auch Daten aus
+// der eigenen Datenbank gelten erst nach Validierung als gültige Buchung.
+
+const BUCHUNG_SPALTEN: &str = "id, buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, created_at, created_by";
+
+fn ungueltige_buchung(e: AppError) -> sqlx::Error {
+    sqlx::Error::Decode(format!("Ungültige Buchung in der Datenbank: {:?}", e).into())
+}
+
+fn iso(datum: Option<NaiveDate>) -> Option<String> {
+    datum.map(|d| d.format("%Y-%m-%d").to_string())
+}
+
+fn buchung_aus_row(row: &SqliteRow) -> Result<Buchung, sqlx::Error> {
+    Ok(Buchung {
+        id: row.try_get("id")?,
+        buchungs_typ: BuchungsTyp::parse(&row.try_get::<String, _>("buchungs_typ")?).map_err(ungueltige_buchung)?,
+        betrag: BuchungsBetrag::from_cents(row.try_get("betrag_cent")?).map_err(ungueltige_buchung)?,
+        kategorie: Kategorie::new(&row.try_get::<String, _>("kategorie")?).map_err(ungueltige_buchung)?,
+        beschreibung: Beschreibung::new(&row.try_get::<String, _>("beschreibung")?).map_err(ungueltige_buchung)?,
+        datum: BuchungsDatum::from_db(&row.try_get::<String, _>("datum")?).map_err(ungueltige_buchung)?,
+        auftrag_id: row.try_get("auftrag_id")?,
+        beleg_referenz: row.try_get::<Option<String>, _>("beleg_referenz")?
+            .map(|v| BelegReferenz::new(&v)).transpose().map_err(ungueltige_buchung)?,
+        created_at: row.try_get("created_at")?,
+        created_by: row.try_get("created_by")?,
+    })
+}
+
+/// `created_by` kommt aus der Session (AuthUser), niemals aus dem Request-Body.
+pub async fn create_buchung(pool: &SqlitePool, daten: &BuchungsDaten, created_by: i64) -> Result<Buchung, sqlx::Error> {
+    let sql = format!(
+        "INSERT INTO buchungen (buchungs_typ, betrag_cent, kategorie, beschreibung, datum, auftrag_id, beleg_referenz, created_by) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING {}", BUCHUNG_SPALTEN);
+    let row = sqlx::query(&sql)
+        .bind(daten.buchungs_typ.as_str())
+        .bind(daten.betrag.as_cents())
+        .bind(daten.kategorie.as_str())
+        .bind(daten.beschreibung.as_str())
+        .bind(daten.datum.to_iso())
+        .bind(daten.auftrag_id)
+        .bind(daten.beleg_referenz.as_ref().map(|b| b.as_str()))
+        .bind(created_by)
+        .fetch_one(pool).await?;
+    buchung_aus_row(&row)
+}
+
+/// Liste aller Buchungen, neueste zuerst. Nicht gesetzte Filter (`NULL`) greifen nicht.
+pub async fn get_buchungen(pool: &SqlitePool, filter: &BuchungsFilter) -> Result<Vec<Buchung>, sqlx::Error> {
+    let sql = format!(
+        "SELECT {} FROM buchungen \
+         WHERE (? IS NULL OR datum >= ?) AND (? IS NULL OR datum <= ?) \
+           AND (? IS NULL OR buchungs_typ = ?) AND (? IS NULL OR kategorie = ? COLLATE NOCASE) \
+         ORDER BY datum DESC, id DESC", BUCHUNG_SPALTEN);
+    let von = iso(filter.zeitraum.von);
+    let bis = iso(filter.zeitraum.bis);
+    let typ = filter.typ.map(|t| t.as_str());
+    let kategorie = filter.kategorie.as_ref().map(|k| k.as_str());
+    let rows = sqlx::query(&sql)
+        .bind(&von).bind(&von)
+        .bind(&bis).bind(&bis)
+        .bind(typ).bind(typ)
+        .bind(kategorie).bind(kategorie)
+        .fetch_all(pool).await?;
+    rows.iter().map(buchung_aus_row).collect()
+}
+
+pub async fn get_buchung_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Buchung>, sqlx::Error> {
+    let sql = format!("SELECT {} FROM buchungen WHERE id = ?", BUCHUNG_SPALTEN);
+    let row = sqlx::query(&sql).bind(id).fetch_optional(pool).await?;
+    row.as_ref().map(buchung_aus_row).transpose()
+}
+
+/// Aktualisiert die fachlichen Felder. `created_at`/`created_by` bleiben unverändert.
+/// Liefert `sqlx::Error::RowNotFound`, wenn die Buchung nicht existiert.
+pub async fn update_buchung(pool: &SqlitePool, id: i64, daten: &BuchungsDaten) -> Result<Buchung, sqlx::Error> {
+    let sql = format!(
+        "UPDATE buchungen SET buchungs_typ = ?, betrag_cent = ?, kategorie = ?, beschreibung = ?, datum = ?, auftrag_id = ?, beleg_referenz = ? \
+         WHERE id = ? RETURNING {}", BUCHUNG_SPALTEN);
+    let row = sqlx::query(&sql)
+        .bind(daten.buchungs_typ.as_str())
+        .bind(daten.betrag.as_cents())
+        .bind(daten.kategorie.as_str())
+        .bind(daten.beschreibung.as_str())
+        .bind(daten.datum.to_iso())
+        .bind(daten.auftrag_id)
+        .bind(daten.beleg_referenz.as_ref().map(|b| b.as_str()))
+        .bind(id)
+        .fetch_optional(pool).await?
+        .ok_or(sqlx::Error::RowNotFound)?;
+    buchung_aus_row(&row)
+}
+
+/// Liefert `sqlx::Error::RowNotFound`, wenn die Buchung nicht existiert.
+pub async fn delete_buchung(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    let res = sqlx::query("DELETE FROM buchungen WHERE id = ?").bind(id).execute(pool).await?;
+    if res.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound);
+    }
+    Ok(())
+}
+
+/// Summen werden in der Datenbank als INTEGER (Cent) gebildet – keine Rundungsfehler.
+pub async fn get_buchungen_uebersicht(pool: &SqlitePool, von: Option<NaiveDate>, bis: Option<NaiveDate>) -> Result<BuchungsUebersicht, sqlx::Error> {
+    let von = iso(von);
+    let bis = iso(bis);
+    let row = sqlx::query(
+        "SELECT COALESCE(SUM(CASE WHEN buchungs_typ = 'einnahme' THEN betrag_cent ELSE 0 END), 0) AS einnahmen, \
+                COALESCE(SUM(CASE WHEN buchungs_typ = 'ausgabe' THEN betrag_cent ELSE 0 END), 0) AS ausgaben \
+         FROM buchungen WHERE (? IS NULL OR datum >= ?) AND (? IS NULL OR datum <= ?)")
+        .bind(&von).bind(&von)
+        .bind(&bis).bind(&bis)
+        .fetch_one(pool).await?;
+    let einnahmen: i64 = row.try_get("einnahmen")?;
+    let ausgaben: i64 = row.try_get("ausgaben")?;
+    let saldo = einnahmen.checked_sub(ausgaben)
+        .ok_or_else(|| sqlx::Error::Decode("Saldo-Überlauf".into()))?;
+    Ok(BuchungsUebersicht {
+        einnahmen_gesamt: Euro::from_cents(einnahmen).map_err(|e| sqlx::Error::Decode(e.into()))?,
+        ausgaben_gesamt: Euro::from_cents(ausgaben).map_err(|e| sqlx::Error::Decode(e.into()))?,
+        saldo,
+    })
 }

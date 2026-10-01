@@ -124,6 +124,42 @@ diesen Abschnitt aktualisieren. Kein Merge ohne aktuelle Doku.
 | `storniert` | `i64` | Anzahl Aufträge mit Status 'Storniert' |
 | `aktuelle_auftraege` | `i64` | Summe aller nicht-stornierten & nicht-abgeschlossenen Aufträge |
 
+### Buchung (Entity – Buchhaltung)
+Felder sind nur crate-intern sichtbar (`pub(crate)`), Zugriff von außen über Getter. Gleichheit nur über `id`.
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `id` | `i64` | Primärschlüssel |
+| `buchungs_typ` | `BuchungsTyp` | Enum `Einnahme` / `Ausgabe` (DB/JSON: `einnahme` / `ausgabe`) |
+| `betrag` | `BuchungsBetrag` | Wrapper um `Euro` (Cent, i64): > 0 und ≤ 10 Mio. € (DB: `betrag_cent`, JSON: Euro als Zahl) |
+| `kategorie` | `Kategorie` | 1–100 Zeichen, Whitelist (Buchstaben, Ziffern, Leerzeichen, `- _ . , & / ( ) +`) |
+| `beschreibung` | `Beschreibung` | max. 500 Zeichen, keine Steuerzeichen, kein `<` `>` |
+| `datum` | `BuchungsDatum` | ISO `YYYY-MM-DD`, nicht in der Zukunft, nicht vor 2000 |
+| `auftrag_id` | `Option<i64>` | FK auf `auftraege` (`ON DELETE SET NULL`) |
+| `beleg_referenz` | `Option<BelegReferenz>` | Belegnummer, max. 100 Zeichen, Whitelist (`- _ / . #`) |
+| `created_at` | `String` | Zeitstempel (DB-Default `datetime('now')`, UTC) |
+| `created_by` | `i64` | FK auf `users`, **serverseitig** aus der Session gesetzt |
+
+### BuchungEingabe (DTO)
+Roh-Eingabe vom Client mit `deny_unknown_fields` (kein Einschleusen von `id`/`created_by`). `validieren()` → `BuchungsDaten` (nur Domain Primitives).
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `buchungs_typ` | `String` | `einnahme` oder `ausgabe` |
+| `betrag` | `f64` | Euro, nur Transportformat → sofort `Euro::from_euro_f64()` |
+| `kategorie` | `String` | Pflicht |
+| `beschreibung` | `String` | optional (Default leer) |
+| `datum` | `String` | `YYYY-MM-DD` |
+| `auftrag_id` | `Option<i64>` | optional, muss existieren (semantische Prüfung im Handler) |
+| `beleg_referenz` | `Option<String>` | optional, leer = `None` |
+
+### BuchungsUebersicht (DTO)
+| Feld | Typ | Beschreibung |
+| :--- | :--- | :--- |
+| `einnahmen_gesamt` | `Euro` | Summe der Einnahmen (JSON: Euro) |
+| `ausgaben_gesamt` | `Euro` | Summe der Ausgaben (JSON: Euro) |
+| `saldo` | `i64` | Einnahmen − Ausgaben in **Cent** (kann negativ sein) |
+
+Filter-DTOs: `BuchungsFilterParameter` (`von`, `bis`, `typ`, `kategorie`) → `BuchungsFilter`; `ZeitraumParameter` (`von`, `bis`) → `Zeitraum` (prüft `von` ≤ `bis`).
+
 ## 3. Datenbankschema – Migrations-Übersicht
 
 Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`).
@@ -148,6 +184,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 | `20260914000000_add_created_by_to_auftraege.sql` | Spalte `created_by` in `auftraege` |
 | `20260922000000_update_einsatz_typen.sql` | Migration auf 3 Einsatz-Typen (`ARBEIT_VOR_ORT`, `ARBEIT_VORBEREITUNG`, `KILOMETER`) |
 | `20260924000001_ensure_users.sql` | Tabelle `users` & sichere Bcrypt-Hashes für `admin` und `stefanie` |
+| `20261001000000_add_buchungen.sql` | Tabelle `buchungen` (Buchhaltung) mit CHECK-Constraints + Indizes auf `datum`, `buchungs_typ`, `created_by` |
 
 ### Wichtige Spalten-Hinweise
 - `kunden.ort` (nicht `stadt` – wurde umbenannt)
@@ -162,6 +199,7 @@ Die Migrationen werden automatisch beim Start ausgeführt (Ordner `migrations/`)
 - [x] **Einsätze:** Dokumentation von Stunden/Kilometern + Digitale Signatur (3 Typen).
 - [x] **Uploads:** Multipart-Form Upload für Dokumente/Bilder + Drag & Drop Support.
 - [x] **Email:** Platzhalter-Endpunkt für den Stundennachweis-Versand.
+- [x] **Buchhaltung:** `GET|POST /api/buchungen` (Filter: `von`, `bis`, `typ`, `kategorie`), `GET /api/buchungen/uebersicht` (`von`, `bis`), `GET|POST /api/buchungen/:id`, `POST /api/buchungen/:id/delete`. Body-Limit 16 KB, Audit-Log (`[AUDIT]`) für jede Mutation.
 
 ## 5. Nächste Schritte
 

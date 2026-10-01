@@ -1,4 +1,6 @@
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use chrono::NaiveDate;
+use crate::error::AppError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Euro(i64);
@@ -13,7 +15,10 @@ impl Euro {
     }
 
     pub fn from_euro_f64(euros: f64) -> Result<Self, String> {
-        if euros < 0.0 {
+        // Secure by Design: NaN/Infinity würden sonst still zu 0 bzw. i64::MAX gecastet
+        if !euros.is_finite() {
+            Err("Betrag muss eine endliche Zahl sein".into())
+        } else if euros < 0.0 {
             Err("Betrag darf nicht negativ sein".into())
         } else {
             let cents = (euros * 100.0).round() as i64;
@@ -247,5 +252,267 @@ impl<'de> Deserialize<'de> for RechnungsNummer {
     where D: Deserializer<'de> {
         let val = String::deserialize(deserializer)?;
         RechnungsNummer::try_new(val).map_err(serde::de::Error::custom)
+    }
+}
+
+
+// =====================================================================
+// Buchhaltung – Domain Primitives
+//
+// Secure by Design, Prinzip 3 (Domain Primitives): Jeder Typ validiert sich
+// selbst im Konstruktor (Preconditions). Existiert ein Wert, ist er garantiert
+// gültig (Postcondition). Alle Typen sind unveränderlich (Prinzip 5: Immutability):
+// private Felder, keine Setter, nur lesende Zugriffe.
+//
+// Die Prüfungen folgen der Reihenfolge der Input Validation (Prinzip 6):
+// Size → Lexical Content → Syntax. Semantische Prüfungen (z.B. "existiert der
+// Auftrag?") benötigen die Datenbank und erfolgen daher erst im Handler.
+// =====================================================================
+
+/// Obergrenze für einen einzelnen Buchungsbetrag: 10 Mio. € (in Cent).
+/// Deep Modeling: Ein Kleinbetrieb bucht keine Milliarden – ein absurder Betrag ist
+/// ein Eingabefehler oder ein Angriff (z.B. Überlauf beim Aufsummieren).
+pub const MAX_BUCHUNGSBETRAG_CENT: i64 = 1_000_000_000;
+
+/// Transaktionstyp – nur zwei gültige Werte.
+/// Als Rust-Enum ist Injection strukturell unmöglich: Es gibt keinen dritten Zustand.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BuchungsTyp {
+    Einnahme,
+    Ausgabe,
+}
+
+impl BuchungsTyp {
+    /// Precondition: exakt "einnahme" oder "ausgabe" (Whitelist, keine Normalisierung)
+    pub fn parse(value: &str) -> Result<Self, AppError> {
+        match value {
+            "einnahme" => Ok(Self::Einnahme),
+            "ausgabe" => Ok(Self::Ausgabe),
+            _ => Err(AppError::BadRequest("Ungültiger Buchungstyp (erlaubt: einnahme, ausgabe)".into())),
+        }
+    }
+
+    /// Repräsentation in der Datenbank (passt zum CHECK-Constraint der Migration)
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Einnahme => "einnahme",
+            Self::Ausgabe => "ausgabe",
+        }
+    }
+}
+
+/// Betrag einer Buchung. Baut auf dem bestehenden `Euro(i64)` auf (Cent, KEIN float),
+/// verschärft aber die Invariante: Eine Buchung über 0 € oder einen negativen Betrag
+/// gibt es nicht (vgl. Fallstudie "-1 Buch kaufen"). Ob Geld hinein- oder hinausgeht,
+/// drückt ausschließlich der `BuchungsTyp` aus – niemals das Vorzeichen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BuchungsBetrag(Euro);
+
+impl BuchungsBetrag {
+    /// Precondition: 0 < Betrag <= MAX_BUCHUNGSBETRAG_CENT
+    /// Postcondition: Self enthält einen positiven, plausiblen Betrag
+    pub fn new(betrag: Euro) -> Result<Self, AppError> {
+        if betrag.as_cents() <= 0 {
+            return Err(AppError::BadRequest("Betrag muss größer als 0 € sein".into()));
+        }
+        if betrag.as_cents() > MAX_BUCHUNGSBETRAG_CENT {
+            return Err(AppError::BadRequest("Betrag ist unplausibel hoch (max. 10.000.000 €)".into()));
+        }
+        Ok(Self(betrag))
+    }
+
+    pub fn from_cents(cents: i64) -> Result<Self, AppError> {
+        Self::new(Euro::from_cents(cents).map_err(AppError::BadRequest)?)
+    }
+
+    /// Gibt eine Kopie zurück (Euro ist Copy) – keine Referenz auf den inneren Wert.
+    pub fn euro(&self) -> Euro {
+        self.0
+    }
+
+    pub fn as_cents(&self) -> i64 {
+        self.0.as_cents()
+    }
+}
+
+impl Serialize for BuchungsBetrag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        self.0.serialize(serializer)
+    }
+}
+
+/// Buchungskategorie mit Whitelist und Längenbeschränkung.
+/// Die Zeichen-Whitelist verhindert strukturell XSS/HTML-Injection: `<`, `>`, `"`, `'`
+/// usw. können in einer Kategorie gar nicht vorkommen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Kategorie(String);
+
+impl Kategorie {
+    pub const MAX_LAENGE: usize = 100;
+
+    /// Precondition: Nicht leer, max. 100 Zeichen, nur zulässige Zeichen
+    /// (Buchstaben inkl. Umlaute, Ziffern, Leerzeichen und `- _ . , & / ( ) +`)
+    /// Postcondition: Self enthält eine gültige Kategorie (getrimmt)
+    pub fn new(value: &str) -> Result<Self, AppError> {
+        let value = value.trim();
+        // Size
+        if value.is_empty() {
+            return Err(AppError::BadRequest("Kategorie darf nicht leer sein".into()));
+        }
+        if value.chars().count() > Self::MAX_LAENGE {
+            return Err(AppError::BadRequest(format!("Kategorie darf max. {} Zeichen lang sein", Self::MAX_LAENGE)));
+        }
+        // Lexical Content (Whitelist)
+        if !value.chars().all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.' | ',' | '&' | '/' | '(' | ')' | '+')) {
+            return Err(AppError::BadRequest("Kategorie enthält unzulässige Zeichen".into()));
+        }
+        Ok(Self(value.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Serialize for Kategorie {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+/// Freitext-Beschreibung einer Buchung mit Längenbeschränkung.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Beschreibung(String);
+
+impl Beschreibung {
+    pub const MAX_LAENGE: usize = 500;
+
+    /// Precondition: Max. 500 Zeichen, keine Steuerzeichen, keine HTML-Klammern `<` `>`
+    /// Postcondition: Self enthält eine gültige (ggf. leere) Beschreibung (getrimmt)
+    pub fn new(value: &str) -> Result<Self, AppError> {
+        let value = value.trim();
+        // Size
+        if value.chars().count() > Self::MAX_LAENGE {
+            return Err(AppError::BadRequest(format!("Beschreibung darf max. {} Zeichen lang sein", Self::MAX_LAENGE)));
+        }
+        // Lexical Content (Blacklist ist hier vertretbar, da Freitext; Ausgabe erfolgt
+        // zusätzlich nur escaped via x-text – Defense in Depth)
+        if value.chars().any(|c| c.is_control() || c == '<' || c == '>') {
+            return Err(AppError::BadRequest("Beschreibung enthält unzulässige Zeichen".into()));
+        }
+        Ok(Self(value.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Serialize for Beschreibung {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+/// Belegnummer (z.B. Rechnungsnummer eines Lieferanten, Quittungsnummer).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BelegReferenz(String);
+
+impl BelegReferenz {
+    pub const MAX_LAENGE: usize = 100;
+
+    /// Precondition: Nicht leer, max. 100 Zeichen, nur Buchstaben, Ziffern,
+    /// Leerzeichen und `- _ / . #`
+    /// Postcondition: Self enthält eine gültige Belegnummer (getrimmt)
+    pub fn new(value: &str) -> Result<Self, AppError> {
+        let value = value.trim();
+        // Size
+        if value.is_empty() {
+            return Err(AppError::BadRequest("Belegnummer darf nicht leer sein".into()));
+        }
+        if value.chars().count() > Self::MAX_LAENGE {
+            return Err(AppError::BadRequest(format!("Belegnummer darf max. {} Zeichen lang sein", Self::MAX_LAENGE)));
+        }
+        // Lexical Content (Whitelist)
+        if !value.chars().all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '/' | '.' | '#')) {
+            return Err(AppError::BadRequest("Belegnummer enthält unzulässige Zeichen".into()));
+        }
+        Ok(Self(value.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Serialize for BelegReferenz {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+/// Parst ein Datum im Format YYYY-MM-DD.
+/// Reihenfolge der Input Validation: Size → Lexical → Syntax (Kalenderprüfung durch chrono,
+/// d.h. "2026-02-30" wird abgelehnt).
+pub fn parse_iso_datum(value: &str) -> Result<NaiveDate, AppError> {
+    // Size + Lexical Content: exakt 10 Zeichen, nur Ziffern und Bindestriche
+    if value.len() != 10 || !value.bytes().all(|b| b.is_ascii_digit() || b == b'-') {
+        return Err(AppError::BadRequest("Datum muss im Format JJJJ-MM-TT angegeben werden".into()));
+    }
+    // Syntax
+    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| AppError::BadRequest("Ungültiges Datum".into()))
+}
+
+/// Buchungsdatum, validiertes Format, nicht in der Zukunft.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BuchungsDatum(NaiveDate);
+
+impl BuchungsDatum {
+    /// Precondition: Gültiges Datum im Format YYYY-MM-DD, nicht in der Zukunft
+    /// Postcondition: Self enthält ein real existierendes, nicht zukünftiges Datum
+    pub fn new(date_str: &str) -> Result<Self, AppError> {
+        Self::new_mit_stichtag(date_str, chrono::Local::now().date_naive())
+    }
+
+    /// Wie `new`, aber mit explizitem Stichtag "heute" (für deterministische Tests).
+    pub fn new_mit_stichtag(date_str: &str, heute: NaiveDate) -> Result<Self, AppError> {
+        use chrono::Datelike;
+        let datum = parse_iso_datum(date_str)?;
+        if datum > heute {
+            return Err(AppError::BadRequest("Buchungsdatum darf nicht in der Zukunft liegen".into()));
+        }
+        if datum.year() < 2000 {
+            return Err(AppError::BadRequest("Buchungsdatum ist unplausibel (vor dem Jahr 2000)".into()));
+        }
+        Ok(Self(datum))
+    }
+
+    /// Rekonstruktion aus der Datenbank: Die fachliche Invariante wurde beim Schreiben
+    /// geprüft, hier wird nur das Format verifiziert (ein gestern gültiges Datum darf
+    /// nicht durch Zeitzonen-Effekte plötzlich unlesbar werden).
+    pub fn from_db(date_str: &str) -> Result<Self, AppError> {
+        parse_iso_datum(date_str).map(Self)
+    }
+
+    /// Gibt eine Kopie zurück (NaiveDate ist Copy).
+    pub fn datum(&self) -> NaiveDate {
+        self.0
+    }
+
+    pub fn to_iso(&self) -> String {
+        self.0.format("%Y-%m-%d").to_string()
+    }
+}
+
+impl Serialize for BuchungsDatum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(&self.to_iso())
     }
 }
